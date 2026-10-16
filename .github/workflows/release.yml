@@ -205,12 +205,19 @@ jobs:
           path: mobile/cache
           key: pyodide-${{ hashFiles('mobile/scripts/prepare-engine.mjs') }}
       - name: Chiave di firma
+        id: chiave
         shell: pwsh
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           if (-not $env:KEYSTORE_B64) {
-            if ($env:GITHUB_REF_TYPE -eq "tag") { throw "Manca il secret ANDROID_KEYSTORE_BASE64: senza la chiave di firma di PDFz i telefoni non accettano gli aggiornamenti." }
+            if ($env:GITHUB_REF_TYPE -eq "tag") {
+              # mai un APK di prova in una release: firmato con una chiave diversa, i telefoni non accetterebbero
+              # poi gli aggiornamenti. Android si salta e gli altri sistemi vengono pubblicati lo stesso.
+              Write-Warning "Manca il secret ANDROID_KEYSTORE_BASE64: Android non entra in questa release (vedi docs/build-e-test.md)."
+              "salta=true" >> $env:GITHUB_OUTPUT
+              exit 0
+            }
             Write-Warning "Manca il secret ANDROID_KEYSTORE_BASE64: APK di prova (debug)."
             exit 0
           }
@@ -218,6 +225,7 @@ jobs:
           [IO.File]::WriteAllBytes($ks, [Convert]::FromBase64String($env:KEYSTORE_B64))
           "HDPDF_KEYSTORE=$ks" >> $env:GITHUB_ENV
       - name: Build
+        if: steps.chiave.outputs.salta != 'true'
         shell: pwsh
         env:
           HDPDF_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -225,6 +233,7 @@ jobs:
           HDPDF_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: ./packaging/build-android.ps1 -OutDir dist
       - uses: actions/upload-artifact@v7
+        if: steps.chiave.outputs.salta != 'true'
         with:
           name: android
           path: dist/*.apk
@@ -234,7 +243,9 @@ jobs:
   release:
     name: Pubblica release
     needs: [version, windows, macos, linux, android]
-    if: github.ref_type == 'tag'
+    # si pubblica quello che si e' compilato: un sistema che non riesce (o Android senza chiave) non blocca gli altri.
+    # Con "Re-run failed jobs" il sistema mancante si aggiunge alla stessa release.
+    if: ${{ !cancelled() && github.ref_type == 'tag' && needs.version.result == 'success' }}
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -248,17 +259,27 @@ jobs:
           merge-multiple: true
       - name: File per l'avviso di nuova versione
         run: |
+          mkdir -p assets updates
           ls -lh assets
+          : > mancanti.txt
           for p in "windows:PDFz-$VERSION-x64.msi" "macos:PDFz-$VERSION-macOS-arm64.dmg" \
                    "linux:PDFz-$VERSION-x86_64.AppImage" "android:PDFz-$VERSION-android.apk"; do
             file="${p#*:}"
-            [ -f "assets/$file" ] || { echo "::error::Manca assets/$file"; exit 1; }
+            if [ ! -f "assets/$file" ]; then
+              echo "::warning::Manca assets/$file: ${p%%:*} non entra in questa release"
+              echo "${p%%:*}" >> mancanti.txt
+              continue
+            fi
             python3 packaging/scrivi_versione.py "${p%%:*}" "$file" updates
           done
+          ls updates/versione-*.json >/dev/null 2>&1 || { echo "::error::Nessun installer compilato: niente da pubblicare."; exit 1; }
       - name: Note di rilascio (da CHANGELOG.md)
         run: |
           awk -v v="## $VERSION" '$0==v{f=1;next} /^## /{if(f)exit} f' CHANGELOG.md > notes.md
           [ -s notes.md ] || echo "PDFz $VERSION" > notes.md
+          if [ -s mancanti.txt ]; then
+            printf '\n> Non ancora disponibile in questa release: %s.\n' "$(paste -sd, mancanti.txt | sed 's/,/, /g')" >> notes.md
+          fi
       - name: GitHub Release (installer e versione-*.json)
         env:
           GH_TOKEN: ${{ github.token }}

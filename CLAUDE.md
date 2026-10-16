@@ -51,8 +51,10 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
 - **A ogni nuova versione** si aggiornano: `__init__.py`, `packaging/version_info.txt`, `mobile/android/app/build.gradle`,
   `frontend` e `mobile` `package.json` + `package-lock.json`, nomi file in `README.md`, `CHANGELOG.md` (intestazione
   esatta `## X.Y.Z`: la pipeline ne estrae le note), `frontend/src/novita.json`, `docs/`, la documentazione Word e **questo file**.
-- **Release = tag git** `X.Y.Z` o `vX.Y.Z` uguale a `__version__`: la pipeline compila Windows (MSI), macOS Apple Silicon (DMG),
-  Linux (AppImage) e Android (APK firmato) e crea la GitHub Release con installer e `versione-*.json`.
+- **Release = tag git `vX.Y.Z`** uguale a `__version__` (la pipeline accetta anche `X.Y.Z`, ma in locale il vecchio tag
+  `1.0.0` è della storia precedente: **mai `git push --tags`**, si invia solo il tag nuovo). La pipeline compila Windows (MSI),
+  macOS Apple Silicon (DMG), Linux (AppImage) e Android (APK firmato) e crea la GitHub Release con installer e `versione-*.json`.
+  Pubblica quello che si è compilato: un sistema fallito o Android senza chiave non bloccano gli altri (mai APK di prova in release).
   Niente build per Mac Intel (pikepdf e cryptography non hanno più pacchetti x86_64).
 - **Aggiornamenti**: l'app legge `UPDATE_BASE_URL` (scritto prima della build da `packaging/imposta-url-aggiornamenti.sh`):
   variabile di repository `UPDATE_BASE_URL` oppure `https://github.com/akito996/pdfz/releases/latest/download/`.

@@ -68,9 +68,18 @@ explorer C:\Build\PDFz-Android\dist
 5. crea la **GitHub Release** del tag con installer e `versione-*.json` e, come note, la sezione della versione in
    `CHANGELOG.md` (la riga deve essere esattamente `## X.Y.Z`).
 
+Si pubblica **quello che si è compilato**: se un sistema non riesce, o se manca la chiave Android (secret
+`ANDROID_KEYSTORE_BASE64`), gli altri escono lo stesso e nelle note compare "Non ancora disponibile: …". Senza chiave
+Android non si pubblica mai un APK di prova: firmato con una chiave diversa, poi i telefoni non accetterebbero gli
+aggiornamenti. Per aggiungere il sistema mancante alla stessa release: sistemare (o creare il secret) e poi
+Actions → la corsa del tag → **Re-run failed jobs** (per Android senza chiave: **Re-run all jobs**, perché il job è riuscito saltando la build).
+
+**Tag di PDFz: sempre `vX.Y.Z`** (es. `v1.0.0`). Nel repository locale c'è un vecchio tag `1.0.0` della storia del
+progetto precedente: non va mai inviato (niente `git push --tags`).
+
 ```powershell
 git tag v1.0.1
-git push origin v1.0.1
+git push origin v1.0.1      # solo il tag nuovo, mai --tags
 ```
 
 La release è una release normale (non bozza, non pre-release): l'indirizzo `releases/latest/download/` punta sempre
