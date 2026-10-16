@@ -1,8 +1,8 @@
 <#
   Crea versione-<piattaforma>.json accanto a MSI/APK (C:\Build\PDFz-Windows\dist / C:\Build\PDFz-Android\dist), il file letto dall'avviso "nuova versione" delle versioni gia' installate.
   Va pubblicato insieme all'installer (MSI o APK) nello spazio degli aggiornamenti (la GitHub Release della versione).
-  Il campo "file" e' solo il nome dell'installer: l'app scarica da UPDATE_BASE_URL + nome, che funziona anche con
-  https://github.com/<proprietario>/<repository>/releases/latest/download/<file>.
+  Campi del download (come scrivi_versione.py): "file" (nome; le app vecchie scaricano da UPDATE_BASE_URL + nome),
+  "url" (link diretto, con -LinkBase), "size" (byte, se l'installer e' in OutDir), "pagina" (con -Pagina).
   Le novita' vengono da frontend\src\novita.json (voce della versione attuale, filtrata per piattaforma).
   Usato da build-windows.ps1 e build-android.ps1; si puo' lanciare anche da solo:
     .\packaging\scrivi-versione.ps1 -Piattaforma windows -File PDFz-1.0.0-x64.msi
@@ -12,7 +12,10 @@ param(
   [Parameter(Mandatory)][string]$File,
   [string]$Root = (Split-Path -Parent $PSScriptRoot),
   # dove scrivere il file; vuoto = <cartella della build>\dist
-  [string]$OutDir = ""
+  [string]$OutDir = "",
+  # facoltativi: link diretto = LinkBase + File (https), pagina della versione
+  [string]$LinkBase = "",
+  [string]$Pagina = ""
 )
 $ErrorActionPreference = "Stop"
 $Version = (Select-String -Path (Join-Path $Root "backend\hdpdf\__init__.py") -Pattern '__version__ = "(.*)"').Matches[0].Groups[1].Value
@@ -29,9 +32,17 @@ $info = [ordered]@{
   date    = $v.data
   titolo  = $v.titolo
   file    = $File
-  novita  = $voci
 }
 if (-not $OutDir) { $OutDir = Join-Path $Root "dist" }
+# stessi campi di scrivi_versione.py: link diretto, dimensione (se l'installer e' accanto), pagina
+if ($LinkBase) {
+  if (-not $LinkBase.StartsWith("https://")) { throw "LinkBase deve iniziare con https://" }
+  $info.url = $LinkBase.TrimEnd("/") + "/" + $File
+}
+$inst = Join-Path $OutDir $File
+if (Test-Path $inst) { $info.size = (Get-Item $inst).Length }
+if ($Pagina) { $info.pagina = $Pagina }
+$info.novita = $voci
 $out = Join-Path $OutDir "versione-$Piattaforma.json"
 New-Item -ItemType Directory -Force -Path (Split-Path $out) | Out-Null
 # UTF-8 senza BOM (il BOM darebbe fastidio ad alcuni lettori JSON)

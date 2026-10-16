@@ -27,23 +27,34 @@ l'utente, semplicemente l'avviso non compare).
   normale** (non bozza, non pre-release). JSON e installer stanno nella stessa release, quindi sono sempre della stessa
   versione: non serve un ordine di caricamento.
 - L'app scarica `UPDATE_BASE_URL + "versione-<piattaforma>.json"` all'avvio e poi al massimo ogni **6 ore**; se la versione è più
-  recente la **campanella** mostra il badge rosso, le novità e il pulsante "Scarica e installa" (apre il link dell'installer:
-  `UPDATE_BASE_URL + file`, oppure il campo `url` se c'è).
+  recente la **campanella** mostra il badge rosso, le novità e il riquadro del **download diretto** della propria
+  piattaforma (dalla 1.0.2): sistema, nome del file e dimensione, pulsante "Scarica la versione X.Y.Z", link da copiare,
+  "Pagina della versione" e come installare. Il link è il campo `url` del file; nei file vecchi senza `url`,
+  `UPDATE_BASE_URL + file`. Le app 1.0.0 e 1.0.1 mostrano solo il pulsante "Scarica", ma usano già il campo `url`.
 - Piattaforme: **Windows, macOS, Linux, Android** (`PLATFORMS` in `aggiornamenti.py`, stesso elenco in `Notifiche.tsx`).
   iPhone escluso: gli aggiornamenti passano da TestFlight / App Store. Ogni piattaforma legge solo il suo file.
 - Windows, macOS e Linux: la richiesta la fa il motore Python; Android: `CapacitorHttp` (il motore Pyodide non ha rete). CORS non necessario.
 - Confronto: versioni `MAJOR.MINOR.PATCH` numero per numero (`versione.newer`).
 
+Ogni piattaforma ha il suo file e il suo installer: `versione-windows.json` → MSI, `versione-macos.json` → DMG,
+`versione-linux.json` → AppImage, `versione-android.json` → APK. La pipeline (`packaging/scrivi_versione.py`) scrive:
+
 ```json
 {
-  "version": "1.0.0",
+  "version": "1.0.2",
   "date": "2026-10-16",
   "titolo": "…",
-  "file": "PDFz-1.0.0-x64.msi",          // link di download = UPDATE_BASE_URL + file
+  "file": "PDFz-1.0.2-x64.msi",
+  "url": "https://github.com/akito996/pdfz/releases/download/v1.0.2/PDFz-1.0.2-x64.msi",
+  "size": 136314880,
+  "pagina": "https://github.com/akito996/pdfz/releases/tag/v1.0.2",
   "novita": [ { "tipo": "...", "piattaforme": [...], "dove": "...", "titolo": "...", "dettaglio": "..." } ]
-  // facoltativo: "url": "link di download diverso"
 }
 ```
+
+- `url`: link **diretto** all'installer di **quella** versione (`releases/download/<tag>/<file>`): resta valido anche
+  quando escono versioni nuove. Con la variabile `UPDATE_BASE_URL` impostata è quell'indirizzo + `file`.
+- `size` (byte) e `pagina` servono al riquadro del download; le release fino alla 1.0.1 hanno solo `file`.
 
 ## Configurazione
 

@@ -62,6 +62,11 @@ def check(platform: str, current: str, max_age: float = 6 * 3600) -> dict:
         _cache[platform] = (time.time(), info)
     latest = str(info.get("version") or "")
     file = str(info.get("file") or "")
+    # link diretto all'installer di questa piattaforma ("url" nei file nuovi; nei vecchi: indirizzo + nome del file)
+    download = str(info.get("url") or (base + file if file else ""))
+    size = info.get("size")
     return {"configured": True, "available": newer(latest, current), "latest": latest, "date": info.get("date"),
             "title": info.get("titolo") or "", "novita": info.get("novita") or [],
-            "download": info.get("url") or (base + file if file else "")}
+            "download": download if download.startswith(("https://", "http://")) else "",
+            "file": file or download.rsplit("/", 1)[-1], "size": size if isinstance(size, int) and size > 0 else None,
+            "page": str(info.get("pagina") or "")}

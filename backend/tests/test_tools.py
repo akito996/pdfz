@@ -727,3 +727,62 @@ def test_no_password_prompt_for_pdfs_without_real_password():
         info = client.post("/api/open", files={"files": (name, data, "application/pdf")}).json()[0]
         assert not info["needs_password"], name
         assert info["restricted"] is expect, name
+
+
+def test_update_check_link_diretto(monkeypatch):
+    """Ogni piattaforma riceve il link DIRETTO al suo installer (MSI, DMG, AppImage, APK), con dimensione e pagina;
+    con un file vecchio senza "url" il link resta indirizzo degli aggiornamenti + nome del file."""
+    import json as _json
+
+    from hdpdf import aggiornamenti
+
+    monkeypatch.setattr(aggiornamenti, "UPDATE_BASE_URL", "https://example.invalid/latest/")
+    monkeypatch.setattr(aggiornamenti, "_cache", {})
+    installer = {"windows": "PDFz-9.9.9-x64.msi", "macos": "PDFz-9.9.9-macOS-arm64.dmg",
+                 "linux": "PDFz-9.9.9-x86_64.AppImage", "android": "PDFz-9.9.9-android.apk"}
+    vecchio = {"linux"}   # file versione senza url/size/pagina (come quelli della 1.0.0)
+
+    class Risposta:
+        def __init__(self, b): self.b = b
+        def read(self): return self.b
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    def fake_urlopen(req, timeout=0):
+        pf = req.full_url.rsplit("versione-", 1)[1].removesuffix(".json")
+        info = {"version": "9.9.9", "file": installer[pf]}
+        if pf not in vecchio:
+            info.update(url=f"https://example.invalid/download/v9.9.9/{installer[pf]}", size=4321,
+                        pagina="https://example.invalid/tag/v9.9.9")
+        return Risposta(_json.dumps(info).encode())
+
+    monkeypatch.setattr(aggiornamenti.urllib.request, "urlopen", fake_urlopen)
+    for pf, nome in installer.items():
+        r = client.get(f"/api/update/check?platform={pf}").json()
+        assert r["available"] is True and r["latest"] == "9.9.9" and r["file"] == nome
+        if pf in vecchio:
+            assert r["download"] == f"https://example.invalid/latest/{nome}" and r["size"] is None and r["page"] == ""
+        else:
+            assert r["download"] == f"https://example.invalid/download/v9.9.9/{nome}" and r["size"] == 4321
+            assert r["page"] == "https://example.invalid/tag/v9.9.9"
+
+
+def test_scrivi_versione_link_diretto(tmp_path):
+    """packaging/scrivi_versione.py: link diretto = cartella della versione + file, dimensione e pagina."""
+    import importlib.util
+    import json as _json
+
+    spec = importlib.util.spec_from_file_location("scrivi_versione", Path(__file__).resolve().parents[2] / "packaging" / "scrivi_versione.py")
+    sv = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sv)
+    inst = tmp_path / "PDFz-1.0.1-android.apk"
+    inst.write_bytes(b"x" * 1234)
+    out = sv.main("android", inst.name, str(tmp_path / "updates"), installer=str(inst),
+                  link_base="https://github.com/akito996/pdfz/releases/download/v1.0.1",
+                  pagina="https://github.com/akito996/pdfz/releases/tag/v1.0.1")
+    info = _json.loads(out.read_text(encoding="utf-8"))
+    assert info["file"] == inst.name and info["size"] == 1234
+    assert info["url"] == "https://github.com/akito996/pdfz/releases/download/v1.0.1/PDFz-1.0.1-android.apk"
+    assert info["pagina"].endswith("/tag/v1.0.1") and all("android" in (v.get("piattaforme") or ["android"]) for v in info["novita"])
+    with pytest.raises(SystemExit):
+        sv.main("android", inst.name, str(tmp_path), link_base="http://non-sicuro.example/")

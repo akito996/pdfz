@@ -1,5 +1,15 @@
 # Novità
 
+## 1.0.2
+Aggiornamenti più semplici: il link diretto all'installer giusto per ogni sistema.
+
+- **Download diretto per sistema** (novità): quando esce una versione nuova, la campanella propone l'installer del
+  sistema che stai usando, con il link diretto: **Windows** l'MSI, **macOS** il DMG, **Linux** l'AppImage, **Android**
+  l'APK. Nel riquadro: nome del file e dimensione, pulsante "Scarica la versione", link da copiare, "Pagina della
+  versione" e come installare su quel sistema.
+- Il link punta all'installer di quella versione precisa: resta valido anche quando escono versioni più nuove.
+- Il repository e le release di PDFz sono pubblici: l'avviso di nuova versione e i download funzionano senza account GitHub.
+
 ## 1.0.1
 Correzioni per telefono e tablet (soprattutto Android).
 

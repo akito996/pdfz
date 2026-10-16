@@ -2,6 +2,37 @@
   "_info": "Novità di ogni versione, mostrate nella campanella dell'app e copiate dalla build in versione-<piattaforma>.json. tipo: nuovo | modifica | correzione | installer | ottimizzazione | rimosso. piattaforme: windows, macos, linux, android, ios.",
   "versioni": [
     {
+      "versione": "1.0.2",
+      "data": "2026-10-16",
+      "titolo": "PDFz 1.0.2: link diretto al download per ogni sistema",
+      "voci": [
+        {
+          "tipo": "nuovo",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android"
+          ],
+          "dove": "Campanella delle notifiche",
+          "titolo": "Download diretto della nuova versione per il tuo sistema",
+          "dettaglio": "Quando esce una versione nuova la campanella propone l'installer giusto con il link diretto: Windows l'MSI, macOS il DMG, Linux l'AppImage, Android l'APK. Vedi nome del file e dimensione, puoi scaricare, copiare il link o aprire la pagina della versione, e trovi come installarla."
+        },
+        {
+          "tipo": "modifica",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android"
+          ],
+          "dove": "Campanella delle notifiche",
+          "titolo": "Il link resta valido nel tempo",
+          "dettaglio": "Il link porta all'installer di quella versione precisa, anche quando ne escono di più nuove."
+        }
+      ]
+    },
+    {
       "versione": "1.0.1",
       "data": "2026-10-16",
       "titolo": "PDFz 1.0.1: menu Tema e notifiche sistemati sul telefono",

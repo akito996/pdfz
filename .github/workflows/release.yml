@@ -262,6 +262,12 @@ jobs:
           mkdir -p assets updates
           ls -lh assets
           : > mancanti.txt
+          # link DIRETTO all'installer di ogni piattaforma per QUESTA versione (Windows MSI, macOS DMG, Linux AppImage,
+          # Android APK): con le GitHub Releases resta valido anche quando escono versioni nuove; con un indirizzo
+          # proprio (variabile UPDATE_BASE_URL) e' quell'indirizzo + nome del file
+          link="${{ vars.UPDATE_BASE_URL }}"
+          [ -n "$link" ] || link="https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME/"
+          pagina="https://github.com/$GITHUB_REPOSITORY/releases/tag/$GITHUB_REF_NAME"
           for p in "windows:PDFz-$VERSION-x64.msi" "macos:PDFz-$VERSION-macOS-arm64.dmg" \
                    "linux:PDFz-$VERSION-x86_64.AppImage" "android:PDFz-$VERSION-android.apk"; do
             file="${p#*:}"
@@ -270,7 +276,7 @@ jobs:
               echo "${p%%:*}" >> mancanti.txt
               continue
             fi
-            python3 packaging/scrivi_versione.py "${p%%:*}" "$file" updates
+            python3 packaging/scrivi_versione.py "${p%%:*}" "$file" updates --installer "assets/$file" --link-base "$link" --pagina "$pagina"
           done
           ls updates/versione-*.json >/dev/null 2>&1 || { echo "::error::Nessun installer compilato: niente da pubblicare."; exit 1; }
       - name: Note di rilascio (da CHANGELOG.md)

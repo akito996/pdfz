@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  AlertTriangle, Bell, CheckCircle2, Download, Gauge, Info, MinusCircle, PackageCheck, PencilLine, Sparkles, Trash2, Wrench, X,
+  AlertTriangle, Bell, CheckCircle2, Copy, Download, ExternalLink, Gauge, Info, MinusCircle, PackageCheck, PencilLine, Sparkles, Trash2,
+  Wrench, X,
   type LucideIcon,
 } from "lucide-react";
-import { api, desktop, isLocalEngine } from "../api";
+import { api, desktop, humanSize, isLocalEngine } from "../api";
 import { useStored } from "../hooks";
 import { svuotaMessaggi, useMessaggi } from "../messaggi";
 import novitaData from "../novita.json";
@@ -64,7 +65,17 @@ const fmtData = (d?: string) => {
   return isNaN(t.getTime()) ? d : t.toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" });
 };
 
-interface Update { latest: string; date?: string; title?: string; novita: Voce[]; download: string }
+/** Nuova versione disponibile. download = link DIRETTO all'installer di questa piattaforma (Windows MSI, macOS DMG,
+ *  Linux AppImage, Android APK), dal file versione-<piattaforma>.json della release. */
+interface Update { latest: string; date?: string; title?: string; novita: Voce[]; download: string; file?: string; size?: number | null; page?: string }
+
+/** Come si installa l'aggiornamento scaricato, per piattaforma. */
+const COME_INSTALLARE: Record<string, string> = {
+  windows: "Apri il file .msi scaricato: installa la nuova versione sopra quella attuale, impostazioni e firme restano.",
+  macos: "Apri il file .dmg e trascina PDFz nella cartella Applicazioni, sostituendo quello vecchio.",
+  linux: "Rendi eseguibile il file .AppImage (tasto destro › Proprietà › Permessi, oppure chmod +x) e usalo al posto del vecchio.",
+  android: "Apri il file .apk scaricato e conferma l'aggiornamento (se richiesto, consenti l'installazione da questa fonte).",
+};
 
 // aperta o chiusa: fuori dal componente, così resta aperta anche se la barra in alto viene ridisegnata da capo
 let aperta = false;
@@ -81,11 +92,13 @@ async function controllaAggiornamento(base: string): Promise<Update | null> {
     let info: any = r.data;
     if (typeof info === "string") info = JSON.parse(info.replace(/^﻿/, ""));
     if (!info?.version) return null;
-    return { latest: info.version, date: info.date, title: info.titolo, novita: info.novita || [], download: info.url || (info.file ? base + info.file : "") };
+    const download = String(info.url || (info.file ? base + info.file : ""));
+    return { latest: info.version, date: info.date, title: info.titolo, novita: info.novita || [], download,
+      file: info.file || download.split("/").pop(), size: typeof info.size === "number" ? info.size : null, page: info.pagina || "" };
   }
   const r: any = await api.updateCheck(PIATTAFORMA);
   if (!r?.configured || !r.latest) return null;
-  return { latest: r.latest, date: r.date, title: r.title, novita: r.novita || [], download: r.download };
+  return { latest: r.latest, date: r.date, title: r.title, novita: r.novita || [], download: r.download, file: r.file, size: r.size, page: r.page };
 }
 
 export function Notifiche({ version, updateUrl }: { version?: string; updateUrl?: string }) {
@@ -172,8 +185,9 @@ export function Notifiche({ version, updateUrl }: { version?: string; updateUrl?
             {aggiornamento && (
               <Anteprima tag="Nuova versione disponibile" nuovo={evidenzia.upd} tutte
                 v={{ versione: aggiornamento.latest, data: aggiornamento.date, titolo: aggiornamento.title, voci: aggiornamento.novita.filter(perMe) }}
-                onOpen={() => apri({ versioni: [{ versione: aggiornamento.latest, data: aggiornamento.date, titolo: aggiornamento.title, voci: aggiornamento.novita.filter(perMe) }], update: aggiornamento })}
-                action={aggiornamento.download ? <button className="btn small primary" onClick={(e) => { e.stopPropagation(); scarica(aggiornamento.download); }}><Download size={14} /> Scarica</button> : null} />
+                onOpen={() => apri({ versioni: [{ versione: aggiornamento.latest, data: aggiornamento.date, titolo: aggiornamento.title, voci: aggiornamento.novita.filter(perMe) }], update: aggiornamento })}>
+                <LinkDiretto upd={aggiornamento} onDownload={scarica} />
+              </Anteprima>
             )}
             {elenco.map((v) => (
               <Anteprima key={v.versione} v={v} nuovo={evidenzia.versioni.includes(v.versione)}
@@ -214,9 +228,33 @@ function conteggi(voci: Voce[]) {
   return ORDINE.filter((t) => c[t]).map((t) => ({ t, n: c[t]! }));
 }
 
+/** Riquadro del download diretto: sistema, file e dimensione, pulsante Scarica, link da copiare e come installare. */
+function LinkDiretto({ upd, onDownload }: { upd: Update; onDownload: (u: string) => void }) {
+  const [copiato, setCopiato] = useState(false);
+  if (!upd.download) return null;
+  const copia = async () => {
+    try { await navigator.clipboard.writeText(upd.download); setCopiato(true); setTimeout(() => setCopiato(false), 2500); } catch { /* resta il link da selezionare */ }
+  };
+  const ferma = (e: React.SyntheticEvent) => e.stopPropagation();   // dentro la scheda: non apre i dettagli
+  return (
+    <div className="dl-diretto" onClick={ferma} onKeyDown={ferma}>
+      <div className="dl-diretto-file">
+        <b>{NOMI[PIATTAFORMA] || PIATTAFORMA}</b> · {upd.file || "installer"}{upd.size ? ` · ${humanSize(upd.size)}` : ""}
+      </div>
+      <div className="btn-row">
+        <button className="btn small primary" onClick={() => onDownload(upd.download)}><Download size={14} /> Scarica la versione {upd.latest}</button>
+        <button className="btn small" onClick={copia}><Copy size={13} /> {copiato ? "Link copiato" : "Copia link"}</button>
+        {upd.page && <button className="btn small ghost" onClick={() => onDownload(upd.page!)}><ExternalLink size={13} /> Pagina della versione</button>}
+      </div>
+      <input className="input dl-diretto-link" readOnly value={upd.download} aria-label="Link diretto al download" onFocus={(e) => e.currentTarget.select()} />
+      {COME_INSTALLARE[PIATTAFORMA] && <div className="hint">{COME_INSTALLARE[PIATTAFORMA]}</div>}
+    </div>
+  );
+}
+
 /** Scheda di una versione. tutte = elenca tutte le voci (versione installata e novità), altrimenti le prime 3. */
-function Anteprima({ v, tag, nuovo, onOpen, action, tutte = false }: {
-  v: Versione; tag: string; nuovo: boolean; onOpen: () => void; action?: React.ReactNode; tutte?: boolean;
+function Anteprima({ v, tag, nuovo, onOpen, action, tutte = false, children }: {
+  v: Versione; tag: string; nuovo: boolean; onOpen: () => void; action?: React.ReactNode; tutte?: boolean; children?: React.ReactNode;
 }) {
   const voci = tutte ? v.voci : v.voci.slice(0, 3);
   return (
@@ -234,6 +272,7 @@ function Anteprima({ v, tag, nuovo, onOpen, action, tutte = false }: {
       <ul className="notif-list">{voci.map((x, i) => <li key={i}>{x.titolo}</li>)}</ul>
       {voci.length < v.voci.length && <div className="hint">…e altre {v.voci.length - voci.length}</div>}
       <div className="notif-foot"><span className="link">Vedi i dettagli ›</span>{action}</div>
+      {children}
     </div>
   );
 }
@@ -257,9 +296,9 @@ function NovitaView({ versioni, update, current, onClose, onDownload }: {
             <h2>{update ? `È disponibile la versione ${update.latest}` : versioni.length === 1 ? `Novità della versione ${versioni[0].versione}` : "Novità delle versioni"}</h2>
             <div className="hint">{current ? `Versione installata: ${current} · ` : ""}{`App ${NOMI[PIATTAFORMA] || PIATTAFORMA}`}</div>
           </div>
-          {update?.download && <button className="btn primary" onClick={() => onDownload(update.download)}><Download size={15} /> Scarica e installa</button>}
           <button className="btn icon ghost" onClick={onClose} aria-label="Chiudi"><X size={18} /></button>
         </div>
+        {update?.download && <div className="novita-dl"><LinkDiretto upd={update} onDownload={onDownload} /></div>}
         <div className="novita-filtri">
           <button className={`chip ${filtro === null ? "on" : ""}`} onClick={() => setFiltro(null)}>Tutte ({tutteVoci.length})</button>
           {conteggi(tutteVoci).map(({ t, n }) => {
