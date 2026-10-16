@@ -1,17 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Bell, Download, Gauge, MinusCircle, PackageCheck, PencilLine, Sparkles, Wrench, X,
+  AlertTriangle, Bell, CheckCircle2, Download, Gauge, Info, MinusCircle, PackageCheck, PencilLine, Sparkles, Trash2, Wrench, X,
   type LucideIcon,
 } from "lucide-react";
 import { api, desktop, isLocalEngine } from "../api";
 import { useStored } from "../hooks";
+import { svuotaMessaggi, useMessaggi } from "../messaggi";
 import novitaData from "../novita.json";
+import { Popover } from "./Popover";
 
 /**
  * Campanella delle notifiche:
  *  - al primo avvio dopo un aggiornamento mostra l'anteprima delle novità (confronto con l'ultima versione vista);
  *  - se è stata pubblicata una versione più recente (versione-windows.json / versione-android.json) lo segnala;
- *  - toccando l'anteprima si apre la schermata con tutte le modifiche, per tipo e per punto dell'app.
+ *  - toccando l'anteprima si apre la schermata con tutte le modifiche, per tipo e per punto dell'app;
+ *  - in fondo i messaggi brevi della sessione (quelli in basso che spariscono dopo qualche secondo), da rileggere.
+ * La finestrella resta aperta finché la chiude l'utente; all'apertura le novità contano già come lette
+ * (niente pallino rosso che resta acceso).
  */
 export type Tipo = "nuovo" | "modifica" | "correzione" | "installer" | "ottimizzazione" | "rimosso";
 export interface Voce { tipo: Tipo; piattaforme?: string[]; dove?: string; titolo: string; dettaglio?: string }
@@ -61,6 +66,9 @@ const fmtData = (d?: string) => {
 
 interface Update { latest: string; date?: string; title?: string; novita: Voce[]; download: string }
 
+// aperta o chiusa: fuori dal componente, così resta aperta anche se la barra in alto viene ridisegnata da capo
+let aperta = false;
+
 async function controllaAggiornamento(base: string): Promise<Update | null> {
   // l'avviso esiste per Windows (MSI), macOS (DMG), Linux (AppImage) e Android (APK);
   // sull'iPhone gli aggiornamenti passano da TestFlight / App Store
@@ -84,10 +92,15 @@ export function Notifiche({ version, updateUrl }: { version?: string; updateUrl?
   const [seen, setSeen] = useStored<string | null>("hdpdf.versioneVista", null);
   const [dismissedUpd, setDismissedUpd] = useStored<string | null>("hdpdf.aggiornamentoVisto", null);
   const [cache, setCache] = useStored<{ t: number; u: Update | null } | null>("hdpdf.controlloAggiornamenti", null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpenState] = useState(aperta);
+  const setOpen = (v: boolean) => { aperta = v; setOpenState(v); };
+  // cosa era "nuovo" quando la finestrella si è aperta (le novità si segnano come lette subito, ma restano evidenziate)
+  const [evidenzia, setEvidenzia] = useState<{ versioni: string[]; upd: boolean }>({ versioni: [], upd: false });
   const [detail, setDetail] = useState<{ versioni: Versione[]; update?: Update } | null>(null);
   const [upd, setUpd] = useState<Update | null>(cache?.u || null);
   const auto = useRef(false);
+  const btn = useRef<HTMLButtonElement>(null);
+  const messaggi = useMessaggi();
 
   const tutte = useMemo(() => (novitaData.versioni as Versione[]).map(filtra).filter((v) => v.voci.length), []);
   // novità non ancora viste: dalle versioni dopo l'ultima vista fino a quella installata (al primo avvio: solo l'attuale)
@@ -97,7 +110,8 @@ export function Notifiche({ version, updateUrl }: { version?: string; updateUrl?
     if (!seen) return fino.filter((v) => v.versione === version).slice(0, 1);
     return fino.filter((v) => piuNuova(v.versione, seen));
   }, [tutte, version, seen]);
-  const corrente = tutte.find((v) => v.versione === version) || tutte[0];
+  // tutte le versioni fino a quella installata, dalla più recente
+  const elenco = useMemo(() => tutte.filter((v) => !version || !piuNuova(v.versione, version)), [tutte, version]);
   const aggiornamento = upd && version && piuNuova(upd.latest, version) ? upd : null;
   const updNuovo = !!aggiornamento && dismissedUpd !== aggiornamento.latest;
   const badge = (nuove.length ? 1 : 0) + (updNuovo ? 1 : 0);
@@ -124,14 +138,16 @@ export function Notifiche({ version, updateUrl }: { version?: string; updateUrl?
   // primo avvio dopo un aggiornamento (o nuova versione disponibile): l'anteprima si apre da sola, una volta
   useEffect(() => {
     if (auto.current || !version) return;
-    if (nuove.length || updNuovo) { auto.current = true; setOpen(true); }
-  }, [version, nuove.length, updNuovo]);
+    if (nuove.length || updNuovo) { auto.current = true; apriPopup(); }
+  }, [version, nuove.length, updNuovo]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const chiudi = () => {
-    setOpen(false);
+  const apriPopup = () => {
+    setEvidenzia({ versioni: nuove.map((v) => v.versione), upd: updNuovo });
+    setOpen(true);
     if (version && nuove.length) setSeen(version);
     if (aggiornamento) setDismissedUpd(aggiornamento.latest);
   };
+  const chiudi = () => setOpen(false);
   const apri = (d: { versioni: Versione[]; update?: Update }) => { chiudi(); setDetail(d); };
   const scarica = (url: string) => {
     if (!url) return;
@@ -143,32 +159,48 @@ export function Notifiche({ version, updateUrl }: { version?: string; updateUrl?
   return (
     <>
       <div className="notif">
-        <button className="btn icon ghost notif-btn" title="Notifiche e novità" aria-label={`Notifiche${badge ? ` (${badge} nuove)` : ""}`}
-          onClick={() => (open ? chiudi() : setOpen(true))}>
+        <button ref={btn} className="btn icon ghost notif-btn" title="Notifiche e novità" aria-label={`Notifiche${badge ? ` (${badge} nuove)` : ""}`}
+          aria-expanded={open} onClick={() => (open ? chiudi() : apriPopup())}>
           <Bell size={18} />
           {badge > 0 ? <span className="notif-badge">{badge}</span>
             : aggiornamento ? <span className="notif-badge upd" title="Aggiornamento disponibile" /> : null}
         </button>
         {open && (
-          <>
-            <div className="notif-back" onClick={chiudi} aria-hidden />
-            <div className="notif-pop" role="dialog" aria-label="Notifiche">
-              <div className="notif-head"><b>Notifiche</b>
-                <button className="btn icon ghost small" onClick={chiudi} aria-label="Chiudi"><X size={15} /></button></div>
-              {aggiornamento && (
-                <Anteprima tag="Nuova versione disponibile" nuovo={updNuovo}
-                  v={{ versione: aggiornamento.latest, data: aggiornamento.date, titolo: aggiornamento.title, voci: aggiornamento.novita.filter(perMe) }}
-                  onOpen={() => apri({ versioni: [{ versione: aggiornamento.latest, data: aggiornamento.date, titolo: aggiornamento.title, voci: aggiornamento.novita.filter(perMe) }], update: aggiornamento })}
-                  action={aggiornamento.download ? <button className="btn small primary" onClick={(e) => { e.stopPropagation(); scarica(aggiornamento.download); }}><Download size={14} /> Scarica</button> : null} />
-              )}
-              {(nuove.length ? nuove : corrente ? [corrente] : []).map((v) => (
-                <Anteprima key={v.versione} v={v} nuovo={nuove.includes(v)}
-                  tag={v.versione === version ? "Novità di questa versione" : "Versione precedente"}
-                  onOpen={() => apri({ versioni: nuove.length ? nuove : [v] })} />
-              ))}
-              <button className="btn small ghost" style={{ alignSelf: "flex-start" }} onClick={() => apri({ versioni: tutte })}>Tutte le versioni…</button>
-            </div>
-          </>
+          <Popover anchor={btn} onClose={chiudi} width={380} className="notif-pop" label="Notifiche">
+            <div className="notif-head"><b>Notifiche</b>
+              <button className="btn icon ghost small" onClick={chiudi} aria-label="Chiudi"><X size={15} /></button></div>
+            {aggiornamento && (
+              <Anteprima tag="Nuova versione disponibile" nuovo={evidenzia.upd} tutte
+                v={{ versione: aggiornamento.latest, data: aggiornamento.date, titolo: aggiornamento.title, voci: aggiornamento.novita.filter(perMe) }}
+                onOpen={() => apri({ versioni: [{ versione: aggiornamento.latest, data: aggiornamento.date, titolo: aggiornamento.title, voci: aggiornamento.novita.filter(perMe) }], update: aggiornamento })}
+                action={aggiornamento.download ? <button className="btn small primary" onClick={(e) => { e.stopPropagation(); scarica(aggiornamento.download); }}><Download size={14} /> Scarica</button> : null} />
+            )}
+            {elenco.map((v) => (
+              <Anteprima key={v.versione} v={v} nuovo={evidenzia.versioni.includes(v.versione)}
+                tutte={v.versione === version || evidenzia.versioni.includes(v.versione)}
+                tag={v.versione === version ? "Novità di questa versione" : "Versione precedente"}
+                onOpen={() => apri({ versioni: [v] })} />
+            ))}
+            {elenco.length > 1 && (
+              <button className="btn small ghost" style={{ alignSelf: "flex-start" }} onClick={() => apri({ versioni: tutte })}>Tutte le novità in dettaglio…</button>
+            )}
+            {messaggi.length > 0 && (
+              <div className="notif-msgs">
+                <div className="notif-sec"><span className="grow">Messaggi recenti</span>
+                  <button className="btn small ghost" onClick={svuotaMessaggi}><Trash2 size={13} /> Svuota</button></div>
+                {messaggi.map((m) => {
+                  const Icon = m.tipo === "err" ? AlertTriangle : m.tipo === "ok" ? CheckCircle2 : Info;
+                  return (
+                    <div key={m.id} className={`notif-msg ${m.tipo}`}>
+                      <Icon size={14} />
+                      <span className="grow">{m.testo}</span>
+                      <span className="ora">{new Date(m.ora).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Popover>
         )}
       </div>
       {detail && <NovitaView {...detail} current={version} onClose={() => setDetail(null)} onDownload={scarica} />}
@@ -182,7 +214,11 @@ function conteggi(voci: Voce[]) {
   return ORDINE.filter((t) => c[t]).map((t) => ({ t, n: c[t]! }));
 }
 
-function Anteprima({ v, tag, nuovo, onOpen, action }: { v: Versione; tag: string; nuovo: boolean; onOpen: () => void; action?: React.ReactNode }) {
+/** Scheda di una versione. tutte = elenca tutte le voci (versione installata e novità), altrimenti le prime 3. */
+function Anteprima({ v, tag, nuovo, onOpen, action, tutte = false }: {
+  v: Versione; tag: string; nuovo: boolean; onOpen: () => void; action?: React.ReactNode; tutte?: boolean;
+}) {
+  const voci = tutte ? v.voci : v.voci.slice(0, 3);
   return (
     <div className={`notif-card ${nuovo ? "new" : ""}`} role="button" tabIndex={0} onClick={onOpen}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}>
@@ -195,7 +231,8 @@ function Anteprima({ v, tag, nuovo, onOpen, action }: { v: Versione; tag: string
           return <span key={t} className={`chip ${T.cls}`}><T.Icon size={12} /> {n} {n === 1 ? T.label.toLowerCase() : T.piu}</span>;
         })}
       </div>
-      <ul className="notif-list">{v.voci.slice(0, 3).map((x, i) => <li key={i}>{x.titolo}</li>)}</ul>
+      <ul className="notif-list">{voci.map((x, i) => <li key={i}>{x.titolo}</li>)}</ul>
+      {voci.length < v.voci.length && <div className="hint">…e altre {v.voci.length - voci.length}</div>}
       <div className="notif-foot"><span className="link">Vedi i dettagli ›</span>{action}</div>
     </div>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Monitor, Moon, Sun } from "lucide-react";
+import { Popover } from "./Popover";
 
 export type ThemeChoice = "light" | "dark" | "system";
 const KEY = "hdpdf.tema";
@@ -73,23 +74,15 @@ const OPTIONS: { value: ThemeChoice; label: string; icon: typeof Sun }[] = [
 export function ThemeMenu({ theme, setTheme }: { theme: ThemeChoice; setTheme: (t: ThemeChoice) => void }) {
   const [open, setOpen] = useState(false);
   const [palette, setPalette] = usePalette();
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
-    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
-    document.addEventListener("mousedown", close);
-    document.addEventListener("keydown", esc);
-    return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", esc); };
-  }, [open]);
+  const btn = useRef<HTMLButtonElement>(null);
   const Cur = OPTIONS.find((o) => o.value === theme)!.icon;
   return (
-    <div className="theme-menu" ref={ref}>
-      <button className="btn icon ghost" title="Tema e colori" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+    <div className="theme-menu">
+      <button ref={btn} className="btn icon ghost" title="Tema e colori" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
         <Cur size={17} />
       </button>
       {open && (
-        <div className="menu theme-pop" role="menu">
+        <Popover anchor={btn} onClose={() => setOpen(false)} width={260} className="menu theme-pop" role="menu" label="Tema e colori">
           <div className="menu-title">Aspetto</div>
           {OPTIONS.map(({ value, label, icon: Icon }) => (
             <button key={value} role="menuitemradio" aria-checked={theme === value} onClick={() => { setTheme(value); setOpen(false); }}>
@@ -107,7 +100,7 @@ export function ThemeMenu({ theme, setTheme }: { theme: ThemeChoice; setTheme: (
               {palette === p.id && <Check size={15} color="var(--brand)" />}
             </button>
           ))}
-        </div>
+        </Popover>
       )}
     </div>
   );

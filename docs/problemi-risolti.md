@@ -6,6 +6,31 @@ Il più recente in cima.
 > Le voci con numeri `AAAAMM.NNN` (es. 202610.014) sono della fase di sviluppo prima di PDFz 1.0.0, quando le versioni
 > avevano quel formato. Restano perché spiegano cosa non rifare.
 
+## 1.0.1 — Android: il menu Tema "non si apre" e le notifiche spariscono
+
+- **Sintomo:**
+  - **menu Tema** (e, su tablet o in orizzontale, notifiche e download): toccando il pulsante non compare niente;
+  - **campanella**: la finestra delle novità sparisce da sola dopo pochi secondi e il pallino rosso resta acceso;
+    inoltre si vedevano solo le prime 3 novità e i messaggi brevi in basso sparivano senza poterli rileggere.
+- **Causa:**
+  - sul telefono la barra in alto scorre in orizzontale (`overflow-x: auto` in `styles.css`): in CSS questo taglia anche
+    tutto ciò che sporge in verticale, e i menu erano disegnati *dentro* la barra (`position: absolute`). Il menu si apriva
+    ma restava nascosto (verificato in vista telefono: al posto del menu c'era la pagina);
+  - la campanella segnava le novità come lette solo alla chiusura con "Chiudi": se la finestra spariva per un altro
+    motivo (ridisegno della barra, chiusura non voluta) il pallino restava. La chiusura dopo pochi secondi sul telefono
+    vero non è stata riprodotta nel browser; la nuova struttura toglie le cause possibili.
+- **Soluzione:**
+  - `components/Popover.tsx`: le finestrelle dei pulsanti in alto (Tema, Notifiche, Download) si disegnano fuori dalla
+    barra, in `<body>`, con posizione fissa sotto il pulsante, misure adattate allo schermo e contenuto che scorre;
+    si chiudono toccando fuori (il tocco arriva comunque a ciò che si tocca), con Esc o con il pulsante stesso;
+  - campanella: resta aperta finché la chiude l'utente (lo stato "aperta" sopravvive al ridisegno), le novità si segnano
+    come lette **all'apertura** (niente pallino che resta), elenca **tutte** le voci della versione e in fondo i
+    **messaggi recenti** della sessione (`messaggi.ts`: ogni messaggio breve finisce anche lì; ora restano 6 secondi
+    sullo schermo, gli errori 10).
+- **Da non rifare:** finestrelle o menu con `position: absolute` dentro la barra in alto (`.topbar`): usare `Popover`.
+  Provando la versione mobile in `localhost:8790`, attenzione al service worker della web app: può servire la pagina vecchia
+  (DevTools › Application › Service workers › Unregister).
+
 ## 1.0.0 — Avvisi "come JavaScript" invece delle finestre dell'app
 
 - **Sintomo:** alcuni avvisi e domande comparivano in finestre grigie del browser o di sistema, diverse da quelle dell'app

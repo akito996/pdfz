@@ -20,6 +20,7 @@ import { sendToCreatePdf } from "./panels/createInbox";
 import { ThemeMenu, useTheme } from "./components/ThemeMenu";
 import { Notifiche } from "./components/Notifiche";
 import { useStored } from "./hooks";
+import { aggiungiMessaggio } from "./messaggi";
 
 interface Toast { id: number; msg: string; kind: "ok" | "err" | "info" }
 
@@ -132,7 +133,8 @@ export default function App() {
   const toast = useCallback((msg: string, kind: Toast["kind"] = "info") => {
     const id = Date.now() + Math.random();
     setToasts((t) => [...t.slice(-3), { id, msg, kind }]);
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), kind === "err" ? 9000 : 4500);
+    aggiungiMessaggio(msg, kind);   // si rilegge dalla campanella anche dopo che è sparito
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), kind === "err" ? 10000 : 6000);
   }, []);
 
   // carica il PDF della versione corrente

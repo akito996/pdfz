@@ -65,6 +65,8 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   mai `window.alert/confirm/prompt` né finestre di sistema. Gli errori dell'app desktop si sollevano in Python come
   `AvvisoUtente` (`desktop.py`) e la pagina li mostra (`desktopCall` in `api.ts`). Uniche eccezioni: la conferma di
   sistema quando la pagina non risponde alla chiusura (`_ask_quit`) e "Lasciare il sito?" del browser su Linux.
+- **Finestrelle dei pulsanti in alto** (Tema, Notifiche, Download e future): solo con `components/Popover.tsx` (disegnate
+  in `<body>`, posizione fissa). Mai `position: absolute` dentro `.topbar`: sul telefono la barra scorre e le taglia.
 - **Strumenti con "Applica"**: ogni pannello registra le modifiche non applicate con `usePending(dirty, def.label, apply)`
   (`apply` restituisce `true` se riuscito). L'app chiede Applica / Non applicare / Annulla quando si lascia lo strumento.
 - **Chiusura dell'app desktop**: `desktop.py` ferma la chiusura e chiama `window.hdpdfRequestClose` da un altro thread; la pagina
@@ -80,7 +82,7 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
 
 ## Stato attuale (2026-10-16)
 
-- Versione nel codice: **1.0.0** di PDFz. Marchio applicato ovunque: **icona e favicon 17 "Foglio oro"** (foglio PDF d'oro
+- Versione nel codice: **1.0.1** di PDFz. Marchio applicato ovunque: **icona e favicon 17 "Foglio oro"** (foglio PDF d'oro
   su rosso con "PDF" e la "z" piccola, nero solo per le finiture), palette predefinita Rubino,
   5 palette selezionabili, avvisi solo con le finestre dell'app (provati nel browser: Oscura, domanda annidata dopo
   "Applica", Salva con nome Android, errore di salvataggio desktop simulato). Test: 74 passati, 2 saltati.
@@ -91,6 +93,9 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   Linux (AppImage) e i `versione-*.json`. **Android aggiunto** con "Re-run all jobs" dopo la chiave: APK firmato con la chiave
   di PDFz (61,6 MB, verificato nel registro della pipeline); note della release corrette. iPhone: nessuna build;
   si prepara una web app da aggiungere alla Home (sessione separata). Installer non provati su macchine vere.
+- **Versione 1.0.1** (2026-10-16, tag `v1.0.1`): correzioni Android/tablet del menu Tema (tagliato dalla barra in alto) e
+  della campanella (resta aperta, segna lette all'apertura, tutte le voci, messaggi recenti). Provate nel browser in vista
+  telefono, non ancora su un telefono vero.
 - Marchio: serie 1 (icone 1-5) scartata dall'utente perché simile a marchi esistenti e tolta dallo script; serie 2
   (6-10) e 3 (11-15) non scelte ma ancora disponibili; all'utente è piaciuta la 11 ("PDF" a capo, "z" piccola),
   messa in un foglio PDF nella serie 4 (16-18): scelta e applicata la **17** (inviata su GitHub).

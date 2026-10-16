@@ -2,6 +2,65 @@
   "_info": "Novità di ogni versione, mostrate nella campanella dell'app e copiate dalla build in versione-<piattaforma>.json. tipo: nuovo | modifica | correzione | installer | ottimizzazione | rimosso. piattaforme: windows, macos, linux, android, ios.",
   "versioni": [
     {
+      "versione": "1.0.1",
+      "data": "2026-10-16",
+      "titolo": "PDFz 1.0.1: menu Tema e notifiche sistemati sul telefono",
+      "voci": [
+        {
+          "tipo": "correzione",
+          "piattaforme": [
+            "windows",
+            "android",
+            "macos",
+            "linux",
+            "ios"
+          ],
+          "dove": "Menu Tema, in alto a destra",
+          "titolo": "Il menu Tema si apre anche sul telefono",
+          "dettaglio": "Sul telefono e sul tablet il menu si apriva ma restava nascosto sotto la barra in alto. Ora si vede e si scelgono aspetto e colori. Stessa correzione per la campanella e il pannello Download, che sui tablet potevano restare tagliati."
+        },
+        {
+          "tipo": "correzione",
+          "piattaforme": [
+            "windows",
+            "android",
+            "macos",
+            "linux",
+            "ios"
+          ],
+          "dove": "Campanella delle notifiche",
+          "titolo": "Le notifiche restano aperte finché le chiudi",
+          "dettaglio": "La finestra delle notifiche non sparisce più da sola e il pallino rosso si spegne appena la apri."
+        },
+        {
+          "tipo": "nuovo",
+          "piattaforme": [
+            "windows",
+            "android",
+            "macos",
+            "linux",
+            "ios"
+          ],
+          "dove": "Campanella delle notifiche",
+          "titolo": "Tutte le notifiche in un posto",
+          "dettaglio": "Nella campanella si leggono tutte le novità della versione e, in fondo, i messaggi recenti (quelli che compaiono in basso e spariscono dopo qualche secondo), con l'ora."
+        },
+        {
+          "tipo": "modifica",
+          "piattaforme": [
+            "windows",
+            "android",
+            "macos",
+            "linux",
+            "ios"
+          ],
+          "dove": "Messaggi in basso",
+          "titolo": "I messaggi restano di più sullo schermo",
+          "dettaglio": "6 secondi invece di 4,5; gli errori 10 secondi. E restano comunque nella campanella."
+        }
+      ]
+    },
+    {
       "versione": "1.0.0",
       "data": "2026-10-16",
       "titolo": "PDFz 1.0.0: nuovo marchio, 5 temi colore e avvisi nelle finestre dell'app",

@@ -1,5 +1,17 @@
 # Novità
 
+## 1.0.1
+Correzioni per telefono e tablet (soprattutto Android).
+
+- **Menu Tema** (correzione): sul telefono e sul tablet si apriva ma restava nascosto sotto la barra in alto. Ora si
+  vede e si scelgono aspetto (chiaro, scuro, sistema) e colori. Stessa correzione per la campanella e per il pannello
+  Download, che sui tablet e in orizzontale potevano restare tagliati.
+- **Campanella delle notifiche** (correzione): la finestra resta aperta finché la chiudi (prima poteva sparire dopo pochi
+  secondi lasciando acceso il pallino rosso); il pallino si spegne appena la apri.
+- **Tutte le notifiche** (novità): nella campanella si leggono tutte le novità della versione, non solo le prime tre, e in
+  fondo i **messaggi recenti** della sessione (quelli che compaiono in basso e spariscono dopo qualche secondo), con l'ora.
+- I messaggi in basso restano sullo schermo più a lungo: 6 secondi, gli errori 10.
+
 ## 1.0.0
 Prima versione di **PDFz**: editor PDF che lavora **tutto sul dispositivo** (nessun file lascia il PC o il telefono),
 per Windows, macOS, Linux, Android e iPhone/iPad.

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Download, ExternalLink, FileDown, FolderOpen, Trash2 } from "lucide-react";
 import { desktop, download, humanSize } from "../api";
+import { Popover } from "./Popover";
 
 export interface DownloadEntry {
   id: number;
@@ -23,7 +24,7 @@ export function Downloads({ entries, setEntries, flash }: {
   const [open, setOpen] = useState(false);
   const [unseen, setUnseen] = useState(0);
   const [pulse, setPulse] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const btn = useRef<HTMLButtonElement>(null);
   const lastFlash = useRef(flash);
 
   // un nuovo elemento apre il riquadro per qualche secondo
@@ -37,13 +38,7 @@ export function Downloads({ entries, setEntries, flash }: {
     return () => clearTimeout(t);
   }, [flash]);
 
-  useEffect(() => {
-    if (!open) return;
-    setUnseen(0);
-    const onDoc = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [open]);
+  useEffect(() => { if (open) setUnseen(0); }, [open]);
 
   const save = async (e: DownloadEntry) => {
     const path = await download(e.itemId, e.name);
@@ -51,13 +46,13 @@ export function Downloads({ entries, setEntries, flash }: {
   };
 
   return (
-    <div className="dl" ref={ref}>
-      <button className={`btn icon ghost dl-btn ${pulse ? "pulse" : ""}`} title="Download e salvataggi" onClick={() => setOpen((o) => !o)}>
+    <div className="dl">
+      <button ref={btn} className={`btn icon ghost dl-btn ${pulse ? "pulse" : ""}`} title="Download e salvataggi" onClick={() => setOpen((o) => !o)}>
         <Download size={18} />
         {unseen > 0 && <span className="dl-badge">{unseen}</span>}
       </button>
       {open && (
-        <div className="dl-pop">
+        <Popover anchor={btn} onClose={() => setOpen(false)} width={360} className="dl-pop" label="Download recenti">
           <div className="dl-head">
             <b>Download recenti</b>
             {entries.length > 0 && <button className="btn small ghost" onClick={() => setEntries(() => [])}><Trash2 size={13} /> Svuota</button>}
@@ -84,7 +79,7 @@ export function Downloads({ entries, setEntries, flash }: {
               </div>
             ))}
           </div>
-        </div>
+        </Popover>
       )}
     </div>
   );

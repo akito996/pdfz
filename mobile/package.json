@@ -1,7 +1,7 @@
 {
   "name": "pdfz-mobile",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "PDFz per Android e iPhone: interfaccia + motore Python (Pyodide) dentro l'app, funziona offline",
   "author": "agjin",
   "scripts": {
