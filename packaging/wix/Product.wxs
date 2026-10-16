@@ -1,0 +1,422 @@
+<!--
+  Installer MSI di PDFz (WiX Toolset v5).
+  Compilato da build-windows.ps1 (Version = numero MSI (100+MAJOR).MINOR.PATCH, DisplayVersion = versione MAJOR.MINOR.PATCH):
+    wix build Product.wxs -ext WixToolset.UI.wixext -arch x64 -d Version=1.0.0 -bindpath App=..\..\dist\PDFz -o PDFz.msi
+
+  L'UpgradeCode NON va mai cambiato: permette alle versioni nuove di sostituire le vecchie.
+  (PDFz ha UpgradeCode, GUID dei componenti, cartelle e chiavi di registro suoi: si installa accanto ad altri
+  programmi senza toccarli.)
+-->
+<?ifndef DisplayVersion?>
+<?define DisplayVersion = $(Version)?>
+<?endif?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+  <Package Name="PDFz"
+           Manufacturer="agjin"
+           Version="$(Version)"
+           UpgradeCode="9e97e063-fb59-42d0-938b-06f48a5082c6"
+           Scope="perUserOrMachine"
+           Language="1040"
+           Codepage="1252"
+           InstallerVersion="500">
+    <SummaryInformation Description="PDFz - editor PDF che lavora in locale" Manufacturer="agjin" />
+
+    <!-- Aggiornamento in due fasi, nella stessa finestra: prima si disinstalla la versione vecchia (con l'avanzamento),
+         poi si installa la nuova. I dati dell'utente restano (la pulizia dei dati non parte durante un aggiornamento). -->
+    <MajorUpgrade Schedule="afterInstallValidate" DowngradeErrorMessage="È già installata una versione più recente di [ProductName]." />
+    <!-- versione già installata (la scrive ogni versione in Software\agjin\PDFz), mostrata nella schermata
+         di aggiornamento; se manca la schermata usa un testo generico -->
+    <Property Id="HDOLDVERSION">
+      <RegistrySearch Id="HdOldVersionM" Root="HKLM" Key="Software\agjin\PDFz" Name="Version" Type="raw" />
+    </Property>
+    <Property Id="HDOLDVERSIONU">
+      <RegistrySearch Id="HdOldVersionU" Root="HKCU" Key="Software\agjin\PDFz" Name="Version" Type="raw" />
+    </Property>
+    <SetProperty Id="HDOLDVERSION" Action="HdOldVersionFromUser" Value="[HDOLDVERSIONU]" After="AppSearch" Sequence="ui"
+                 Condition="NOT HDOLDVERSION AND HDOLDVERSIONU" />
+    <!-- MSZIP a blocchi da 200 MB: la compressione "high" (LZX) usa un solo core e su 360 MB di file
+         puo' durare ore; MSZIP finisce in pochi minuti e l'MSI e' solo un po' piu' grande -->
+    <!-- installazione più rapida: 1 = niente punto di ripristino di Windows (può richiedere decine di secondi),
+         2 = calcolo dello spazio solo sui file (salta i controlli che qui non servono). L'avanzamento resta dettagliato. -->
+    <Property Id="MSIFASTINSTALL" Value="3" />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="mszip" MaximumUncompressedMediaSize="200" />
+
+    <Icon Id="AppIcon" SourceFile="..\assets\icon.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+    <Property Id="ARPCONTACT" Value="agjin" />
+
+    <!-- WebView2 è incluso in Windows 10/11; se manca l'installazione si interrompe con un messaggio chiaro -->
+    <Property Id="WEBVIEW2">
+      <RegistrySearch Id="WV2Machine" Root="HKLM" Key="SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" Name="pv" Type="raw" />
+    </Property>
+    <Property Id="WEBVIEW2USER">
+      <RegistrySearch Id="WV2User" Root="HKCU" Key="Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}" Name="pv" Type="raw" />
+    </Property>
+    <Launch Condition="Installed OR WEBVIEW2 OR WEBVIEW2USER"
+            Message="Serve Microsoft Edge WebView2 Runtime (https://go.microsoft.com/fwlink/p/?LinkId=2124703). Installalo e riprova." />
+
+    <!-- ============================================================ per chi installare
+         Pacchetto "a doppio uso" (Microsoft: Single Package Authoring):
+           machine = per tutti gli utenti del PC: C:\Program Files, menu Start comune, serve un amministratore (UAC);
+           user    = solo per l'utente corrente: %LOCALAPPDATA%\Programs, niente permessi di amministratore.
+         Con l'interfaccia lo chiede una schermata; da riga di comando:  msiexec /i ... /qn HDSCOPE=user
+         Predefinito "machine" (come le versioni precedenti, anche nelle installazioni silenziose /qn).
+         Negli aggiornamenti si resta nell'ambito già installato. -->
+    <Property Id="HDSCOPE" Value="auto" Secure="yes" />
+    <!-- un'installazione "solo per me" scrive questa chiave in HKCU (HKMU = HKCU nelle installazioni per utente) -->
+    <Property Id="HDPREVUSER">
+      <RegistrySearch Id="HdPrevUser" Root="HKCU" Key="Software\agjin\PDFz" Name="InstallScope" Type="raw" />
+    </Property>
+    <SetProperty Id="HDSCOPE" Action="HdScopeUser" Value="user" After="AppSearch" Sequence="both"
+                 Condition="HDSCOPE = &quot;auto&quot; AND HDPREVUSER = &quot;user&quot;" />
+    <SetProperty Id="HDSCOPE" Action="HdScopeMachine" Value="machine" After="HdScopeUser" Sequence="both"
+                 Condition="HDSCOPE &lt;&gt; &quot;user&quot;" />
+    <!-- ALLUSERS=2 (doppio uso): MSIINSTALLPERUSER=1 → per utente, vuoto → per tutti -->
+    <SetProperty Id="MSIINSTALLPERUSER" Action="HdCtxUser" Value="1" After="HdScopeMachine" Sequence="both"
+                 Condition="HDSCOPE = &quot;user&quot;" />
+    <SetProperty Id="MSIINSTALLPERUSER" Action="HdCtxMachine" Value="[HDNOVALUE]" After="HdCtxUser" Sequence="both"
+                 Condition="HDSCOPE = &quot;machine&quot;" />
+    <!-- la ricerca della versione già installata avviene DOPO la scelta dell'ambito (vedi le due sequenze più sotto) -->
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="PDFz" />
+    </StandardDirectory>
+
+    <!-- tutti i file prodotti da PyInstaller -->
+    <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
+      <Files Include="!(bindpath.App)\**" />
+    </ComponentGroup>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Component Id="StartMenuShortcut" Guid="93ece6c8-ea36-4ded-aeae-5a1c3346262d">
+        <Shortcut Id="AppStartMenu" Name="PDFz" Description="Visualizza e modifica documenti PDF"
+                  Target="[INSTALLFOLDER]PDFz.exe" WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
+        <RegistryValue Root="HKMU" Key="Software\agjin\PDFz" Name="StartMenu" Type="integer" Value="1" KeyPath="yes" />
+        <!-- per chi è installato: serve agli aggiornamenti per restare nello stesso ambito -->
+        <RegistryValue Root="HKMU" Key="Software\agjin\PDFz" Name="InstallScope" Type="string" Value="[HDSCOPE]" />
+        <RegistryValue Root="HKMU" Key="Software\agjin\PDFz" Name="Version" Type="string" Value="$(DisplayVersion)" />
+      </Component>
+    </StandardDirectory>
+
+    <StandardDirectory Id="DesktopFolder">
+      <Component Id="DesktopShortcut" Condition="DESKTOPSHORTCUT = 1" Guid="cc6310d9-9157-4ba7-b26a-1b9194fe1e55">
+        <Shortcut Id="AppDesktop" Name="PDFz" Target="[INSTALLFOLDER]PDFz.exe"
+                  WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
+        <RegistryValue Root="HKMU" Key="Software\agjin\PDFz" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+    <Property Id="DESKTOPSHORTCUT" Value="1" />
+
+    <!-- associazione ai .pdf: compare in "Apri con" e in Impostazioni > App predefinite -->
+    <Component Id="FileAssociation" Directory="INSTALLFOLDER" Guid="9154bfc9-850d-4a6c-8248-97853e4c9a91">
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.Document" Value="Documento PDF" Type="string" KeyPath="yes" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.Document" Name="FriendlyTypeName" Value="Documento PDF (PDFz)" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.Document\DefaultIcon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.Document\shell\open" Name="FriendlyAppName" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.Document\shell\open\command" Value="&quot;[INSTALLFOLDER]PDFz.exe&quot; &quot;%1&quot;" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\.pdf\OpenWithProgids" Name="PDFz.Document" Value="" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\Applications\PDFz.exe\SupportedTypes" Name=".pdf" Value="" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Microsoft\Windows\CurrentVersion\App Paths\PDFz.exe" Value="[INSTALLFOLDER]PDFz.exe" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\agjin\PDFz\Capabilities" Name="ApplicationName" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\agjin\PDFz\Capabilities" Name="ApplicationDescription" Value="Editor PDF che lavora in locale" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\agjin\PDFz\Capabilities\FileAssociations" Name=".pdf" Value="PDFz.Document" Type="string" />
+      <!-- file firmati CAdES (.p7m/.p7s): compaiono in "Apri con" senza togliere l'app predefinita (es. ArubaSign) -->
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.Firmato" Value="File firmato digitalmente" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.Firmato" Name="FriendlyTypeName" Value="File firmato digitalmente (PDFz)" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.Firmato\DefaultIcon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.Firmato\shell\open" Name="FriendlyAppName" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.Firmato\shell\open\command" Value="&quot;[INSTALLFOLDER]PDFz.exe&quot; &quot;%1&quot;" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\.p7m\OpenWithProgids" Name="PDFz.Firmato" Value="" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\.p7s\OpenWithProgids" Name="PDFz.Firmato" Value="" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\Applications\PDFz.exe\SupportedTypes" Name=".p7m" Value="" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\agjin\PDFz\Capabilities\FileAssociations" Name=".p7m" Value="PDFz.Firmato" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\agjin\PDFz\Capabilities\FileAssociations" Name=".p7s" Value="PDFz.Firmato" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\RegisteredApplications" Name="PDFz" Value="Software\agjin\PDFz\Capabilities" Type="string" />
+    </Component>
+
+    <!-- ============================================================ menu del tasto destro di Esplora risorse
+         Voce "PDFz" con un sottomenu, secondo il tipo di file:
+           foto ............ Crea PDF · Modifica con PDFz
+           documenti ....... Crea PDF (anche selezionando più file: diventano un unico PDF)
+           file firmati .... Estrai documento · Verifica firma · Marca temporale · Cifra…
+         Il sottomenu è definito una volta (PDFz.Menu*) e collegato a ogni estensione con ExtendedSubCommandsKey.
+         MultiSelectModel=Player: la voce compare anche con più di 15 file selezionati.
+         Windows 11: le voci classiche sono in "Mostra altre opzioni" (o Maiusc+F10).
+         HKMU = HKLM per tutti gli utenti, HKCU per "solo per me". Per non installarlo:  msiexec ... HDCONTEXTMENU=0 -->
+    <Property Id="HDCONTEXTMENU" Value="1" Secure="yes" />
+    <Component Id="ContextMenu" Directory="INSTALLFOLDER" Guid="63a807cd-ce9c-4ff6-a66e-f81f0ca95434" Condition="HDCONTEXTMENU = 1">
+      <RegistryValue Root="HKMU" Key="Software\agjin\PDFz" Name="ContextMenu" Type="integer" Value="1" KeyPath="yes" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.MenuImmagine\shell\1crea" Name="MUIVerb" Value="Crea PDF" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.MenuImmagine\shell\1crea" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.MenuImmagine\shell\1crea\command" Value="&quot;[INSTALLFOLDER]PDFz.exe&quot; --azione crea-pdf &quot;%1&quot;" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.MenuImmagine\shell\2modifica" Name="MUIVerb" Value="Modifica con PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.MenuImmagine\shell\2modifica" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.MenuImmagine\shell\2modifica\command" Value="&quot;[INSTALLFOLDER]PDFz.exe&quot; --azione apri &quot;%1&quot;" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.MenuDocumento\shell\1crea" Name="MUIVerb" Value="Crea PDF" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.MenuDocumento\shell\1crea" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.MenuDocumento\shell\1crea\command" Value="&quot;[INSTALLFOLDER]PDFz.exe&quot; --azione crea-pdf &quot;%1&quot;" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.MenuFirmato\shell\1estrai" Name="MUIVerb" Value="Estrai documento" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.MenuFirmato\shell\1estrai" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.MenuFirmato\shell\1estrai\command" Value="&quot;[INSTALLFOLDER]PDFz.exe&quot; --azione p7m-estrai &quot;%1&quot;" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.MenuFirmato\shell\2verifica" Name="MUIVerb" Value="Verifica firma" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.MenuFirmato\shell\2verifica" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.MenuFirmato\shell\2verifica\command" Value="&quot;[INSTALLFOLDER]PDFz.exe&quot; --azione p7m-verifica &quot;%1&quot;" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.MenuFirmato\shell\3marca" Name="MUIVerb" Value="Marca temporale" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.MenuFirmato\shell\3marca" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.MenuFirmato\shell\3marca\command" Value="&quot;[INSTALLFOLDER]PDFz.exe&quot; --azione p7m-marca &quot;%1&quot;" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.MenuFirmato\shell\4cifra" Name="MUIVerb" Value="Cifra…" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.MenuFirmato\shell\4cifra" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\PDFz.MenuFirmato\shell\4cifra\command" Value="&quot;[INSTALLFOLDER]PDFz.exe&quot; --azione p7m-cifra &quot;%1&quot;" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.png\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.png\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.png\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuImmagine" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.png\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.jpg\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.jpg\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.jpg\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuImmagine" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.jpg\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.jpeg\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.jpeg\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.jpeg\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuImmagine" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.jpeg\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.bmp\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.bmp\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.bmp\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuImmagine" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.bmp\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.gif\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.gif\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.gif\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuImmagine" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.gif\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.tif\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.tif\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.tif\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuImmagine" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.tif\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.tiff\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.tiff\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.tiff\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuImmagine" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.tiff\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.webp\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.webp\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.webp\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuImmagine" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.webp\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.pdf\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.pdf\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.pdf\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuDocumento" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.pdf\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.doc\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.doc\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.doc\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuDocumento" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.doc\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.docx\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.docx\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.docx\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuDocumento" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.docx\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.rtf\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.rtf\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.rtf\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuDocumento" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.rtf\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.odt\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.odt\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.odt\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuDocumento" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.odt\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.xls\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.xls\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.xls\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuDocumento" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.xls\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.xlsx\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.xlsx\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.xlsx\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuDocumento" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.xlsx\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.ods\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.ods\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.ods\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuDocumento" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.ods\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.csv\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.csv\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.csv\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuDocumento" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.csv\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.ppt\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.ppt\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.ppt\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuDocumento" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.ppt\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.pptx\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.pptx\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.pptx\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuDocumento" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.pptx\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.odp\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.odp\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.odp\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuDocumento" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.odp\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.txt\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.txt\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.txt\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuDocumento" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.txt\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.html\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.html\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.html\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuDocumento" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.html\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.htm\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.htm\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.htm\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuDocumento" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.htm\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.xps\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.xps\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.xps\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuDocumento" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.xps\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.epub\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.epub\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.epub\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuDocumento" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.epub\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.svg\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.svg\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.svg\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuDocumento" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.svg\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.p7m\shell\PDFz" Name="MUIVerb" Value="PDFz" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.p7m\shell\PDFz" Name="Icon" Value="[INSTALLFOLDER]PDFz.exe,0" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.p7m\shell\PDFz" Name="ExtendedSubCommandsKey" Value="PDFz.MenuFirmato" Type="string" />
+      <RegistryValue Root="HKMU" Key="Software\Classes\SystemFileAssociations\.p7m\shell\PDFz" Name="MultiSelectModel" Value="Player" Type="string" />
+    </Component>
+
+    <Feature Id="Main" Title="PDFz" Level="1">
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentRef Id="StartMenuShortcut" />
+      <ComponentRef Id="DesktopShortcut" />
+      <ComponentRef Id="FileAssociation" />
+      <ComponentRef Id="ContextMenu" />
+    </Feature>
+
+    <ui:WixUI Id="WixUI_Minimal" />
+
+    <!-- Aggiornamento: se c'è già una versione installata si sceglie cosa fare con impostazioni e dati.
+         keep     = aggiorna e mantieni tutto (predefinito, anche nelle installazioni silenziose /qn)
+         settings = salva solo il file delle impostazioni, elimina il resto, installa la nuova versione
+         clean    = installazione pulita (predefinito quando non c'è nessuna versione precedente)
+         Da riga di comando: msiexec /i PDFz-x.y.z-x64.msi /qn HDSETUPMODE=settings -->
+    <!-- "auto" = decide l'installer; il gruppo di scelte (RadioButtonGroup) vuole comunque un valore iniziale (ICE34) -->
+    <Property Id="HDSETUPMODE" Value="auto" Secure="yes" />
+    <SetProperty Id="HDSETUPMODE" Action="HdSetupModeKeep" Value="keep" After="FindRelatedProducts" Sequence="both"
+                 Condition="WIX_UPGRADE_DETECTED AND HDSETUPMODE = &quot;auto&quot;" />
+    <SetProperty Id="HDSETUPMODE" Action="HdSetupModeClean" Value="clean" After="HdSetupModeKeep" Sequence="both"
+                 Condition="NOT WIX_UPGRADE_DETECTED AND HDSETUPMODE = &quot;auto&quot;" />
+
+    <UI>
+      <Dialog Id="HdUpgradeDlg" Width="370" Height="270" Title="Installazione di [ProductName]">
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="280" Height="15" Transparent="yes" NoPrefix="yes"
+                 Text="{\WixUI_Font_Title}Trovata una versione già installata" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes"
+                 Text="Verrà sostituita dalla versione $(DisplayVersion)." />
+        <!-- le due fasi dell'aggiornamento, mostrate nella stessa finestra di avanzamento -->
+        <Control Id="InfoVer" Type="Text" X="20" Y="52" Width="335" Height="40" NoPrefix="yes" ShowCondition="HDOLDVERSION" HideCondition="NOT HDOLDVERSION"
+                 Text="Sul PC c'è la versione [HDOLDVERSION]. Premendo Avanti: 1) la versione vecchia viene disinstallata, 2) viene installata la versione $(DisplayVersion). Vedrai l'avanzamento di entrambe le fasi in questa finestra." />
+        <Control Id="InfoOld" Type="Text" X="20" Y="52" Width="335" Height="40" NoPrefix="yes" ShowCondition="NOT HDOLDVERSION" HideCondition="HDOLDVERSION"
+                 Text="Sul PC c'è una versione precedente. Premendo Avanti: 1) la versione vecchia viene disinstallata, 2) viene installata la versione $(DisplayVersion). Vedrai l'avanzamento di entrambe le fasi in questa finestra." />
+        <Control Id="DataTitle" Type="Text" X="20" Y="96" Width="335" Height="12" NoPrefix="yes" Text="Cosa fare con i tuoi dati:" />
+        <Control Id="Mode" Type="RadioButtonGroup" X="20" Y="110" Width="335" Height="118" Property="HDSETUPMODE">
+          <RadioButtonGroup Property="HDSETUPMODE">
+            <RadioButton Value="keep" X="0" Y="0" Width="335" Height="36"
+                         Text="&amp;Mantieni tutto (consigliato): preferiti, etichette, tema, impostazioni, lingue scaricate e firme salvate restano come sono." />
+            <RadioButton Value="settings" X="0" Y="40" Width="335" Height="36"
+                         Text="Mantieni solo &amp;preferiti e impostazioni di base (con una copia di sicurezza); elimina il resto dei dati della versione vecchia." />
+            <RadioButton Value="clean" X="0" Y="80" Width="335" Height="36"
+                         Text="Installazione &amp;pulita: elimina tutte le impostazioni e i dati della versione vecchia, come su un PC nuovo." />
+          </RadioButtonGroup>
+        </Control>
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="A&amp;vanti">
+          <Publish Event="EndDialog" Value="Return" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Annulla">
+          <Publish Event="SpawnDialog" Value="CancelDlg" />
+        </Control>
+      </Dialog>
+      <!-- testi della finestra di avanzamento per le azioni dell'installer (quelli standard sono in Testi.it-IT.wxl) -->
+      <ProgressText Action="HdSetupData" Message="Preparazione dei dati secondo la scelta fatta…" />
+      <ProgressText Action="HdSetupDataPerUser" Message="Preparazione dei dati secondo la scelta fatta…" />
+      <Dialog Id="HdScopeDlg" Width="370" Height="270" Title="Installazione di [ProductName]">
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="280" Height="15" Transparent="yes" NoPrefix="yes"
+                 Text="{\WixUI_Font_Title}Per chi vuoi installare il programma?" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes"
+                 Text="Scegli se PDFz deve essere disponibile per tutti o solo per te." />
+        <Control Id="Scope" Type="RadioButtonGroup" X="20" Y="60" Width="335" Height="150" Property="HDSCOPE">
+          <RadioButtonGroup Property="HDSCOPE">
+            <RadioButton Value="machine" X="0" Y="0" Width="335" Height="48"
+                         Text="Per &amp;tutti gli utenti di questo PC (consigliato): installato in Programmi, con il collegamento nel menu Start di tutti. Servono i permessi di amministratore." />
+            <RadioButton Value="user" X="0" Y="70" Width="335" Height="48"
+                         Text="&amp;Solo per me (utente corrente): installato nella cartella del tuo profilo, gli altri utenti non lo vedono. Non servono i permessi di amministratore." />
+          </RadioButtonGroup>
+        </Control>
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="A&amp;vanti">
+          <!-- ambito e cartella: la cartella va impostata qui perché le cartelle sono già state calcolate -->
+          <Publish Property="MSIINSTALLPERUSER" Value="1" Condition="HDSCOPE = &quot;user&quot;" Order="1" />
+          <Publish Property="INSTALLFOLDER" Value="[LocalAppDataFolder]Programs\PDFz\" Condition="HDSCOPE = &quot;user&quot;" Order="2" />
+          <Publish Property="MSIINSTALLPERUSER" Value="{}" Condition="HDSCOPE = &quot;machine&quot;" Order="3" />
+          <Publish Property="INSTALLFOLDER" Value="[ProgramFiles64Folder]PDFz\" Condition="HDSCOPE = &quot;machine&quot;" Order="4" />
+          <Publish Event="EndDialog" Value="Return" Order="5" />
+        </Control>
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Annulla">
+          <Publish Event="SpawnDialog" Value="CancelDlg" />
+        </Control>
+      </Dialog>
+      <!-- ultima schermata: casella "Avvia PDFz" (già spuntata) -->
+      <!-- Order="1": prima della chiusura della finestra (EndDialog di WixUI ha Order 999) -->
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchApplication" Order="1"
+               Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed" />
+      <InstallUISequence>
+        <FindRelatedProducts After="HdCtxMachine" />
+        <Show Dialog="HdUpgradeDlg" Before="WelcomeEulaDlg" Condition="WIX_UPGRADE_DETECTED AND NOT Installed" />
+        <!-- prima installazione: per chi installare (negli aggiornamenti si resta come prima) -->
+        <Show Dialog="HdScopeDlg" Before="HdUpgradeDlg" Condition="NOT Installed AND NOT WIX_UPGRADE_DETECTED" />
+      </InstallUISequence>
+    </UI>
+    <WixVariable Id="WixUILicenseRtf" Value="license.rtf" />
+    <WixVariable Id="WixUIBannerBmp" Value="banner.bmp" />
+    <WixVariable Id="WixUIDialogBmp" Value="dialog.bmp" />
+
+    <!-- Disinstallazione completa: elimina anche dati, impostazioni, firme salvate e file
+         temporanei creati dall'app nei profili di tutti gli utenti. Non avviene durante
+         un aggiornamento (UPGRADINGPRODUCTCODE), cosi' le impostazioni restano. -->
+    <CustomAction Id="CleanupUserData" Directory="INSTALLFOLDER"
+                  ExeCommand="&quot;[INSTALLFOLDER]PDFz.exe&quot; --cleanup-all-users"
+                  Execute="deferred" Impersonate="no" Return="ignore" />
+    <!-- installazione "solo per me": gira come l'utente (tocca solo il suo profilo) -->
+    <CustomAction Id="CleanupUserDataPerUser" Directory="INSTALLFOLDER"
+                  ExeCommand="&quot;[INSTALLFOLDER]PDFz.exe&quot; --cleanup-all-users"
+                  Execute="deferred" Impersonate="yes" Return="ignore" />
+    <!-- avvio dell'app a fine installazione (solo con l'interfaccia; con /qn non parte niente).
+         Gira come l'utente che ha installato, non come amministratore. -->
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Avvia PDFz" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <!-- il percorso si conosce solo dopo CostFinalize: va impostato con un'azione, non con un valore fisso (WIX1077) -->
+    <!-- Prima si usava WixShellExec con il percorso fissato subito dopo CostFinalize: se la cartella cambiava dopo
+         (scelta "per tutti / solo per me") o il percorso non era ancora quello definitivo, l'app non partiva.
+         Ora si avvia direttamente l'eseguibile, con il percorso letto al momento del clic su "Fine",
+         cartella di lavoro = cartella del programma e senza aspettare che finisca (asyncNoWait). -->
+    <CustomAction Id="LaunchApplication" Directory="INSTALLFOLDER" ExeCommand="&quot;[INSTALLFOLDER]PDFz.exe&quot;"
+                  Execute="immediate" Impersonate="yes" Return="asyncNoWait" />
+
+    <!-- applica la scelta fatta sopra in tutti i profili utente (dopo la copia dei file nuovi) -->
+    <CustomAction Id="HdSetupData" Directory="INSTALLFOLDER"
+                  ExeCommand="&quot;[INSTALLFOLDER]PDFz.exe&quot; --setup-data [HDSETUPMODE]"
+                  Execute="deferred" Impersonate="no" Return="ignore" />
+    <CustomAction Id="HdSetupDataPerUser" Directory="INSTALLFOLDER"
+                  ExeCommand="&quot;[INSTALLFOLDER]PDFz.exe&quot; --setup-data [HDSETUPMODE]"
+                  Execute="deferred" Impersonate="yes" Return="ignore" />
+    <InstallExecuteSequence>
+      <FindRelatedProducts After="HdCtxMachine" />
+      <Custom Action="CleanupUserData" Before="RemoveFiles"
+              Condition="REMOVE=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE AND NOT MSIINSTALLPERUSER" />
+      <Custom Action="CleanupUserDataPerUser" After="CleanupUserData"
+              Condition="REMOVE=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE AND MSIINSTALLPERUSER" />
+      <Custom Action="HdSetupData" After="InstallFiles"
+              Condition="NOT Installed AND NOT REMOVE AND NOT MSIINSTALLPERUSER AND (HDSETUPMODE = &quot;settings&quot; OR HDSETUPMODE = &quot;clean&quot;)" />
+      <Custom Action="HdSetupDataPerUser" After="HdSetupData"
+              Condition="NOT Installed AND NOT REMOVE AND MSIINSTALLPERUSER AND (HDSETUPMODE = &quot;settings&quot; OR HDSETUPMODE = &quot;clean&quot;)" />
+    </InstallExecuteSequence>
+  </Package>
+</Wix>

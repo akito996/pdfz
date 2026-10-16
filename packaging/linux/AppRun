@@ -1,0 +1,5 @@
+#!/bin/sh
+# Avvio dell'AppImage di PDFz
+HERE="$(dirname "$(readlink -f "$0")")"
+export HDPDF_APPIMAGE="${APPIMAGE:-}"
+exec "$HERE/usr/lib/pdfz/PDFz" "$@"

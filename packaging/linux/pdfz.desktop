@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=PDFz
+GenericName=Editor PDF
+Comment=Visualizza, modifica, firma e converti documenti PDF
+Exec=PDFz %F
+Icon=pdfz
+Terminal=false
+Categories=Office;Viewer;Graphics;
+MimeType=application/pdf;application/pkcs7-mime;application/pkcs7-signature;
+Keywords=PDF;firma;OCR;converti;
+StartupWMClass=PDFz

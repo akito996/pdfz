@@ -1,0 +1,9 @@
+{
+  "appId": "com.agjin.pdfz",
+  "appName": "PDFz",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  }
+}

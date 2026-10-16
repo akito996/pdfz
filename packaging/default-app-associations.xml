@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Imposta PDFz come programma predefinito per i PDF sui PC gestiti con criteri di gruppo.
+  Windows non permette agli installer di farlo da soli: va applicato dall'IT.
+
+  Metodo 1 (immagine / singolo PC, come amministratore):
+    Dism /Online /Import-DefaultAppAssociations:default-app-associations.xml
+  Metodo 2 (GPO): Configurazione computer > Modelli amministrativi > Componenti di Windows >
+    Esplora file > "Imposta un file di configurazione delle associazioni predefinite" -> percorso di questo file.
+  Metodo 3 (Intune): profilo Settings Catalog "Default Associations Configuration" con questo XML in Base64.
+-->
+<DefaultAssociations>
+  <Association Identifier=".pdf" ProgId="PDFz.Document" ApplicationName="PDFz" />
+</DefaultAssociations>

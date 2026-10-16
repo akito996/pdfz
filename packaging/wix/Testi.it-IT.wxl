@@ -1,0 +1,13 @@
+<!--
+  Testi dell'installer che sostituiscono quelli standard di WixUI (in italiano), passati a "wix build" con -loc.
+  Nella finestra di avanzamento si vede quale fase dell'aggiornamento e' in corso.
+-->
+<WixLocalization Culture="it-IT" Codepage="1252" xmlns="http://wixtoolset.org/schemas/v4/wxl">
+  <String Id="ProgressTextFindRelatedProducts" Value="Ricerca della versione già installata..." />
+  <String Id="ProgressTextRemoveExistingProducts" Value="Fase 1 di 2: disinstallazione della versione precedente (preferiti e impostazioni restano)..." />
+  <String Id="ProgressTextRemoveExistingProductsTemplate" Value="[1]" />
+  <String Id="ProgressTextInstallFiles" Value="Fase 2 di 2: installazione della nuova versione, copia dei file..." />
+  <String Id="ProgressTextInstallFilesTemplate" Value="File: [1]" />
+  <String Id="ProgressTextWriteRegistryValues" Value="Fase 2 di 2: registrazione del programma (menu Start, file PDF, menu del tasto destro)..." />
+  <String Id="ProgressTextRemoveFiles" Value="Rimozione dei file della versione precedente..." />
+</WixLocalization>

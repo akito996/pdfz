@@ -1,0 +1,112 @@
+{
+  "_info": "Novità di ogni versione, mostrate nella campanella dell'app e copiate dalla build in versione-<piattaforma>.json. tipo: nuovo | modifica | correzione | installer | ottimizzazione | rimosso. piattaforme: windows, macos, linux, android, ios.",
+  "versioni": [
+    {
+      "versione": "1.0.0",
+      "data": "2026-10-16",
+      "titolo": "PDFz 1.0.0: nuovo marchio, 5 temi colore e avvisi nelle finestre dell'app",
+      "voci": [
+        {
+          "tipo": "nuovo",
+          "piattaforme": [
+            "windows",
+            "android",
+            "macos",
+            "linux",
+            "ios"
+          ],
+          "dove": "Tutta l'app",
+          "titolo": "Benvenuto in PDFz",
+          "dettaglio": "Nuovo nome, nuova icona e nuovo logo nei colori rosso, oro, nero e bianco. Le funzioni sono quelle di sempre e tutto continua a essere elaborato sul tuo dispositivo."
+        },
+        {
+          "tipo": "nuovo",
+          "piattaforme": [
+            "windows",
+            "android",
+            "macos",
+            "linux",
+            "ios"
+          ],
+          "dove": "Menu Tema, in alto a destra",
+          "titolo": "5 temi colore: Rubino, Oro, Onice, Avorio e Bordeaux",
+          "dettaglio": "Ognuno funziona con l'aspetto chiaro, scuro o quello del sistema. La scelta resta salvata."
+        },
+        {
+          "tipo": "correzione",
+          "piattaforme": [
+            "windows",
+            "android",
+            "macos",
+            "linux",
+            "ios"
+          ],
+          "dove": "Avvisi e domande",
+          "titolo": "Avvisi sempre nelle finestre dell'app",
+          "dettaglio": "\"Salva con nome\" sul telefono, la conferma di \"Oscura\" e gli errori di salvataggio (file aperto in un altro programma, cartella protetta) usavano le finestre del browser o di sistema: ora compaiono nelle finestre dell'app, come tutte le altre domande."
+        },
+        {
+          "tipo": "nuovo",
+          "piattaforme": [
+            "windows",
+            "android",
+            "macos",
+            "linux",
+            "ios"
+          ],
+          "dove": "Tutti gli strumenti",
+          "titolo": "Modifiche non applicate: l'app chiede prima di perderle",
+          "dettaglio": "Se hai modificato qualcosa in uno strumento senza premere \"Applica\" e passi a un altro strumento, cambi documento o lo chiudi, compare la domanda: applicare le modifiche, non applicarle o annullare."
+        },
+        {
+          "tipo": "nuovo",
+          "piattaforme": [
+            "windows",
+            "macos"
+          ],
+          "dove": "Chiusura dell'app",
+          "titolo": "Alla chiusura: salva o applica prima di uscire",
+          "dettaglio": "Chiudendo la finestra con documenti non salvati l'app chiede se salvarli; se ci sono modifiche non applicate in uno strumento chiede se applicarle e salvare prima di uscire."
+        },
+        {
+          "tipo": "modifica",
+          "piattaforme": [
+            "windows",
+            "android",
+            "macos",
+            "linux",
+            "ios"
+          ],
+          "dove": "Schede dei documenti",
+          "titolo": "Chiudendo un documento non salvato puoi salvarlo subito",
+          "dettaglio": "La domanda alla chiusura di una scheda ora offre Salva, Non salvare e Annulla."
+        },
+        {
+          "tipo": "nuovo",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android"
+          ],
+          "dove": "Campanella delle notifiche",
+          "titolo": "Avviso di nuova versione",
+          "dettaglio": "Quando esce una nuova versione di PDFz la campanella la segnala con le novità e il pulsante per scaricarla."
+        },
+        {
+          "tipo": "installer",
+          "piattaforme": [
+            "windows",
+            "android",
+            "macos",
+            "linux",
+            "ios"
+          ],
+          "dove": "Installazione",
+          "titolo": "PDFz si installa come programma nuovo",
+          "dettaglio": "Ha una cartella, un menu Start, associazioni dei file e, sul telefono, un'app tutte sue: non sostituisce altri programmi già installati."
+        }
+      ]
+    }
+  ]
+}

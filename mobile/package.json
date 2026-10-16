@@ -1,0 +1,30 @@
+{
+  "name": "pdfz-mobile",
+  "private": true,
+  "version": "1.0.0",
+  "description": "PDFz per Android e iPhone: interfaccia + motore Python (Pyodide) dentro l'app, funziona offline",
+  "author": "agjin",
+  "scripts": {
+    "web": "cd ../frontend && npm run build:android",
+    "engine": "node scripts/prepare-engine.mjs",
+    "build": "npm run web && npm run engine && npx cap sync android",
+    "open": "npx cap open android",
+    "apk": "npm run build && cd android && (gradlew.bat assembleDebug || ./gradlew assembleDebug)",
+    "serve": "node scripts/serve.mjs",
+    "web:ios": "cd ../frontend && npm run build:ios",
+    "build:ios": "npm run web:ios && npm run engine && npx cap sync ios",
+    "open:ios": "npx cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/filesystem": "^8.1.3",
+    "@capacitor/ios": "^8.5.2",
+    "@capacitor/share": "^8.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
+    "fflate": "^0.8.2"
+  }
+}
