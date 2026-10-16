@@ -33,7 +33,7 @@ node node_modules/vite/bin/vite.js build
 # motore in modalita' server per provare l'interfaccia nel browser (dalla cartella backend; vite dev usa la porta 8765)
 ../.venv/Scripts/python -m hdpdf --server --port 8765
 # marchio: proposte + applicazione di icona e favicon scelti (dalla radice)
-.venv/Scripts/python branding/genera_marchio.py --icona 1 --favicon 1
+.venv/Scripts/python branding/genera_marchio.py --serie 4 --icona 17 --favicon 17
 ```
 
 Build locali: `packaging/build-windows.ps1`, `build-android.ps1`, `build-macos.sh`, `build-linux.sh`, `build-ios.sh`
@@ -78,12 +78,16 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
 
 ## Stato attuale (2026-10-16)
 
-- Versione nel codice: **1.0.0** di PDFz. Nuovo marchio applicato ovunque (icona 1 "Rubino", favicon 1, palette Rubino),
+- Versione nel codice: **1.0.0** di PDFz. Marchio applicato ovunque: **icona e favicon 17 "Foglio oro"** (foglio PDF d'oro
+  su rosso con "PDF" e la "z" piccola, nero solo per le finiture), palette predefinita Rubino,
   5 palette selezionabili, avvisi solo con le finestre dell'app (provati nel browser: Oscura, domanda annidata dopo
   "Applica", Salva con nome Android, errore di salvataggio desktop simulato). Test: 74 passati, 2 saltati.
 - Prova WiX riuscita (MSI e pacchetto lingue compilano con i nomi nuovi); PyInstaller, Gradle, Xcode e AppImage non provati
   dopo il cambio di nome.
 - Codice su GitHub `akito996/pdfz` (ramo `main`, storia nuova che parte dal commit iniziale di PDFz 1.0.0). Nessun tag, nessuna release.
+- Marchio: serie 1 (icone 1-5) scartata dall'utente perché simile a marchi esistenti e tolta dallo script; serie 2
+  (6-10) e 3 (11-15) non scelte ma ancora disponibili; all'utente è piaciuta la 11 ("PDF" a capo, "z" piccola),
+  messa in un foglio PDF nella serie 4 (16-18): scelta e applicata la **17** (inviata su GitHub).
 
 ## Punti aperti
 
@@ -91,7 +95,8 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
    senza, la build Android di un tag si ferma. Conservare la chiave al sicuro: se si perde, i telefoni non accettano gli aggiornamenti.
 2. **Repository pubblico o privato**: l'avviso di nuova versione funziona solo se le release sono pubbliche.
 3. **Primo rilascio**: tag `1.0.0` → pipeline mai verificata fino in fondo su questo repository (Linux e Android mai riusciti prima).
-4. **Scelta definitiva del marchio**: in uso icona 1, favicon 1, palette Rubino; proposte in `branding/proposte/anteprima.png`.
+4. **Verifica dei marchi registrati** per l'icona 17 e il nome PDFz prima di pubblicare (TMview, WIPO Global Brand
+   Database, store: vedi `docs/branding.md`). Un foglio con "PDF" ricorda l'icona generica dei file PDF.
 5. **Firma del codice** assente (Authenticode Windows, notarizzazione Apple): SmartScreen e Gatekeeper mostrano un avviso.
 6. Non provate dopo le modifiche: chiusura nella finestra desktop vera e l'errore di salvataggio con pywebview vero.
 7. Note minori: negli strumenti che producono solo un file (conversioni) cambiare un'opzione e uscire fa comparire la domanda

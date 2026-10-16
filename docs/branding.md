@@ -2,37 +2,93 @@
 
 Aggiornato il 2026-10-16. Nome dell'app: **PDFz**. Autore ed editore: **agjin**.
 
+**In uso: icona e favicon 17 "Foglio oro"** (serie 4): foglio PDF d'oro con l'angolo piegato, su fondo rosso;
+dentro, "PDF" rosso su una riga e sotto, al centro, una "z" rossa piccola; il nero solo nelle finiture (contorno
+sottile, ombra, piega, filo tra "PDF" e "z"). Il favicon è il foglio da solo, senza fondo.
+
 ## Colori del marchio
 
 | Colore | Codice | Dove si usa |
 |---|---|---|
-| Rosso | `#C8102E` | fondo dell'icona, "z" del logo, contatori e avvisi |
-| Oro | `#D4AF37` | angolo piegato della pagina, dettagli |
-| Nero | `#111111` | lettere, Z dell'icona |
-| Bianco | `#FFFFFF` | pagina dell'icona, fondi |
+| Rosso | `#C8102E` | fondo dell'icona, "PDF" e "z" sul foglio, "z" del logo, contatori e avvisi |
+| Oro | `#D4AF37` (piega `#F1D27A`) | foglio PDF dell'icona |
+| Nero | `#111111` | solo finiture: contorno e ombra del foglio, piega, filo; lettere "PDF" del logo |
+| Bianco | `#FFFFFF` | fondi (schermata di avvio, installer) |
 
 Nell'interfaccia il rosso dei pulsanti è un po' più scuro (`#B3122B`): il testo bianco si legge meglio (contrasto 6,9:1).
 
-## Icone e favicon: 5 proposte ciascuno
+## Icone e favicon
 
-Anteprima di tutte le proposte, alle varie dimensioni e su fondo chiaro e scuro: [`branding/proposte/anteprima.png`](../branding/proposte/anteprima.png).
-I disegni originali sono in `branding/proposte/icona-N.svg` e `favicon-N.svg`.
+Le proposte sono a **serie** di 5 icone, ognuna con il suo favicon (stesso numero). I disegni originali sono in
+`branding/proposte/icona-N.svg` e `favicon-N.svg`; ogni serie ha la sua anteprima, alle varie dimensioni e su fondo
+chiaro e scuro.
+
+### Serie 4 (2026-10-16): la 11 dentro un foglio PDF — scelta la 17
+
+Anteprima: [`branding/proposte/anteprima-serie-4.png`](../branding/proposte/anteprima-serie-4.png).
+Richiesta: l'icona 11 ("PDF" su una riga, sotto al centro la "z" piccola) dentro l'icona di un file PDF, con più rosso
+e oro; il nero solo per le finiture (contorno sottile, ombra, piega, filo tra "PDF" e "z"). Tre varianti di colore;
+il favicon è il foglio da solo, senza fondo, così nelle schede del browser si vede come un file.
 
 | N. | Icona | Favicon |
 |---|---|---|
-| 1 | **Rubino** (in uso): pagina bianca con angolo oro e Z nera su rosso | **Z bianca su rosso** (in uso) |
-| 2 | Onice: monogramma Z oro con punto rosso su nero | Z oro su nero |
-| 3 | Sigillo: timbro rosso con anello oro e Z bianca su bianco | Z nera su oro |
-| 4 | Fulmine: diagonale nero/rosso, Z bianca con base oro | Sigillo rosso con anello oro |
-| 5 | Scritta: "PDF" nero e "z" rossa su oro | Diagonale nero/rosso con Z bianca |
+| 16 | **Foglio rosso**: foglio PDF rosso su fondo oro, "PDF" e "z" in oro chiaro | foglio rosso, scritte oro |
+| 17 | **Foglio oro** (in uso): foglio PDF d'oro su fondo rosso, "PDF" e "z" rossi | **foglio d'oro, scritte rosse** (in uso) |
+| 18 | **Cornice d'oro**: foglio PDF rosso con bordo d'oro su fondo rosso scuro, "PDF" e "z" in oro | foglio rosso con bordo d'oro |
 
-Perché la 1 come predefinita: la pagina con l'angolo piegato si riconosce subito come "documento", e la Z si legge
-anche a 32 px. Il favicon 1 è la stessa idea semplificata per le schede del browser (16 px).
+Nota: un foglio con la scritta "PDF" ricorda l'icona generica dei file PDF usata da molti programmi; la "z", l'oro e il
+filo nero lo distinguono, ma la verifica dei marchi (sotto) resta necessaria.
+
+### Serie 3 (2026-10-16): non scelta (la 11 è diventata la serie 4)
+
+Anteprima: [`branding/proposte/anteprima-serie-3.png`](../branding/proposte/anteprima-serie-3.png).
+La 11 è quella richiesta: "PDF" su una riga e sotto, al centro, una "z" piccola.
+
+| N. | Icona | Favicon | Idea |
+|---|---|---|---|
+| 11 | **A capo**: "PDF" bianco su una riga, filo d'oro e sotto, al centro, una "z" rossa piccola, su nero | PDF e z a capo | il nome scritto su due righe |
+| 12 | **Evidenziato**: righe di testo in cui le parti evidenziate in rosso disegnano una z, su bianco con bordo d'oro | z evidenziata | evidenziare e annotare il testo |
+| 13 | **Cucitura**: foglio bianco con una z cucita a punti rossi e il filo d'oro, su nero | foglio con la z cucita | unire i documenti |
+| 14 | **Goccia**: goccia d'inchiostro rossa con la z bianca, su oro | goccia rossa con la z | l'inchiostro della firma (attenzione: una goccia rossa ricorda anche le app sul sangue) |
+| 15 | **Ventaglio**: tre fogli aperti a ventaglio, nero, oro e bianco, con la z rossa, su rosso | tre fogli a ventaglio | più documenti insieme |
+
+### Serie 2 (2026-10-16): non scelta
+
+Anteprima: [`branding/proposte/anteprima-serie-2.png`](../branding/proposte/anteprima-serie-2.png).
+Idee lontane dai cliché delle app PDF, legate al nome e alle funzioni dell'app.
+
+| N. | Icona | Favicon | Idea |
+|---|---|---|---|
+| 6 | **Legatura**: "p" e "z" bianche unite sulla stessa base, su rosso, piede d'oro | "pz" bianca su rosso | monogramma che esiste solo per il nome PDFz |
+| 7 | **Controforma**: P nera con una "z" rossa al posto del buco, su bianco | P nera con la z rossa | P di PDF + z nello stesso segno |
+| 8 | **Taglio**: foglio diviso da un taglio a Z, parte bianca e parte oro, su nero | foglio tagliato a Z | dividere e unire i PDF |
+| 9 | **Pennino**: pennino d'oro con il foro a forma di z rossa, su nero | pennino d'oro | firma dei documenti |
+| 10 | **Piega**: foglio piegato a fisarmonica, bianco e oro con righe di testo, su rosso | piega a Z | la "piega a Z" della carta |
+
+Le serie 2 e 3 restano nello script come alternative: si possono applicare con lo stesso comando.
+
+### Serie 1 (2026-10-16): scartata
+
+Anteprima: [`branding/proposte/anteprima-serie-1.png`](../branding/proposte/anteprima-serie-1.png).
+Scartata perché troppo simile a marchi esistenti: pagina con l'angolo piegato, lettera dentro un quadrato, sigillo e
+diagonale sono idee molto usate. Icone 1-5: Rubino, Onice, Sigillo, Fulmine, Scritta. Tolte dallo script dopo la
+scelta della 17: restano solo l'anteprima e i disegni SVG in `branding/proposte/`.
+
+### Prima di adottare un marchio: verifica dei marchi già registrati
+
+Un disegno nuovo può comunque assomigliare a un marchio registrato: va controllato prima di pubblicare l'app.
+
+- 💎 **Prestazione**: ricerca di anteriorità fatta da un consulente in proprietà industriale (marchi UE, nazionali e
+  internazionali, anche figurativi), poi deposito del marchio all'EUIPO.
+- ⚖️ **Qualità/Prezzo**: servizio online di ricerca marchi con confronto delle immagini, poi deposito in proprio all'EUIPO.
+- 🆓 **Economica/Gratuita**: ricerca in proprio su [TMview](https://www.tmdn.org/tmview/) (marchi UE e nazionali,
+  anche per immagine), [WIPO Global Brand Database](https://branddb.wipo.int/) (ricerca per immagine) e negli store
+  (Google Play, App Store) per le parole "PDFz" e "PDF z".
 
 ### Cambiare icona o favicon
 
 ```bash
-.venv/Scripts/python branding/genera_marchio.py --icona 2 --favicon 2
+.venv/Scripts/python branding/genera_marchio.py --icona 17 --favicon 17
 ```
 
 Lo script (`branding/genera_marchio.py`) è l'unica fonte del disegno: forme geometriche, nessun carattere esterno,
@@ -48,7 +104,7 @@ quindi nessuna licenza da rispettare. Scrive tutti i file, nelle dimensioni gius
 
 Dopo il cambio: ricompilare (le build copiano i file da qui).
 
-Senza argomenti lo script rifà solo le proposte e l'anteprima. Limite noto: il motore SVG di PyMuPDF non gestisce
+Senza argomenti lo script rifà solo le proposte e l'anteprima dell'ultima serie (`--serie 2` o `3` per le precedenti). Limite noto: il motore SVG di PyMuPDF non gestisce
 sfumature né `clipPath`, per questo il disegno è piatto e le forme tagliate sono calcolate nello script.
 
 ## Temi colore: 5 palette
