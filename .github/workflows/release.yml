@@ -290,6 +290,8 @@ jobs:
             # cosi' l'avviso non punta mai a un file che non c'e' ancora
             gh release upload "$GITHUB_REF_NAME" assets/* --clobber
             gh release upload "$GITHUB_REF_NAME" updates/versione-*.json --clobber
+            # le note seguono i sistemi presenti (es. dopo il Re-run che aggiunge Android sparisce "Non ancora disponibile")
+            gh release edit "$GITHUB_REF_NAME" --notes-file notes.md
           else
             # gh crea la release come bozza, carica tutti i file e solo alla fine la pubblica:
             # releases/latest/download/ passa alla nuova versione solo quando ci sono tutti i file

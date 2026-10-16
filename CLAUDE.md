@@ -86,17 +86,23 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   "Applica", Salva con nome Android, errore di salvataggio desktop simulato). Test: 74 passati, 2 saltati.
 - Prova WiX riuscita (MSI e pacchetto lingue compilano con i nomi nuovi); PyInstaller, Gradle, Xcode e AppImage non provati
   dopo il cambio di nome.
-- Codice su GitHub `akito996/pdfz` (ramo `main`, storia nuova che parte dal commit iniziale di PDFz 1.0.0). Nessun tag, nessuna release.
+- Codice su GitHub `akito996/pdfz` (ramo `main`, storia nuova che parte dal commit iniziale di PDFz 1.0.0).
+- **Release v1.0.0 pubblicata** (2026-10-16, pipeline riuscita in 12 minuti): Windows (MSI + 2 MSI lingue), macOS arm64 (DMG),
+  Linux (AppImage) e i `versione-*.json`. **Android aggiunto** con "Re-run all jobs" dopo la chiave: APK firmato con la chiave
+  di PDFz (61,6 MB, verificato nel registro della pipeline); note della release corrette. iPhone: nessuna build;
+  si prepara una web app da aggiungere alla Home (sessione separata). Installer non provati su macchine vere.
 - Marchio: serie 1 (icone 1-5) scartata dall'utente perché simile a marchi esistenti e tolta dallo script; serie 2
   (6-10) e 3 (11-15) non scelte ma ancora disponibili; all'utente è piaciuta la 11 ("PDF" a capo, "z" piccola),
   messa in un foglio PDF nella serie 4 (16-18): scelta e applicata la **17** (inviata su GitHub).
 
 ## Punti aperti
 
-1. **Chiave di firma Android** `pdfz-release.jks` da creare (comando in `docs/build-e-test.md`) e secrets GitHub da impostare:
-   senza, la build Android di un tag si ferma. Conservare la chiave al sicuro: se si perde, i telefoni non accettano gli aggiornamenti.
+1. **Copia di riserva della chiave Android**: `C:\Dev\PDFz-chiave-android` (`pdfz-release.jks` + `password.txt`, creata
+   il 2026-10-16, impronta SHA-256 `2D:2F:3F:BC:…:A6:83:D3:D6`, valida fino al 2054) va copiata in un posto sicuro;
+   `keystore-base64.txt` si può cancellare. Secrets GitHub già impostati.
 2. **Repository pubblico o privato**: l'avviso di nuova versione funziona solo se le release sono pubbliche.
-3. **Primo rilascio**: tag `1.0.0` → pipeline mai verificata fino in fondo su questo repository (Linux e Android mai riusciti prima).
+3. **Web app per iPhone** pronta sul ramo `claude/heuristic-austin-71ab67` (commit 79f9323, sessione separata): non ancora
+   unita in `pdfz`/`main` né pubblicata; con repository privato niente GitHub Pages (vedi `docs/web-app-iphone.md` sul ramo).
 4. **Verifica dei marchi registrati** per l'icona 17 e il nome PDFz prima di pubblicare (TMview, WIPO Global Brand
    Database, store: vedi `docs/branding.md`). Un foglio con "PDF" ricorda l'icona generica dei file PDF.
 5. **Firma del codice** assente (Authenticode Windows, notarizzazione Apple): SmartScreen e Gatekeeper mostrano un avviso.
