@@ -512,6 +512,46 @@ def test_rotated_page_visual_coordinates():
     assert r.x0 < 60 and r.y0 < 60, r
 
 
+def _riga_da_modificare(src, testo):
+    return next(s for s in run("text_spans", src, page=0)["data"]["spans"] if s["text"] == testo)
+
+
+def test_text_edit_keeps_close_lines():
+    """Modifica testo cancella solo le lettere della riga: le righe vicine restano anche se molto fitte
+    (con caratteri dall'ascendente alto il riquadro della riga copriva le righe accanto, che sparivano)."""
+    d0 = pymupdf.open()
+    p = d0.new_page()
+    p.insert_text((72, 89), "Riga sopra fitta", fontsize=12)
+    p.insert_text((72, 100), "Riga da cambiare", fontsize=12)
+    p.insert_text((72, 110), "Riga sotto fitta", fontsize=12)
+    src = open_doc(d0.tobytes())["id"]
+    s = _riga_da_modificare(src, "Riga da cambiare")
+    edit = {"page": 0, "bbox": s["bbox"], "origin": s["origin"], "text": "Riga cambiata grande", "font": "tiro",
+            "size": 20, "color": "#000000", "original_font": s["font"]}
+    righe = [r.strip() for r in load(run("edit_text", src, edits=[edit])["doc"]["id"])[0].get_text().splitlines()]
+    assert "Riga sopra fitta" in righe and "Riga sotto fitta" in righe
+    assert "Riga cambiata grande" in righe and "Riga da cambiare" not in righe
+    # per l'anteprima: riquadro stretto delle lettere, dentro quello della riga
+    assert s["bbox"][1] <= s["ink"][1] and s["ink"][3] <= s["bbox"][3]
+
+
+@pytest.mark.parametrize("rot", [90, 180, 270])
+def test_text_edit_keeps_direction_on_rotated_page(rot):
+    """Pagina ruotata con il testo scritto in un altro verso: il testo riscritto mantiene la direzione
+    dell'originale (prima andava al contrario e la fine usciva dal foglio: «Riga cambiat»)."""
+    d0 = pymupdf.open()
+    p = d0.new_page()
+    p.insert_text((72, 100), "Riga originale", fontsize=12)
+    p.insert_text((72, 140), "Altra riga sotto", fontsize=12)
+    p.set_rotation(rot)
+    src = open_doc(d0.tobytes())["id"]
+    s = _riga_da_modificare(src, "Riga originale")
+    edit = {"page": 0, "bbox": s["bbox"], "origin": s["origin"], "text": "Riga originale molto piu lunga",
+            "font": "original", "size": s["size"], "color": "#000000", "original_font": s["font"]}
+    righe = [r.strip() for r in load(run("edit_text", src, edits=[edit])["doc"]["id"])[0].get_text().splitlines()]
+    assert "Riga originale molto piu lunga" in righe and "Altra riga sotto" in righe
+
+
 def test_text_edit_wrap_and_move(doc):
     spans = run("text_spans", doc, page=0)["data"]["spans"]
     line = next(s for s in spans if s["text"].startswith("Documento di prova"))
@@ -798,3 +838,7 @@ def test_scheda_spostata_si_ritira_una_volta():
     assert client.get(f"/api/schede/{b}").status_code == 404     # già ritirata
     assert client.get("/api/schede/inventato").status_code == 404
     assert client.post("/api/schede", json={"history": ["x" * 300_000]}).status_code == 413
+    # trascinamento finito senza che nessuna finestra la prenda: la finestra di partenza la butta
+    b = client.post("/api/schede", json=scheda).json()["biglietto"]
+    assert client.delete(f"/api/schede/{b}").status_code == 200
+    assert client.get(f"/api/schede/{b}").status_code == 404

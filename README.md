@@ -43,7 +43,8 @@ e il pulsante Scarica. Le novità di ogni versione sono in `CHANGELOG.md`.
 Inoltre: menu strumenti con **Preferiti**, etichette e sezioni comprimibili; tema chiaro/scuro/sistema e **5 temi colore**
 (Rubino, Oro, Onice, Avorio, Bordeaux) dal menu **Tema**; pannello **download** in alto a destra (come in Chrome) con i file
 salvati e convertiti; schede multiple (con 2 o più schede, una scheda trascinata fuori dalla finestra, o "Sposta in una
-nuova finestra" dal tasto destro, si apre in una finestra nuova; trascinata su un'altra scheda cambia posto); annulla/ripeti illimitato (<kbd>Ctrl</kbd>+<kbd>Z</kbd>/<kbd>Y</kbd>); ricerca nel testo;
+nuova finestra" dal tasto destro, si apre in una finestra nuova; trascinata su un'altra finestra di PDFz passa lì, e
+"Riunisci qui le altre finestre" le riporta tutte in una; trascinata su un'altra scheda cambia posto); annulla/ripeti illimitato (<kbd>Ctrl</kbd>+<kbd>Z</kbd>/<kbd>Y</kbd>); ricerca nel testo;
 miniature; stampa; apertura di PDF protetti; "Apri con" da Esplora file; istanza singola.
 
 Le conversioni Office usano **Microsoft Office** se è installato (massima fedeltà); se manca, LibreOffice;

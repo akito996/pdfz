@@ -23,6 +23,24 @@ def _vis(page: pymupdf.Page, r) -> list[float]:
     return [round(v, 2) for v in rr]
 
 
+def _rotazione(d: pymupdf.Point) -> int | None:
+    """Rotazione di insert_text che scrive nella direzione d (solo multipli di 90°; None per righe oblique)."""
+    for rot, (dx, dy) in ((0, (1, 0)), (90, (0, -1)), (180, (-1, 0)), (270, (0, 1))):
+        if abs(d.x - dx) < 0.05 and abs(d.y - dy) < 0.05:
+            return rot
+    return None
+
+
+def _fascia(r: pymupdf.Rect, origin: pymupdf.Point, d: pymupdf.Point, size: float, da: float, a: float) -> pymupdf.Rect:
+    """Fascia lunga quanto la riga r, da «da» ad «a» volte il corpo sopra la linea di base (verso la parte alta delle
+    lettere). Coordinate interne; d = direzione della riga."""
+    su = pymupdf.Point(d.y, -d.x)   # verso la parte alta delle lettere
+    p, q = origin + su * (size * da), origin + su * (size * a)
+    if abs(d.x) >= abs(d.y):   # riga orizzontale
+        return pymupdf.Rect(r.x0, min(p.y, q.y), r.x1, max(p.y, q.y))
+    return pymupdf.Rect(min(p.x, q.x), r.y0, max(p.x, q.x), r.y1)
+
+
 def write_lines(page: pymupdf.Page, box: pymupdf.Rect, text: str, font_id: str, size: float,
                 col, opacity: float = 1.0, align: str = "left", line_spacing: float = 1.2,
                 angle: float = 0, wrap: bool = True, font_override=None) -> float:
@@ -108,6 +126,10 @@ def text_spans(ctx: Ctx) -> Result:
                 if sp["text"].strip():
                     bbox |= pymupdf.Rect(sp["bbox"])
             first = next(sp for sp in spans if sp["text"].strip())
+            # riquadro stretto delle lettere: quello della riga dipende da ascendente e discendente dichiarati dal
+            # carattere (in alcuni font più del doppio del corpo) e coprirebbe le righe vicine nell'anteprima
+            corpo = max(sp["size"] for sp in spans)
+            ink = _fascia(bbox, pymupdf.Point(first["origin"]), pymupdf.Point(line["dir"]), corpo, -0.3, 1.0) & bbox
             out.append({
                 "id": f"{b['number']}-{li}",
                 "text": text.strip(),
@@ -118,6 +140,7 @@ def text_spans(ctx: Ctx) -> Result:
                 "color": "#%06x" % main["color"],
                 "flags": main["flags"],
                 "dir": list(line["dir"]),
+                "ink": _vis(pg, ink if not ink.is_empty else bbox),
                 "suggested_font": fonts.match_system_font(main["font"], main["flags"]),
             })
     doc.close()
@@ -142,6 +165,73 @@ def _original_font(doc: pymupdf.Document, page: pymupdf.Page, fontname: str, tex
     return None
 
 
+def _righe(pg: pymupdf.Page) -> list[dict]:
+    """Righe della pagina come le elenca text_spans: riquadro (senza spazi ai lati), direzione, linea di base della
+    prima parte scritta e corpo più grande. Coordinate interne."""
+    out = []
+    for b in pg.get_text("dict", flags=pymupdf.TEXT_PRESERVE_WHITESPACE)["blocks"]:
+        for line in b.get("lines", []):
+            spans = [sp for sp in line["spans"] if sp["text"].strip()]
+            if not spans:
+                continue
+            r = pymupdf.Rect()
+            for sp in spans:
+                r |= pymupdf.Rect(sp["bbox"])
+            out.append({"bbox": r, "dir": pymupdf.Point(line["dir"]), "origin": pymupdf.Point(spans[0]["origin"]),
+                        "size": max(sp["size"] for sp in spans)})
+    return out
+
+
+def _riga_di(pg: pymupdf.Page, e: dict, righe: list[dict]) -> dict | None:
+    """La riga del documento che si sta modificando: quella con lo stesso riquadro."""
+    r = rect_from(e["bbox"], pg)
+    return next((x for x in righe if all(abs(u - v) < 1 for u, v in zip(x["bbox"], r))), None)
+
+
+def _scansa(f: pymupdf.Rect, oriz: bool, altre: list[pymupdf.Rect]) -> pymupdf.Rect:
+    """Toglie dalla fascia la parte che tocca i riquadri di altre righe (righe molto fitte o con caratteri «alti»),
+    se ne resta un pezzo: ogni lettera della riga lo tocca comunque."""
+    pezzi = [(f.y0, f.y1) if oriz else (f.x0, f.x1)]
+    for o in altre:
+        if not f.intersects(o):
+            continue
+        l0, l1 = (o.y0, o.y1) if oriz else (o.x0, o.x1)
+        resto = []
+        for p0, p1 in pezzi:
+            if l1 <= p0 or l0 >= p1:
+                resto.append((p0, p1))
+                continue
+            if l0 > p0:
+                resto.append((p0, l0))
+            if l1 < p1:
+                resto.append((l1, p1))
+        pezzi = resto
+    pezzi = [x for x in pezzi if x[1] - x[0] > 0.2]
+    if not pezzi:
+        return f   # righe sovrapposte davvero: non si può evitare
+    p0, p1 = max(pezzi, key=lambda x: x[1] - x[0])
+    return pymupdf.Rect(f.x0, p0, f.x1, p1) if oriz else pymupdf.Rect(p0, f.y0, p1, f.y1)
+
+
+def _area_da_cancellare(pg: pymupdf.Page, e: dict, riga: dict | None, righe: list[dict]) -> pymupdf.Rect:
+    """Area con cui si cancella la riga originale (coordinate interne). MuPDF toglie ogni lettera il cui riquadro la
+    tocca: basta una fascia sottile all'altezza delle minuscole. Non si usa il riquadro intero della riga: la sua
+    altezza dipende da ascendente e discendente dichiarati dal carattere, che in alcuni font (Segoe Print, Javanese
+    Text…) valgono più del doppio del corpo, e cancellerebbe anche le righe vicine.
+    Direzione, linea di base e corpo si prendono dalla riga nel documento (_riga_di)."""
+    r = rect_from(e["bbox"], pg)
+    if riga:
+        d, origin, corpo = riga["dir"], riga["origin"], riga["size"]
+        oriz = abs(d.x) >= abs(d.y)
+        f = _fascia(r, origin, d, corpo, 0.1, 0.6) & r
+        if not f.is_empty:
+            f += (0.3, 0, -0.3, 0) if oriz else (0, 0.3, 0, -0.3)
+            return _scansa(f, oriz, [x["bbox"] for x in righe if x is not riga])
+    # riga non trovata: riquadro ristretto un poco (vecchio metodo)
+    shrink = min(r.height * 0.2, 1.5)
+    return r + (0.3, shrink, -0.3, -shrink)
+
+
 @tool("edit_text")
 def edit_text(ctx: Ctx) -> Result:
     """params.edits: [{page, bbox (visivo, testo originale), origin, rect (nuova casella, facoltativa),
@@ -158,14 +248,16 @@ def edit_text(ctx: Ctx) -> Result:
         by_page.setdefault(int(e["page"]), []).append(e)
     for pno, items in by_page.items():
         pg = doc[pno]
-        for e in items:
-            r = rect_from(e["bbox"], pg)
-            # restringe leggermente il box per non toccare righe adiacenti
-            shrink = min(r.height * 0.2, 1.5)
-            pg.add_redact_annot(r + (0.3, shrink, -0.3, -shrink), fill=False)
+        righe = _righe(pg)
+        dirs = {}
+        for i, e in enumerate(items):
+            riga = _riga_di(pg, e, righe)
+            pg.add_redact_annot(_area_da_cancellare(pg, e, riga, righe), fill=False)
+            if riga:
+                dirs[i] = riga["dir"]
         pg.apply_redactions(images=pymupdf.PDF_REDACT_IMAGE_NONE,
                             graphics=pymupdf.PDF_REDACT_LINE_ART_NONE)
-        for e in items:
+        for i, e in enumerate(items):
             text = (e.get("text") or "").rstrip()
             if not text.strip():
                 continue
@@ -197,7 +289,11 @@ def edit_text(ctx: Ctx) -> Result:
                     size = max(size * orig_box.width / tw, size * 0.6)
                 p = point_from(e["origin"], pg) if e.get("origin") else \
                     pymupdf.Point(orig_box.x0, orig_box.y1 - size * 0.22) * pg.derotation_matrix
-                pg.insert_text(p, text, fontname=fontname, fontsize=size, color=col, rotate=pg.rotation)
+                # stessa direzione della riga originale: su una pagina ruotata il testo può essere scritto in un
+                # verso diverso da quello della pagina e, riscritto al contrario, finirebbe fuori dal foglio
+                rot = _rotazione(dirs[i]) if i in dirs and e.get("origin") else None
+                pg.insert_text(p, text, fontname=fontname, fontsize=size, color=col,
+                               rotate=pg.rotation if rot is None else rot)
             elif not wrap:
                 # casella spostata ma testo su una riga: stessa riga, nuova posizione
                 write_lines(pg, new_box, text, font_id, size, col, align=e.get("align", "left"),

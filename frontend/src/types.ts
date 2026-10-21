@@ -12,6 +12,9 @@ export interface Span {
   color: string;
   flags: number;
   suggested_font: string;
+  dir?: [number, number];
+  /** riquadro stretto delle lettere (quello della riga può essere molto più alto, secondo il carattere) */
+  ink?: [number, number, number, number];
 }
 
 export interface SpanEdit {

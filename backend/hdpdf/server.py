@@ -473,6 +473,11 @@ def create_app(require_token: bool = False) -> FastAPI:
         schede[k] = (now, payload)
         return {"biglietto": k}
 
+    @app.delete("/api/schede/{biglietto}")
+    def scheda_butta(biglietto: str):
+        schede.pop(biglietto, None)
+        return {"ok": True}
+
     @app.get("/api/schede/{biglietto}")
     def scheda_ritira(biglietto: str):
         v = schede.pop(biglietto, None)

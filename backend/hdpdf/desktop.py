@@ -91,8 +91,9 @@ class Api:
         """La UI ha deciso di chiudere la finestra (dopo aver salvato o scelto di non salvare). Chiude solo questa
         finestra: l'app termina quando si chiude l'ultima."""
         self._quit_ok = True
-        # in un thread: destroy() dentro una chiamata da JavaScript bloccherebbe la finestra
-        threading.Thread(target=self._window.destroy, daemon=True, name="quit").start()
+        # in un thread e un attimo dopo: destroy() dentro una chiamata da JavaScript bloccherebbe la finestra, e
+        # pywebview deve ancora rispondere alla pagina (altrimenti scrive un errore sulla finestra già eliminata)
+        threading.Timer(0.3, self._window.destroy).start()
         return True
 
     # --- finestre di dialogo native

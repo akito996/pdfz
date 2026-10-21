@@ -95,7 +95,7 @@ export function EditTextPanel({ def, onClose }: { def: ToolDef; onClose: () => v
   const startEdit = (page: number, span: Span) => {
     const [x0, y0, x1, y1] = span.bbox;
     const o: PageObject = {
-      id: `e${seq++}`, page, kind: "text", cover: true, autoHeight: true, autoWidth: true,
+      id: `e${seq++}`, page, kind: "text", autoHeight: true, autoWidth: true,
       rect: { x: x0 - 1, y: y0 - 1, w: x1 - x0 + 2, h: y1 - y0 + 2 },
       text: span.text, fontId: span.suggested_font, size: span.size, color: span.color, align: "left",
       meta: { span, spanKey: `${page}:${span.id}`, fontChoice: "original", minW: x1 - x0 + 2, orig: { x: x0 - 1, y: y0 - 1 } },
@@ -121,10 +121,11 @@ export function EditTextPanel({ def, onClose }: { def: ToolDef; onClose: () => v
     });
   }, [objects, selectedId, visibleSpans, app.fontStyle]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => app.setInteraction({ mode: "none" }), []); // eslint-disable-line react-hooks/exhaustive-deps
-  // casella spostata: nell'anteprima il testo originale sparisce dal suo posto (come avverrà applicando)
+  // anteprima: il testo originale sparisce dal suo posto (come avverrà applicando). Si copre solo il riquadro delle
+  // lettere: la casella è trasparente, così un testo più grande o un altro carattere non nasconde le righe vicine
   useEffect(() => {
-    app.setOverlays(objects.filter((o) => Math.abs(o.rect.x - o.meta.orig.x) > 1 || Math.abs(o.rect.y - o.meta.orig.y) > 1).map((o) => {
-      const [x0, y0, x1, y1] = o.meta.span.bbox as number[];
+    app.setOverlays(objects.map((o) => {
+      const [x0, y0, x1, y1] = (o.meta.span.ink || o.meta.span.bbox) as number[];
       return { id: `orig-${o.id}`, page: o.page, kind: "fill" as const, rect: { x: x0 - 1, y: y0 - 1, w: x1 - x0 + 2, h: y1 - y0 + 2 },
         style: { background: "#fff", border: "none", opacity: 1 } };
     }));

@@ -2,7 +2,7 @@ import { TabsMenu } from "./components/TabsMenu";
 import { OpenMenu, PhotoScan } from "./components/PhotoScan";
 import { useIsMobile, useMedia } from "./panels/fields";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AppWindow, ChevronUp, FolderOpen, Menu, Printer, Redo2, Save, Undo2, X, FilePlus2, Lock } from "lucide-react";
+import { AppWindow, ChevronUp, FolderOpen, Menu, Merge, Printer, Redo2, Save, Undo2, X, FilePlus2, Lock } from "lucide-react";
 import { api, desktop, download, humanSize, isLocalEngine, onDesktopError, type Capabilities, type DocInfo, type FontInfo, type ToolResponse } from "./api";
 import { loadPdf, pageSizes, type PDFDoc, type PageSize } from "./pdf";
 import { Ctx, type AppCtx, type Pending, type Tab } from "./context";
@@ -20,14 +20,16 @@ import { sendToCreatePdf } from "./panels/createInbox";
 import { Popover } from "./components/Popover";
 import { ThemeMenu, useTheme } from "./components/ThemeMenu";
 import { Notifiche } from "./components/Notifiche";
-import { useStored } from "./hooks";
+import { useEvent, useStored } from "./hooks";
+import { MIA_FINESTRA, ascolta, invia, type Messaggio } from "./finestre";
 import { aggiungiMessaggio } from "./messaggi";
 
 interface Toast { id: number; msg: string; kind: "ok" | "err" | "info" }
 
 let tabSeq = 0;
-// tipo dei dati trascinati quando si sposta una scheda (riordino o nuova finestra)
+// tipo dei dati trascinati quando si sposta una scheda (riordino, nuova finestra, altra finestra di PDFz)
 const TAB_DRAG = "application/x-pdfz-tab";
+const datiScheda = (t: Tab) => ({ history: t.history, index: t.index, savedIndex: t.savedIndex, savedPath: t.savedPath, password: t.password });
 let dialogSeq = 0;
 const loadedFonts = new Set<string>();
 const isDirtyTab = (t: Tab) => t.index !== t.savedIndex && t.history.length > 1;
@@ -452,12 +454,15 @@ export default function App() {
   });
 
   // Scheda spostata in una nuova finestra (trascinata fuori dalla finestra o dal menu del tasto destro), con almeno
-  // 2 schede aperte. Il documento passa così com'è: modifiche non salvate, Annulla/Ripeti, percorso e password.
-  // I dati vanno al motore, che dà un biglietto da usare una volta sola; la nuova finestra lo ritira all'avvio.
+  // 2 schede aperte, oppure in un'altra finestra di PDFz già aperta (trascinata lì: vedi finestre.ts).
+  // Il documento passa così com'è: modifiche non salvate, Annulla/Ripeti, percorso e password.
+  // I dati vanno al motore, che dà un biglietto da usare una volta sola; la finestra di arrivo lo ritira.
   // Nell'app Android c'è una sola finestra.
+  const [altre, setAltre] = useState<string[]>([]);   // altre finestre di PDFz aperte
   const canDetach = !isLocalEngine() && tabs.length >= 2;
-  const moveToNewWindow = async (key: string, at?: { x: number; y: number }) => {
-    if (key === active) {
+  const canDrag = !isLocalEngine() && (tabs.length >= 2 || altre.length > 0);
+  const moveToNewWindow = async (key: string, at?: { x: number; y: number }, gia?: string) => {
+    if (key === active && !gia) {
       const hadPending = !!pendingRef.current;
       if (!(await resolvePending())) return;
       if (hadPending) await nextCommit();   // la versione appena applicata deve essere nella scheda che si sposta
@@ -465,7 +470,7 @@ export default function App() {
     const t = tabsRef.current.find((x) => x.key === key);
     if (!t) return;
     try {
-      const biglietto = await api.depositaScheda({ history: t.history, index: t.index, savedIndex: t.savedIndex, savedPath: t.savedPath, password: t.password });
+      const biglietto = gia || await api.depositaScheda(datiScheda(t));
       const opened = desktop.available() ? await desktop.newWindow(`scheda=${biglietto}`) : openBrowserWindow(biglietto, at);
       if (!opened) {
         if (!desktop.available()) notify("Nuova finestra bloccata", "Il browser non ha aperto la nuova finestra: consenti le finestre a comparsa per PDFz e riprova.");
@@ -489,6 +494,20 @@ export default function App() {
   const [tabMenu, setTabMenu] = useState<string | null>(null);
   const tabMenuAnchor = useRef<HTMLElement | null>(null);
 
+  /** Ritira dal motore una scheda arrivata da un'altra finestra e la apre qui. */
+  const prendiScheda = async (biglietto: string) => {
+    try {
+      const s = await api.ritiraScheda(biglietto);
+      if (!Array.isArray(s.history) || !s.history[s.index]) throw new Error("La scheda spostata non è valida.");
+      const key = `t${++tabSeq}`;
+      setTabs((ts) => [...ts, { key, history: s.history, index: s.index, savedIndex: s.savedIndex, savedPath: s.savedPath, password: s.password }]);
+      setActive(key);
+      setCurrentPage(0);
+    } catch (e: any) {
+      toast(e.message, "err");
+    }
+  };
+
   // finestra aperta da una scheda spostata: ritira la scheda (una sola volta) e toglie il biglietto dall'indirizzo
   useEffect(() => {
     const q = new URLSearchParams(location.search);
@@ -497,13 +516,77 @@ export default function App() {
     q.delete("scheda");
     const rest = q.toString();
     window.history.replaceState(null, "", `${location.pathname}${rest ? `?${rest}` : ""}${location.hash}`);
-    api.ritiraScheda(biglietto).then((s) => {
-      if (!Array.isArray(s.history) || !s.history[s.index]) throw new Error("La scheda spostata non è valida.");
-      const key = `t${++tabSeq}`;
-      setTabs((ts) => [...ts, { key, history: s.history, index: s.index, savedIndex: s.savedIndex, savedPath: s.savedPath, password: s.password }]);
-      setActive(key);
-      setCurrentPage(0);
-    }).catch((e) => toast(e.message, "err"));
+    prendiScheda(biglietto);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---- schede fra finestre già aperte (finestre.ts)
+  // trascino: scheda che sta uscendo da questa finestra; inArrivo: scheda che un'altra finestra sta trascinando;
+  // cedute: biglietto → scheda di questa finestra consegnata a un'altra (si toglie quando l'altra la prende)
+  const trascino = useRef<{ key: string; biglietto?: string; presa: boolean } | null>(null);
+  const inArrivo = useRef<string | null>(null);
+  const cedute = useRef(new Map<string, string>());
+  const [dropScheda, setDropScheda] = useState(false);
+  const chiudiFinestra = () => {
+    if (desktop.available()) window.pywebview!.api.quit();
+    else window.close();   // nel browser si chiudono solo le finestre aperte dall'app
+  };
+  /** Un'altra finestra ha preso una scheda di questa: la scheda si toglie; senza più schede la finestra si chiude. */
+  const schedaCeduta = (biglietto: string) => {
+    if (trascino.current?.biglietto === biglietto) trascino.current.presa = true;
+    const key = cedute.current.get(biglietto);
+    if (!key) return;
+    cedute.current.delete(biglietto);
+    dropTab(key);
+    setTimeout(() => { if (!tabsRef.current.length && !pendingRef.current) chiudiFinestra(); }, 300);
+  };
+  /** "Riunisci": tutte le schede di questa finestra vanno nella finestra «verso». */
+  const cediTutte = async (verso: string) => {
+    const hadPending = !!pendingRef.current;
+    if (!(await resolvePending())) return;   // l'utente ha scelto di restare: questa finestra resta com'è
+    if (hadPending) await nextCommit();
+    const biglietti: string[] = [];
+    for (const t of tabsRef.current) {
+      try {
+        const b = await api.depositaScheda(datiScheda(t));
+        cedute.current.set(b, t.key);
+        biglietti.push(b);
+      } catch (e: any) { toast(e.message, "err"); }
+    }
+    if (biglietti.length) invia({ tipo: "consegna", da: MIA_FINESTRA, verso, biglietti });
+    else if (!tabsRef.current.length) chiudiFinestra();
+  };
+  /** Scheda di un'altra finestra lasciata qui: si avvisa subito l'altra finestra (che la toglie) e si ritira. */
+  const arrivaScheda = async () => {
+    for (let i = 0; i < 30 && !inArrivo.current; i++) await new Promise((r) => setTimeout(r, 50));   // biglietto in viaggio
+    const b = inArrivo.current;
+    inArrivo.current = null;
+    if (!b) { toast("La scheda non è arrivata: riprova a trascinarla.", "err"); return; }
+    invia({ tipo: "presa", da: MIA_FINESTRA, biglietto: b });
+    await prendiScheda(b);
+  };
+  const onMessaggio = useEvent(async (m: Messaggio) => {
+    if (m.tipo === "ciao" || m.tipo === "ci-sono") {
+      if (m.tipo === "ciao") invia({ tipo: "ci-sono", da: MIA_FINESTRA });
+      setAltre((a) => (a.includes(m.da) ? a : [...a, m.da]));
+    } else if (m.tipo === "addio") setAltre((a) => a.filter((x) => x !== m.da));
+    else if (m.tipo === "trascina") inArrivo.current = m.biglietto;
+    else if (m.tipo === "fine-trascina") { if (inArrivo.current === m.biglietto) { inArrivo.current = null; setDropScheda(false); } }
+    else if (m.tipo === "presa") schedaCeduta(m.biglietto);
+    else if (m.tipo === "riunisci") cediTutte(m.da);
+    else if (m.tipo === "consegna" && m.verso === MIA_FINESTRA) {
+      for (const b of m.biglietti) {
+        invia({ tipo: "presa", da: MIA_FINESTRA, biglietto: b });
+        await prendiScheda(b);
+      }
+    }
+  });
+  useEffect(() => {
+    if (isLocalEngine()) return;
+    const stop = ascolta(onMessaggio);
+    invia({ tipo: "ciao", da: MIA_FINESTRA });
+    const addio = () => invia({ tipo: "addio", da: MIA_FINESTRA });
+    window.addEventListener("pagehide", addio);
+    return () => { stop(); window.removeEventListener("pagehide", addio); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // chiusura dell'app desktop (X della finestra): l'app ferma la chiusura e chiede qui cosa fare delle modifiche
@@ -651,16 +734,28 @@ export default function App() {
   const dirty = tab ? isDirtyTab(tab) : false;
   const pickTab = (k: string) => { if (k !== active) guard(() => { setActive(k); setCurrentPage(0); }); };
 
+  // una scheda trascinata da un'altra finestra di PDFz (non da questa: quella si riordina sulle schede)
+  const schedaDaFuori = (e: React.DragEvent) => !dragTab.current && (!!inArrivo.current || e.dataTransfer.types.includes(TAB_DRAG));
+  const onDragOverApp = (e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes("Files")) { e.preventDefault(); setDragOver(true); return; }
+    if (!schedaDaFuori(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDropScheda(true);
+  };
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
+    setDropScheda(false);
+    if (schedaDaFuori(e)) { arrivaScheda(); return; }
     const files = Array.from(e.dataTransfer.files || []);
     if (files.length) openFiles(files);
   };
 
   return (
     <Ctx.Provider value={ctx}>
-      <div className="app" onDragOver={(e) => { if (!e.dataTransfer.types.includes("Files")) return; e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)} onDrop={onDrop}>
+      <div className="app" onDragOver={onDragOverApp} onDragLeave={() => { setDragOver(false); setDropScheda(false); }} onDrop={onDrop}>
+        {dropScheda && <div className="drop-scheda" aria-hidden>Rilascia qui per spostare la scheda in questa finestra</div>}
         <header className="topbar">
           <button className="btn icon ghost mobile-only" onClick={() => setDrawer(true)} title="Strumenti" aria-label="Apri il menu degli strumenti"><Menu size={20} /></button>
           <Logo />
@@ -682,19 +777,50 @@ export default function App() {
               const isDirty = isDirtyTab(t);
               return (
                 <div key={t.key} className={`tab ${t.key === active ? "active" : ""}`} onClick={() => pickTab(t.key)}
-                  title={canDetach ? `${d.name}\nTrascinala fuori dalla finestra per aprirla in una nuova finestra` : d.name}
-                  draggable={canDetach}
-                  onDragStart={(e) => { dragTab.current = t.key; e.dataTransfer.setData(TAB_DRAG, t.key); e.dataTransfer.effectAllowed = "move"; }}
+                  title={[d.name, canDetach && "Trascinala fuori dalla finestra per aprirla in una nuova finestra",
+                    altre.length > 0 && "Trascinala su un'altra finestra di PDFz per spostarla lì"].filter(Boolean).join("\n")}
+                  draggable={canDrag}
+                  onDragStart={(e) => {
+                    // con modifiche non applicate nello strumento la scheda attiva non si sposta (la domanda non si può fare qui)
+                    if (t.key === active && pendingRef.current) {
+                      e.preventDefault();
+                      toast(`Prima applica o scarta le modifiche in "${pendingRef.current.label}".`, "info");
+                      return;
+                    }
+                    dragTab.current = t.key;
+                    e.dataTransfer.setData(TAB_DRAG, MIA_FINESTRA);
+                    e.dataTransfer.effectAllowed = "move";
+                    const tr = { key: t.key, biglietto: undefined as string | undefined, presa: false };
+                    trascino.current = tr;
+                    // altre finestre aperte: la scheda va al motore subito, così può arrivare dove la si lascia
+                    if (altre.length) api.depositaScheda(datiScheda(t)).then((b) => {
+                      if (trascino.current !== tr) { api.buttaScheda(b); return; }   // trascinamento già finito
+                      tr.biglietto = b;
+                      cedute.current.set(b, t.key);
+                      invia({ tipo: "trascina", da: MIA_FINESTRA, biglietto: b });
+                    }).catch(() => {});
+                  }}
                   onDragOver={(e) => { if (dragTab.current && dragTab.current !== t.key) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; } }}
                   onDrop={(e) => { if (!dragTab.current) return; e.preventDefault(); e.stopPropagation(); moveTabTo(dragTab.current, t.key); }}
                   onDragEnd={(e) => {
-                    const k = dragTab.current;
+                    const tr = trascino.current;
+                    trascino.current = null;
                     dragTab.current = null;
-                    // lasciata fuori dalla finestra (nessuno l'ha presa): nuova finestra
+                    if (!tr) return;
+                    if (tr.biglietto) invia({ tipo: "fine-trascina", da: MIA_FINESTRA, biglietto: tr.biglietto });
+                    const nessuno = e.dataTransfer.dropEffect === "none";
                     const out = e.clientX <= 0 || e.clientY <= 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight;
-                    if (k && e.dataTransfer.dropEffect === "none" && out) moveToNewWindow(k, { x: e.screenX, y: e.screenY });
+                    const at = { x: e.screenX, y: e.screenY };
+                    // un'altra finestra di PDFz può averla presa: la risposta arriva subito dopo il rilascio
+                    setTimeout(() => {
+                      if (tr.presa) return;
+                      if (tr.biglietto) cedute.current.delete(tr.biglietto);
+                      // lasciata fuori dalla finestra (nessuno l'ha presa): nuova finestra
+                      if (nessuno && out && tabsRef.current.length >= 2) moveToNewWindow(tr.key, at, tr.biglietto);
+                      else if (tr.biglietto) api.buttaScheda(tr.biglietto);
+                    }, tr.biglietto ? 400 : 0);
                   }}
-                  onContextMenu={(e) => { if (!canDetach) return; e.preventDefault(); tabMenuAnchor.current = e.currentTarget; setTabMenu(t.key); }}>
+                  onContextMenu={(e) => { if (!canDrag) return; e.preventDefault(); tabMenuAnchor.current = e.currentTarget; setTabMenu(t.key); }}>
                   {isDirty && <span className="dot" title="Modifiche non salvate" />}
                   <span className="name">{d.name}</span>
                   <span className="x" onClick={(e) => { e.stopPropagation(); closeTab(t.key); }}><X size={14} /></span>
@@ -704,7 +830,9 @@ export default function App() {
           </div>}
           {tabMenu && (
             <Popover anchor={tabMenuAnchor} onClose={() => setTabMenu(null)} width={260} className="menu tab-pop" role="menu" label="Scheda">
-              <button role="menuitem" onClick={() => { setTabMenu(null); moveToNewWindow(tabMenu); }}><AppWindow size={15} /> Sposta in una nuova finestra</button>
+              {canDetach && <button role="menuitem" onClick={() => { setTabMenu(null); moveToNewWindow(tabMenu); }}><AppWindow size={15} /> Sposta in una nuova finestra</button>}
+              {altre.length > 0 && <button role="menuitem" onClick={() => { setTabMenu(null); invia({ tipo: "riunisci", da: MIA_FINESTRA }); }}>
+                <Merge size={15} /> Riunisci qui le altre finestre</button>}
               <button role="menuitem" onClick={() => { setTabMenu(null); closeTab(tabMenu); }}><X size={15} /> Chiudi la scheda</button>
             </Popover>
           )}

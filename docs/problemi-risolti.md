@@ -6,6 +6,29 @@ Il più recente in cima.
 > Le voci con numeri `AAAAMM.NNN` (es. 202610.014) sono della fase di sviluppo prima di PDFz 1.0.0, quando le versioni
 > avevano quel formato. Restano perché spiegano cosa non rifare.
 
+## Dopo la 1.1.0 — Modifica testo fa sparire le righe attorno e perde lettere sulle pagine ruotate
+
+- **Sintomo:**
+  - inserito un testo nuovo e poi modificato con "Modifica testo" cambiando carattere e dimensione, spariscono le
+    scritte attorno (anche intere righe sopra e sotto); già nell'anteprima la casella bianca, ingrandendosi, le copriva;
+  - su una pagina ruotata il testo riscritto perde la parte finale (es. "Riga cambiat").
+- **Causa:**
+  - `edit_text` cancellava la riga con il suo riquadro (ristretto di 1,5 punti). L'altezza del riquadro viene da
+    ascendente e discendente dichiarati dal carattere: in alcuni font di Windows (Segoe Print, Javanese Text, Dubai…)
+    vale 1,7-2,7 volte il corpo, e anche Helvetica arriva a 1,37. MuPDF toglie ogni lettera il cui riquadro tocca l'area:
+    le righe vicine sparivano (provato: con righe a 10-11 punti di distanza spariscono sia quella sopra sia quella sotto);
+  - il testo nuovo si scriveva sempre "dritto per chi guarda" (rotazione della pagina). Se la riga originale era scritta
+    in un altro verso (pagina ruotata dopo aver scritto il testo), il testo nuovo partiva dallo stesso punto nella
+    direzione opposta e la fine usciva dal foglio;
+  - anteprima: la casella in modifica aveva lo sfondo bianco (`cover`) e cresceva con carattere e dimensione.
+- **Soluzione:** `content.py` — `_riga_di` ritrova la riga nel documento (direzione, linea di base, corpo);
+  `_area_da_cancellare` usa una fascia tra 0,1 e 0,6 volte il corpo sopra la linea di base, e `_scansa` la allontana dai
+  riquadri delle altre righe; il testo si riscrive con la rotazione della riga (`_rotazione`). `text_spans` restituisce
+  `ink` (riquadro stretto delle lettere) e `TextPanels.tsx` copre di bianco solo quello, con la casella trasparente.
+  Test: `test_text_edit_keeps_close_lines`, `test_text_edit_keeps_direction_on_rotated_page` (falliscono con il codice
+  vecchio).
+- **Da non rifare:** cancellare testo con il riquadro di riga o di span (`bbox`): dipende dalle metriche del carattere.
+
 ## 1.1.0 — La pipeline si ferma su Windows, macOS e Linux (PyMuPDF 2.0)
 
 - **Sintomo:** release `v1.1.0` pubblicata con il solo APK Android; Windows, macOS e Linux falliti dopo 1-2 minuti, nei

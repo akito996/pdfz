@@ -73,6 +73,10 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   chiede salva/applica e poi chiama `api.quit()`. Mai `evaluate_js` dentro l'evento `closing` (blocca la finestra).
   **Più finestre** (scheda trascinata fuori): `apri_finestra()` in `run()` crea ogni finestra con la sua `Api`; `quit()` chiude
   solo la sua, l'app termina con l'ultima. La scheda passa con un biglietto monouso (`/api/schede`), mai nell'indirizzo.
+  Fra finestre già aperte (scheda trascinata su un'altra finestra, "Riunisci qui le altre finestre") le finestre si
+  parlano con BroadcastChannel (`frontend/src/finestre.ts`); una finestra che ha ceduto tutte le schede si chiude.
+- **Modifica testo**: la riga originale si cancella con una fascia sottile all'altezza delle minuscole (`_area_da_cancellare`
+  in `tools/content.py`), mai con il riquadro della riga: dipende dalle metriche del carattere e cancellava le righe vicine.
 - **Colori**: solo variabili CSS (`--brand`, `--on-brand`, `rgba(var(--brand-rgb), …)`), mai codici del vecchio marchio o
   colori dell'interfaccia scritti a mano. Nuova palette: vedi `docs/branding.md`. Icone: solo da `branding/genera_marchio.py`.
 - **Firma Android**: chiave `pdfz-release.jks` (alias `pdfz`) dell'autore, **mai nel repository**. Nella pipeline arriva dai
@@ -124,6 +128,15 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
     senza login: i 4 link diretti rispondono, `latest` = 1.1.0, nessun MSI lingue; un'app 1.0.2 vede la 1.1.0 con
     l'installer del proprio sistema (Android senza voci di novità: le modifiche sono solo per i PC).
 
+- **Dopo la 1.1.0 (2026-10-21, non inviato né pubblicato)**:
+  - **schede fra finestre**: una scheda si trascina su un'altra finestra di PDFz (anche l'unica scheda di una finestra) e
+    "Riunisci qui le altre finestre" (tasto destro su una scheda) porta tutte le schede in una finestra; quelle rimaste
+    vuote si chiudono. Provato con pywebview vero (finestre e canale veri, trascinamento simulato con eventi della pagina:
+    il trascinamento con il mouse fra due finestre non è stato provato);
+  - **correzioni di Modifica testo**: non spariscono più le righe attorno (fascia sottile invece del riquadro della riga,
+    anteprima con casella trasparente) e sulle pagine ruotate il testo resta intero (stessa direzione dell'originale).
+    Provato nel motore (2 test nuovi) e nella finestra desktop vera. Test: 77 passati, 2 saltati.
+
 ## Punti aperti
 
 1. **Copia di riserva della chiave Android**: `C:\Dev\PDFz-chiave-android` (`pdfz-release.jks` + `password.txt`, creata
@@ -140,7 +153,8 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
 6. Non provate dopo le modifiche: chiusura nella finestra desktop vera e l'errore di salvataggio con pywebview vero.
 7. **PyMuPDF 2.0**: bloccato sotto la 2.0 (`requirements.txt`); il passaggio va fatto a parte, correggendo "Sblocca
    moduli" (con la 2.0 `Widget.update()` non salva `field_flags`) e rilanciando tutti i test.
-8. **Nuove finestre (1.1.0)** da provare su macOS (Cocoa) e Linux (finestra del browser). La cartella locale
+8. **Nuove finestre (1.1.0) e schede fra finestre** da provare su macOS (Cocoa) e Linux (finestra del browser), e con il
+   mouse fra due finestre vere su Windows. La cartella locale
    `vendor/lingue` (2 GB, ignorata da git) non serve più e si può cancellare.
 9. Note minori: negli strumenti che producono solo un file (conversioni) cambiare un'opzione e uscire fa comparire la domanda
    "applicare?"; nei Commenti non è coperto il testo di una nota ancora in scrittura sulla pagina.

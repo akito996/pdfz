@@ -93,6 +93,7 @@ const jsonPost = async (url: string, body: unknown): Promise<any> =>
 
 export const api = {
   async depositaScheda(s: SchedaSpostata): Promise<string> { return (await jsonPost("api/schede", s)).biglietto; },
+  async buttaScheda(biglietto: string): Promise<void> { await fetch(`api/schede/${encodeURIComponent(biglietto)}`, { method: "DELETE", headers: headers() }); },
   async ritiraScheda(biglietto: string): Promise<SchedaSpostata> { return handle(await fetch(`api/schede/${encodeURIComponent(biglietto)}`, { headers: headers() })); },
   async heartbeat(): Promise<{ open?: string[]; actions?: { action: string; paths: string[] }[] }> { return handle(await fetch("api/heartbeat", { headers: headers() })); },
   async user(): Promise<{ name: string; login: string }> {

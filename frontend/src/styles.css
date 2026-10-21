@@ -180,7 +180,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .tool-item .fav.on { color: var(--accent); }
 .theme-menu { position: relative; }
 .menu.theme-pop { min-width: 0; }
-.menu.tab-pop { min-width: 0; }   /* menu del tasto destro sulla scheda: components/Popover.tsx */   /* posizione e misure: components/Popover.tsx */
+.menu.tab-pop { min-width: 0; }
+/* scheda trascinata da un'altra finestra di PDFz sopra questa */
+.drop-scheda { position: fixed; inset: 8px; z-index: 200; pointer-events: none; display: grid; place-items: center;
+  border: 3px dashed var(--brand); border-radius: 12px; background: rgba(var(--brand-rgb), 0.08);
+  color: var(--brand); font-weight: 700; font-size: 18px; }   /* menu del tasto destro sulla scheda: components/Popover.tsx */   /* posizione e misure: components/Popover.tsx */
 .menu.theme-pop .grow small { display: block; font-size: 11px; color: var(--muted); }
 .palette-swatch { display: inline-flex; flex: none; width: 34px; height: 20px; border-radius: 5px; overflow: hidden; border: 1px solid var(--line-strong); }
 .palette-swatch i { flex: 1; }
