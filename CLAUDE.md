@@ -138,8 +138,12 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
    Database, store: vedi `docs/branding.md`). Un foglio con "PDF" ricorda l'icona generica dei file PDF.
 5. **Firma del codice** assente (Authenticode Windows, notarizzazione Apple): SmartScreen e Gatekeeper mostrano un avviso.
 6. Non provate dopo le modifiche: chiusura nella finestra desktop vera e l'errore di salvataggio con pywebview vero.
-7. **PyMuPDF 2.0**: bloccato sotto la 2.0 (`requirements.txt`); il passaggio va fatto a parte, correggendo "Sblocca
-   moduli" (con la 2.0 `Widget.update()` non salva `field_flags`) e rilanciando tutti i test.
+7. **PyMuPDF 2.0**: passaggio pronto sul ramo `claude/elastic-payne-8e66cf` (non ancora unito né pubblicato).
+   "Sblocca moduli" scrive `/Ff` direttamente sul widget e sui campi padre (la 2.0 separa campo e widget e
+   `Widget.update()` non salva `field_flags` sui widget figli); limite `pymupdf>=1.26,<3`. Test 73 passati, 2 saltati
+   con la 1.28.2 e con la 2.0 (venv di prova su Windows). La prossima build della pipeline installerà la 2.0; il venv del
+   PC resta sulla 1.28.2 finché non lo si aggiorna. Android resta sulla 1.28.2: per la 2.0 non c'è la ruota
+   WebAssembly. Dettagli in `docs/problemi-risolti.md`.
 8. **Nuove finestre (1.1.0)** da provare su macOS (Cocoa) e Linux (finestra del browser). La cartella locale
    `vendor/lingue` (2 GB, ignorata da git) non serve più e si può cancellare.
 9. Note minori: negli strumenti che producono solo un file (conversioni) cambiare un'opzione e uscire fa comparire la domanda

@@ -360,16 +360,32 @@ def sanitize(ctx: Ctx) -> Result:
 # ------------------------------------------------------------ moduli
 
 
+def _unlock_field(doc: pymupdf.Document, xref: int) -> bool:
+    """Toglie "sola lettura" (bit 1 di /Ff) dal widget e dai campi padre: il valore si eredita, quindi
+    il flag può stare su uno qualsiasi. Si scrive /Ff direttamente: con PyMuPDF 2.0 `Widget.update()`
+    non salva più `field_flags` e i campi restavano bloccati."""
+    changed = False
+    seen = set()
+    while xref and xref not in seen:
+        seen.add(xref)
+        kind, val = doc.xref_get_key(xref, "Ff")
+        if kind == "int" and int(val) & 1:
+            doc.xref_set_key(xref, "Ff", str(int(val) & ~1))
+            changed = True
+        kind, val = doc.xref_get_key(xref, "Parent")
+        xref = int(val.split()[0]) if kind == "xref" else 0
+    return changed
+
+
 @tool("unlock_forms")
 def unlock_forms(ctx: Ctx) -> Result:
     doc = ctx.open()
-    n = 0
+    unlocked = set()
     for pg in doc:
         for w in pg.widgets() or []:
-            if w.field_flags & 1:
-                w.field_flags &= ~1
-                w.update()
-                n += 1
+            if _unlock_field(doc, w.xref):
+                unlocked.add(w.field_name)
+    n = len(unlocked)
     # rimuove anche eventuali XFA che bloccano la compilazione
     cat = doc.pdf_catalog()
     acro = doc.xref_get_key(cat, "AcroForm")
