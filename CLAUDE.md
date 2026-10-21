@@ -141,7 +141,9 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
     Provato nel motore (2 test nuovi) e nella finestra desktop vera. Test: 77 passati, 2 saltati con PyMuPDF 1.28.2 e 2.0;
   - **PyMuPDF 2.0** unito dal ramo `claude/elastic-payne-8e66cf` (sessione separata): vedi punto aperto 7.
 
-- **Versione 1.2.1** (2026-10-21, commit e tag `v1.2.1` inviati su GitHub): trascinata in un'altra finestra la sua ultima scheda, la
+- **Release v1.2.1 pubblicata** (2026-10-21, "Latest", commit `ffc1e4e`, pipeline #7 riuscita in 6 minuti; è partita
+  qualche minuto dopo il tag). Verificato senza login: 4 link diretti, `latest` = 1.2.1, un'app 1.2.0 vede la 1.2.1
+  (1 novità sui PC, nessuna su Android). Correzione: trascinata in un'altra finestra la sua ultima scheda, la
   finestra di partenza si chiude in ogni ordine degli eventi (biglietto valido 5 s, rilascio accettato anche dopo la fine
   del trascinamento, chiusura senza aspettare l'evento di fine). Provato con pywebview vero in 3 ordini.
 
