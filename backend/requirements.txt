@@ -1,5 +1,5 @@
 # Motore PDF e server locale
-pymupdf>=1.26
+pymupdf>=1.26,<2   # la 2.0 (ottobre 2026) cambia "Sblocca moduli" (test_forms_unlock_flatten): da verificare prima di passarci
 fastapi>=0.110
 uvicorn>=0.29
 python-multipart>=0.0.9

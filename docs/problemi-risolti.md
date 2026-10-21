@@ -6,6 +6,20 @@ Il più recente in cima.
 > Le voci con numeri `AAAAMM.NNN` (es. 202610.014) sono della fase di sviluppo prima di PDFz 1.0.0, quando le versioni
 > avevano quel formato. Restano perché spiegano cosa non rifare.
 
+## 1.1.0 — La pipeline si ferma su Windows, macOS e Linux (PyMuPDF 2.0)
+
+- **Sintomo:** release `v1.1.0` pubblicata con il solo APK Android; Windows, macOS e Linux falliti dopo 1-2 minuti, nei
+  test: `FAILED tests/test_tools.py::test_forms_unlock_flatten - assert not (1 & 1)`. Sul PC di sviluppo i test passano.
+- **Causa:** il 21 ottobre 2026 su PyPI c'era **PyMuPDF 2.0** e `requirements.txt` diceva solo `pymupdf>=1.26`: la pipeline
+  ha installato la 2.0, il PC di sviluppo ha la 1.28.2. Con la 2.0 `Widget.field_flags` cambiato e `update()` non viene
+  più salvato: "Sblocca moduli" lascia i campi in sola lettura (provato in un ambiente separato: flag `1` con la 2.0,
+  `0` con la 1.28.2). Android non ne risente (Pyodide usa la 1.28.2 fissata in `prepare-engine.mjs`). La pipeline
+  pubblica comunque i sistemi compilati, quindi è uscita una release con il solo Android, segnata come "Latest".
+- **Soluzione:** `pymupdf>=1.26,<2` in `backend/requirements.txt`; il passaggio alla 2.0 va fatto a parte, con i test.
+- **Da non rifare:** dipendenze principali senza limite superiore di versione (vedi anche `opencv-python-headless<5`).
+  Per fermare una pipeline serve un token con il permesso Actions (quello di `gh` sul PC non ce l'ha): annullare
+  dalla pagina della run.
+
 ## 1.0.1 — Android: il menu Tema "non si apre" e le notifiche spariscono
 
 - **Sintomo:**
