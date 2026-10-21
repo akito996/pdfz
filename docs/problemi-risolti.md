@@ -6,7 +6,7 @@ Il più recente in cima.
 > Le voci con numeri `AAAAMM.NNN` (es. 202610.014) sono della fase di sviluppo prima di PDFz 1.0.0, quando le versioni
 > avevano quel formato. Restano perché spiegano cosa non rifare.
 
-## Dopo la 1.1.0 — Modifica testo fa sparire le righe attorno e perde lettere sulle pagine ruotate
+## 1.2.0 — Modifica testo fa sparire le righe attorno e perde lettere sulle pagine ruotate
 
 - **Sintomo:**
   - inserito un testo nuovo e poi modificato con "Modifica testo" cambiando carattere e dimensione, spariscono le

@@ -2,6 +2,48 @@
   "_info": "Novità di ogni versione, mostrate nella campanella dell'app e copiate dalla build in versione-<piattaforma>.json. tipo: nuovo | modifica | correzione | installer | ottimizzazione | rimosso. piattaforme: windows, macos, linux, android, ios.",
   "versioni": [
     {
+      "versione": "1.2.0",
+      "data": "2026-10-21",
+      "titolo": "PDFz 1.2.0: schede in una sola finestra e Modifica testo più affidabile",
+      "voci": [
+        {
+          "tipo": "nuovo",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux"
+          ],
+          "dove": "Schede dei documenti",
+          "titolo": "Riporta le schede in un'altra finestra",
+          "dettaglio": "Trascina una scheda su un'altra finestra di PDFz e passa lì, oppure tasto destro su una scheda → \"Riunisci qui le altre finestre\". Le finestre rimaste vuote si chiudono da sole."
+        },
+        {
+          "tipo": "correzione",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android"
+          ],
+          "dove": "Modifica testo",
+          "titolo": "Le scritte attorno non spariscono più",
+          "dettaglio": "Cambiando carattere e dimensione di un testo restano al loro posto le righe vicine, anche quelle molto fitte. L'anteprima mostra già il risultato."
+        },
+        {
+          "tipo": "correzione",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android"
+          ],
+          "dove": "Modifica testo",
+          "titolo": "Testo intero sulle pagine ruotate",
+          "dettaglio": "Il testo riscritto mantiene il verso dell'originale e non perde più la parte finale."
+        }
+      ]
+    },
+    {
       "versione": "1.1.0",
       "data": "2026-10-21",
       "titolo": "PDFz 1.1.0: schede in una nuova finestra e app più leggera",

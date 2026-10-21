@@ -4,7 +4,7 @@
   "description": "PDFz: interfaccia dell'editor PDF che lavora in locale",
   "author": "agjin",
   "license": "AGPL-3.0-only",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -1,5 +1,17 @@
 # Novità
 
+## 1.2.0
+Schede che tornano in una sola finestra e "Modifica testo" più affidabile.
+
+- **Schede fra finestre** (novità, Windows, macOS, Linux): trascina una scheda su un'altra finestra di PDFz e passa lì,
+  anche se è l'unica della sua finestra; oppure tasto destro su una scheda → "Riunisci qui le altre finestre" per
+  riportare tutte le schede in una finestra sola. Le finestre rimaste vuote si chiudono da sole.
+- **Modifica testo** (correzione): modificando un testo (anche appena inserito) e cambiandone carattere e dimensione
+  non spariscono più le scritte attorno. Già mentre scrivi l'anteprima mostra il risultato, senza coprire le righe vicine.
+- **Modifica testo sulle pagine ruotate** (correzione): il testo riscritto resta intero e nello stesso verso
+  dell'originale (prima poteva perdere la parte finale, es. "Riga cambiat").
+- "Sblocca moduli" funziona anche con la nuova versione 2.0 della libreria PDF usata dall'app (PyMuPDF).
+
 ## 1.1.0
 App più leggera e schede che si spostano in una nuova finestra.
 

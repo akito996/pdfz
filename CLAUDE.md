@@ -91,7 +91,7 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
 
 ## Stato attuale (2026-10-21)
 
-- Versione nel codice: **1.1.0** di PDFz. Marchio applicato ovunque: **icona e favicon 17 "Foglio oro"** (foglio PDF d'oro
+- Versione nel codice: **1.2.0** di PDFz. Marchio applicato ovunque: **icona e favicon 17 "Foglio oro"** (foglio PDF d'oro
   su rosso con "PDF" e la "z" piccola, nero solo per le finiture), palette predefinita Rubino,
   5 palette selezionabili, avvisi solo con le finestre dell'app (provati nel browser: Oscura, domanda annidata dopo
   "Applica", Salva con nome Android, errore di salvataggio desktop simulato). Test: 73 passati, 2 saltati.
@@ -128,14 +128,15 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
     senza login: i 4 link diretti rispondono, `latest` = 1.1.0, nessun MSI lingue; un'app 1.0.2 vede la 1.1.0 con
     l'installer del proprio sistema (Android senza voci di novità: le modifiche sono solo per i PC).
 
-- **Dopo la 1.1.0 (2026-10-21, non inviato né pubblicato)**:
+- **Versione 1.2.0** (2026-10-21, commit e tag `v1.2.0` inviati su GitHub):
   - **schede fra finestre**: una scheda si trascina su un'altra finestra di PDFz (anche l'unica scheda di una finestra) e
     "Riunisci qui le altre finestre" (tasto destro su una scheda) porta tutte le schede in una finestra; quelle rimaste
     vuote si chiudono. Provato con pywebview vero (finestre e canale veri, trascinamento simulato con eventi della pagina:
     il trascinamento con il mouse fra due finestre non è stato provato);
   - **correzioni di Modifica testo**: non spariscono più le righe attorno (fascia sottile invece del riquadro della riga,
     anteprima con casella trasparente) e sulle pagine ruotate il testo resta intero (stessa direzione dell'originale).
-    Provato nel motore (2 test nuovi) e nella finestra desktop vera. Test: 77 passati, 2 saltati.
+    Provato nel motore (2 test nuovi) e nella finestra desktop vera. Test: 77 passati, 2 saltati con PyMuPDF 1.28.2 e 2.0;
+  - **PyMuPDF 2.0** unito dal ramo `claude/elastic-payne-8e66cf` (sessione separata): vedi punto aperto 7.
 
 ## Punti aperti
 
