@@ -128,7 +128,10 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
     senza login: i 4 link diretti rispondono, `latest` = 1.1.0, nessun MSI lingue; un'app 1.0.2 vede la 1.1.0 con
     l'installer del proprio sistema (Android senza voci di novità: le modifiche sono solo per i PC).
 
-- **Versione 1.2.0** (2026-10-21, commit e tag `v1.2.0` inviati su GitHub):
+- **Release v1.2.0 pubblicata** (2026-10-21, "Latest", tag sul commit `6eb99ad`, pipeline #6 riuscita in 9 minuti con
+  PyMuPDF 2.0). Installer: MSI 131,6 MB (1.1.0: 116,6), DMG 160,4 MB (137,4), AppImage 175,0 MB (162,9), APK 64,6 MB:
+  più grandi per PyMuPDF 2.0. Verificato senza login: 4 link diretti, `latest` = 1.2.0, un'app 1.1.0 vede la 1.2.0
+  con l'installer del proprio sistema (3 novità sui PC, 2 su Android).
   - **schede fra finestre**: una scheda si trascina su un'altra finestra di PDFz (anche l'unica scheda di una finestra) e
     "Riunisci qui le altre finestre" (tasto destro su una scheda) porta tutte le schede in una finestra; quelle rimaste
     vuote si chiudono. Provato con pywebview vero (finestre e canale veri, trascinamento simulato con eventi della pagina:
@@ -154,7 +157,7 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
 6. Non provate dopo le modifiche: chiusura nella finestra desktop vera e l'errore di salvataggio con pywebview vero.
 7. **PyMuPDF 2.0** (unito per la 1.2.0): "Sblocca moduli" scrive `/Ff` direttamente sul widget e sui campi padre (la 2.0
    separa campo e widget e `Widget.update()` non salva `field_flags` sui widget figli); limite `pymupdf>=1.26,<3`.
-   La pipeline installa la 2.0; il venv del PC resta sulla 1.28.2 finché non lo si aggiorna. Android resta sulla 1.28.2:
+   La pipeline installa la 2.0 (release 1.2.0); il venv del PC resta sulla 1.28.2 finché non lo si aggiorna. Android resta sulla 1.28.2:
    per la 2.0 non c'è la ruota WebAssembly. Dettagli in `docs/problemi-risolti.md`.
 8. **Nuove finestre (1.1.0) e schede fra finestre** da provare su macOS (Cocoa) e Linux (finestra del browser), e con il
    mouse fra due finestre vere su Windows. La cartella locale
