@@ -15,7 +15,9 @@ Il più recente in cima.
   più salvato: "Sblocca moduli" lascia i campi in sola lettura (provato in un ambiente separato: flag `1` con la 2.0,
   `0` con la 1.28.2). Android non ne risente (Pyodide usa la 1.28.2 fissata in `prepare-engine.mjs`). La pipeline
   pubblica comunque i sistemi compilati, quindi è uscita una release con il solo Android, segnata come "Latest".
-- **Soluzione:** `pymupdf>=1.26,<2` in `backend/requirements.txt`; il passaggio alla 2.0 va fatto a parte, con i test.
+- **Soluzione:** `pymupdf>=1.26,<2` in `backend/requirements.txt` (commit `1aaee3c`); tag `v1.1.0` spostato su quel commit
+  (`git push --force` del solo tag): la pipeline ha aggiunto Windows, macOS e Linux alla stessa release e ricompilato
+  l'APK. Il passaggio alla 2.0 va fatto a parte, con i test.
 - **Da non rifare:** dipendenze principali senza limite superiore di versione (vedi anche `opencv-python-headless<5`).
   Per fermare una pipeline serve un token con il permesso Actions (quello di `gh` sul PC non ce l'ha): annullare
   dalla pagina della run.

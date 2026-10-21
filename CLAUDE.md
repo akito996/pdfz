@@ -81,6 +81,9 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   (email noreply di GitHub, impostata nel repository locale). Commit e push solo quando l'utente lo chiede; messaggi in italiano.
   In locale si lavora sul ramo `pdfz` (storia nuova, collegato a `origin/main`). Il ramo locale `main` contiene la storia
   del progetto precedente: **mai da pubblicare** (contiene il vecchio marchio); si può rinominare o eliminare quando non serve più.
+  Sul PC Git Credential Manager ha due account GitHub (akito996 e ServicedeskHDgroup): per inviare si usa **akito996**,
+  esplicito: `git push https://akito996@github.com/akito996/pdfz.git pdfz:main` (con l'altro account: errore 403).
+  Il token di `gh` (akito996) legge i registri della pipeline ma non può annullarla.
 
 ## Stato attuale (2026-10-21)
 
@@ -107,13 +110,19 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
 - Marchio: serie 1 (icone 1-5) scartata dall'utente perché simile a marchi esistenti e tolta dallo script; serie 2
   (6-10) e 3 (11-15) non scelte ma ancora disponibili; all'utente è piaciuta la 11 ("PDF" a capo, "z" piccola),
   messa in un foglio PDF nella serie 4 (16-18): scelta e applicata la **17** (inviata su GitHub).
-- **Versione 1.1.0** (2026-10-21, commit e tag `v1.1.0` inviati su GitHub):
+- **Release v1.1.0 pubblicata** (2026-10-21, "Latest"), tag `v1.1.0` sul commit `1aaee3c`:
   - **traduzione tolta** per alleggerire l'app: strumento Traduci, `translate.py`, `tools/translate_pdf.py`, CTranslate2 e
     SentencePiece, MSI `PDFz-Lingue-*` (`Lingue.wxs`), opzioni lingue di `build-windows.ps1`, cache `vendor/lingue` nella
     pipeline. All'avvio l'app desktop cancella `<dati>\lingue` (`cleanup.rimuovi_modelli_traduzione`);
   - **schede in una nuova finestra**: con 2+ schede, trascinata fuori dalla finestra o "Sposta in una nuova finestra" dal
     tasto destro; trascinata su un'altra scheda cambia posto. Provato con pywebview vero su Windows (seconda finestra,
     chiusura della principale) e nel browser (menu, riordino, rilascio fuori simulato). Non su Android/iPhone.
+  - **pubblicazione**: la prima pipeline (commit `8473e2f`) ha installato **PyMuPDF 2.0**, che rompe "Sblocca moduli"
+    (`test_forms_unlock_flatten`): Windows, macOS e Linux falliti, release uscita con il solo Android. Correzione
+    `pymupdf>=1.26,<2`, tag `v1.1.0` spostato su `1aaee3c` (scelta dell'utente), pipeline #5 riuscita in 6 minuti.
+    Installer: MSI 116,6 MB (1.0.2: 136,8), DMG 137,4 MB, AppImage 162,9 MB (1.0.2: 199,7), APK 64,6 MB. Verificato
+    senza login: i 4 link diretti rispondono, `latest` = 1.1.0, nessun MSI lingue; un'app 1.0.2 vede la 1.1.0 con
+    l'installer del proprio sistema (Android senza voci di novità: le modifiche sono solo per i PC).
 
 ## Punti aperti
 
@@ -129,7 +138,9 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
    Database, store: vedi `docs/branding.md`). Un foglio con "PDF" ricorda l'icona generica dei file PDF.
 5. **Firma del codice** assente (Authenticode Windows, notarizzazione Apple): SmartScreen e Gatekeeper mostrano un avviso.
 6. Non provate dopo le modifiche: chiusura nella finestra desktop vera e l'errore di salvataggio con pywebview vero.
-7. **Nuove finestre (1.1.0)** da provare su macOS (Cocoa) e Linux (finestra del browser). La cartella locale
+7. **PyMuPDF 2.0**: bloccato sotto la 2.0 (`requirements.txt`); il passaggio va fatto a parte, correggendo "Sblocca
+   moduli" (con la 2.0 `Widget.update()` non salva `field_flags`) e rilanciando tutti i test.
+8. **Nuove finestre (1.1.0)** da provare su macOS (Cocoa) e Linux (finestra del browser). La cartella locale
    `vendor/lingue` (2 GB, ignorata da git) non serve più e si può cancellare.
-8. Note minori: negli strumenti che producono solo un file (conversioni) cambiare un'opzione e uscire fa comparire la domanda
+9. Note minori: negli strumenti che producono solo un file (conversioni) cambiare un'opzione e uscire fa comparire la domanda
    "applicare?"; nei Commenti non è coperto il testo di una nota ancora in scrittura sulla pagina.
