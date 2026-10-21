@@ -34,14 +34,34 @@ Il più recente in cima.
 - **Sintomo:** release `v1.1.0` pubblicata con il solo APK Android; Windows, macOS e Linux falliti dopo 1-2 minuti, nei
   test: `FAILED tests/test_tools.py::test_forms_unlock_flatten - assert not (1 & 1)`. Sul PC di sviluppo i test passano.
 - **Causa:** il 21 ottobre 2026 su PyPI c'era **PyMuPDF 2.0** e `requirements.txt` diceva solo `pymupdf>=1.26`: la pipeline
-  ha installato la 2.0, il PC di sviluppo ha la 1.28.2. Con la 2.0 `Widget.field_flags` cambiato e `update()` non viene
-  più salvato: "Sblocca moduli" lascia i campi in sola lettura (provato in un ambiente separato: flag `1` con la 2.0,
-  `0` con la 1.28.2). Android non ne risente (Pyodide usa la 1.28.2 fissata in `prepare-engine.mjs`). La pipeline
+  ha installato la 2.0, il PC di sviluppo ha la 1.28.2. Con la 2.0 "Sblocca moduli" lascia i campi in sola lettura
+  (flag `1` con la 2.0, `0` con la 1.28.2). Il motivo:
+  - la 2.0 crea e gestisce i campi in due oggetti: il **campo** (`/T`, `/FT`, `/Ff`, `/V`) e il **widget** che lo
+    disegna, figlio del campo (`/Parent`); la 1.28.2 li teneva in un oggetto solo;
+  - `Widget.update()` della 2.0 scrive `/Ff` (e valore, tipo, azioni) solo sui widget **senza** `/Parent`: per gli altri
+    `field_flags` viene ignorato in silenzio. `unlock_forms` faceva `w.field_flags &= ~1; w.update()`, quindi il flag
+    restava. Anche con la 1.28.2 il codice vecchio non era giusto sui campi con padre (PDF di altri programmi, campi
+    con più widget): scriveva `/Ff 0` sul widget e lasciava `/Ff 1` sul campo, che altri programmi possono leggere
+    ancora come sola lettura (provato).
+
+  Android non ne risente (Pyodide usa la 1.28.2 fissata in `prepare-engine.mjs`). La pipeline
   pubblica comunque i sistemi compilati, quindi è uscita una release con il solo Android, segnata come "Latest".
-- **Soluzione:** `pymupdf>=1.26,<2` in `backend/requirements.txt` (commit `1aaee3c`); tag `v1.1.0` spostato su quel commit
-  (`git push --force` del solo tag): la pipeline ha aggiunto Windows, macOS e Linux alla stessa release e ricompilato
-  l'APK. Il passaggio alla 2.0 va fatto a parte, con i test.
+- **Soluzione:**
+  - subito: `pymupdf>=1.26,<2` in `backend/requirements.txt` (commit `1aaee3c`); tag `v1.1.0` spostato su quel commit
+    (`git push --force` del solo tag): la pipeline ha aggiunto Windows, macOS e Linux alla stessa release e ricompilato
+    l'APK;
+  - poi (passaggio alla 2.0, dopo la 1.1.0): `unlock_forms` in `tools/security.py` scrive `/Ff` direttamente
+    (`_unlock_field`, con `doc.xref_get_key`/`xref_set_key`) sul widget **e sui campi padre**, perché il flag si eredita
+    e può stare su uno qualsiasi; niente più `Widget.update()`. Il messaggio conta i campi (nomi), non i widget.
+    `test_forms_unlock_flatten` prova anche un flag ereditato dal campo padre. Limite portato a `pymupdf>=1.26,<3`.
+    Test: 73 passati, 2 saltati sia con la 1.28.2 sia con la 2.0 (Windows, venv di prova); con la 2.0 e il codice
+    vecchio falliva solo `test_forms_unlock_flatten`.
+  - Note sulla 2.0: ruote solo per Python 3.11+ e Windows x64, macOS arm64, Linux x86_64/aarch64 (bastano per la
+    pipeline); **nessuna ruota WebAssembly** (per questo Android resta sulla 1.28.2). Il vecchio nome `fitz`, usato da
+    pdf2docx, è deprecato (avviso `FutureWarning` nei test): finché esiste funziona, va ricontrollato a ogni nuova versione.
 - **Da non rifare:** dipendenze principali senza limite superiore di versione (vedi anche `opencv-python-headless<5`).
+  Con PyMuPDF non fidarsi di `Widget.update()` per le proprietà del campo (`field_flags`, `field_value`…): sui widget
+  figli non le salva. Per i flag scrivere `/Ff` con `xref_set_key`.
   Per fermare una pipeline serve un token con il permesso Actions (quello di `gh` sul PC non ce l'ha): annullare
   dalla pagina della run.
 

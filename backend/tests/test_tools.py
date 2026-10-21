@@ -301,6 +301,24 @@ def test_forms_unlock_flatten():
     src = open_doc(d0.tobytes())["id"]
     d = load(run("unlock_forms", src)["doc"]["id"])
     assert not list(d[0].widgets())[0].field_flags & 1
+    # sola lettura ereditata da un campo padre ("padre.nome"): va tolta anche lì.
+    # PyMuPDF 1.28 crea campo e widget in un oggetto solo, la 2.0 in due (il widget è figlio del campo)
+    fx = list(d0[0].widgets())[0].xref
+    kind, val = d0.xref_get_key(fx, "Parent")
+    if kind == "xref":
+        fx = int(val.split()[0])
+    px = d0.get_new_xref()
+    d0.update_object(px, f"<< /T (padre) /Ff 1 /Kids [{fx} 0 R] >>")
+    d0.xref_set_key(fx, "Parent", f"{px} 0 R")
+    d0.xref_set_key(fx, "Ff", "null")
+    d0.xref_set_key(d0.pdf_catalog(), "AcroForm/Fields", f"[{px} 0 R]")
+    assert list(d0[0].widgets())[0].field_flags & 1
+    res = run("unlock_forms", open_doc(d0.tobytes())["id"])
+    assert "Sbloccati 1 campi" in res["message"]
+    d = load(res["doc"]["id"])
+    assert not list(d[0].widgets())[0].field_flags & 1
+    top = int(d.xref_get_key(d.pdf_catalog(), "AcroForm/Fields")[1].strip("[]").split()[0])
+    assert d.xref_get_key(top, "Ff") == ("int", "0")   # il campo padre, quello che leggono gli altri programmi
     d = load(run("flatten", src, mode="forms")["doc"]["id"])
     assert not list(d[0].widgets() or [])
     assert "Mario" in d[0].get_text()
