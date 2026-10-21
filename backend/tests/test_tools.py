@@ -18,8 +18,6 @@ _WORK = Path(__file__).parent / "_work"
 __import__("shutil").rmtree(_WORK, ignore_errors=True)
 os.environ.setdefault("HDPDF_WORKDIR", str(_WORK))
 os.environ.setdefault("HDPDF_DATADIR", str(Path(__file__).parent / "_data"))
-# i pacchetti lingue installati sul PC di build (MSI Lingue) non devono cambiare il risultato dei test
-os.environ["HDPDF_ONLY_USER_PACKS"] = "1"
 
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -786,3 +784,17 @@ def test_scrivi_versione_link_diretto(tmp_path):
     assert info["pagina"].endswith("/tag/v1.0.1") and all("android" in (v.get("piattaforme") or ["android"]) for v in info["novita"])
     with pytest.raises(SystemExit):
         sv.main("android", inst.name, str(tmp_path), link_base="http://non-sicuro.example/")
+
+
+def test_scheda_spostata_si_ritira_una_volta():
+    """Scheda trascinata in una nuova finestra: la finestra di partenza la deposita, la nuova la ritira UNA volta."""
+    scheda = {"history": [{"id": "x1", "name": "a.pdf"}], "index": 0, "savedIndex": -1, "password": "segreta"}
+    r = client.post("/api/schede", json=scheda)
+    assert r.status_code == 200
+    b = r.json()["biglietto"]
+    assert len(b) >= 16
+    r = client.get(f"/api/schede/{b}")
+    assert r.status_code == 200 and r.json() == scheda
+    assert client.get(f"/api/schede/{b}").status_code == 404     # già ritirata
+    assert client.get("/api/schede/inventato").status_code == 404
+    assert client.post("/api/schede", json={"history": ["x" * 300_000]}).status_code == 413

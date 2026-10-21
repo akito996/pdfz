@@ -23,9 +23,6 @@ o la offre come servizio web deve mettere a disposizione anche il codice sorgent
 | PDF.js (Mozilla) | visualizzazione nell'interfaccia | Apache-2.0 |
 | React | interfaccia | MIT |
 | Lucide | icone | ISC |
-| CTranslate2 (OpenNMT) | motore di traduzione offline | MIT |
-| SentencePiece (Google) | suddivisione del testo per la traduzione | Apache-2.0 |
-| Pacchetti lingua Argos Translate | modelli di traduzione (inclusi o scaricati) | licenza indicata in ogni pacchetto (modelli addestrati su dati OPUS) |
 | Ghostscript (facoltativo, se incluso nella build) | compressione avanzata, PDF/A | AGPL-3.0 |
 
 Programmi usati solo se già installati sul PC: Microsoft Office (conversioni Office ↔ PDF),

@@ -317,7 +317,7 @@
         <Control Id="Mode" Type="RadioButtonGroup" X="20" Y="110" Width="335" Height="118" Property="HDSETUPMODE">
           <RadioButtonGroup Property="HDSETUPMODE">
             <RadioButton Value="keep" X="0" Y="0" Width="335" Height="36"
-                         Text="&amp;Mantieni tutto (consigliato): preferiti, etichette, tema, impostazioni, lingue scaricate e firme salvate restano come sono." />
+                         Text="&amp;Mantieni tutto (consigliato): preferiti, etichette, tema, impostazioni e firme salvate restano come sono." />
             <RadioButton Value="settings" X="0" Y="40" Width="335" Height="36"
                          Text="Mantieni solo &amp;preferiti e impostazioni di base (con una copia di sicurezza); elimina il resto dei dati della versione vecchia." />
             <RadioButton Value="clean" X="0" Y="80" Width="335" Height="36"

@@ -32,7 +32,6 @@ export interface AppCtx {
   fontStyle: (fontId: string) => React.CSSProperties;
   setMainView: (v: React.ReactNode | null) => void;
   openDoc: (d: DocInfo) => void;
-  adoptVersion: (fromDocId: string, d: DocInfo) => void;
   panelLayout: { width: number; collapsed: boolean; setWidth: (w: number) => void; setCollapsed: (c: boolean) => void;
     sheetDown: boolean; setSheetDown: (d: boolean) => void };   // sheetDown: telefono, pannello abbassato (strumento ancora attivo)
   pickTool: (id: string) => void;

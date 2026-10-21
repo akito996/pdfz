@@ -4,6 +4,7 @@ from __future__ import annotations
 import base64
 import logging
 import secrets
+import time
 import traceback
 from pathlib import Path
 
@@ -13,7 +14,6 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import APP_NAME, __version__, config, fonts, p7m
-from . import translate as tr
 from .fileutil import wait_readable
 from .store import store
 from .tools import REGISTRY, Ctx, ToolError
@@ -91,7 +91,6 @@ def create_app(require_token: bool = False) -> FastAPI:
 
     @app.get("/api/heartbeat")
     def heartbeat():
-        import time
         app.state.last_beat = time.time()
         out, app.state.pending_open = app.state.pending_open, []
         acts, app.state.pending_actions = app.state.pending_actions, []
@@ -455,49 +454,31 @@ def create_app(require_token: bool = False) -> FastAPI:
             login = ""
         return {"name": name or login, "login": login}
 
-    # ------------------------------------------------------------ traduzione: lingue e pacchetti
-    def _tr(fn, *a, **kw):
-        try:
-            return fn(*a, **kw)
-        except tr.TranslateError as ex:
-            raise HTTPException(400, str(ex))
+    # ------------------------------------------------------------ scheda spostata in una nuova finestra
+    # La finestra di partenza deposita la scheda (versioni del documento, percorso, password…) e riceve un biglietto;
+    # la nuova finestra lo ritira UNA volta. Così niente dati nell'indirizzo; il biglietto scade dopo 2 minuti.
+    schede: dict[str, tuple[float, dict]] = {}
 
-    @app.get("/api/translate/languages")
-    def tr_languages():
-        return tr.languages()
+    @app.post("/api/schede")
+    def scheda_deposita(payload: dict = Body(...)):
+        import json as _json
 
-    @app.get("/api/translate/available")
-    def tr_available(refresh: bool = False):
-        if refresh:
-            _tr(tr.index, refresh=True)
-        return _tr(tr.available)
+        if len(_json.dumps(payload)) > 256_000:
+            raise HTTPException(413, "Scheda troppo grande")
+        now = time.time()
+        for k, (t, _) in list(schede.items()):
+            if now - t > 120:
+                schede.pop(k, None)
+        k = secrets.token_urlsafe(16)
+        schede[k] = (now, payload)
+        return {"biglietto": k}
 
-    @app.post("/api/translate/install")
-    def tr_install(payload: dict = Body(...)):
-        if payload.get("asset"):   # pacchetto .argosmodel copiato a mano (PC senza internet)
-            p = _tr(tr.install_archive, store.get(payload["asset"]).path.read_bytes())
-            return {"key": p.key}
-        return _tr(tr.download, payload["key"], payload.get("job"))
-
-    @app.post("/api/translate/remove")
-    def tr_remove(payload: dict = Body(...)):
-        _tr(tr.remove, payload["key"])
-        return {"ok": True}
-
-    @app.post("/api/translate/detect")
-    def tr_detect(payload: dict = Body(...)):
-        it = store.get(payload["doc"])
-        d = pymupdf.open(it.path)
-        if d.needs_pass:
-            d.authenticate(it.extra.get("password", ""))
-        text = " ".join(d[i].get_text() for i in range(min(d.page_count, 5)))
-        d.close()
-        code = tr.detect(text) if text.strip() else ""
-        return {"code": code, "name": tr.LANG_NAMES.get(code, code)}
-
-    @app.get("/api/progress/{job}")
-    def progress(job: str):
-        return tr.PROGRESS.get(job) or {}
+    @app.get("/api/schede/{biglietto}")
+    def scheda_ritira(biglietto: str):
+        v = schede.pop(biglietto, None)
+        if not v or time.time() - v[0] > 120:
+            raise HTTPException(404, "La scheda non è più disponibile: riprova a spostarla.")
+        return v[1]
 
     @app.get("/api/tools")
     def tools_list():

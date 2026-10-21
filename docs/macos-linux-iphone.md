@@ -80,7 +80,7 @@ Cosa imposta `build-ios.sh` a ogni build (Info.plist e progetto):
 
 Differenze rispetto ad Android: niente tasto "indietro"; i file si salvano in *File → Sul mio iPhone → PDFz*;
 avviso di nuova versione **spento** (gli aggiornamenti passano da TestFlight/App Store/Xcode). Come su Android mancano
-traduzione, PDF/A, compressione Ghostscript e conversioni Office → PDF.
+PDF/A, compressione Ghostscript e conversioni Office → PDF.
 
 **Da verificare alla prima prova sul dispositivo** (non provabile senza un Mac): avvio del motore Pyodide nel WebView di iOS
 (WebAssembly servito da `capacitor://localhost`), memoria sugli iPhone più vecchi (il motore occupa qualche centinaio di MB),

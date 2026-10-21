@@ -1,5 +1,17 @@
 # Novità
 
+## 1.1.0
+App più leggera e schede che si spostano in una nuova finestra.
+
+- **Schede in una nuova finestra** (novità, Windows, macOS, Linux): con due o più documenti aperti, trascina una scheda
+  fuori dalla finestra e si apre in una finestra nuova di PDFz; oppure tasto destro sulla scheda → "Sposta in una nuova
+  finestra". Il documento passa così com'è: modifiche non ancora salvate, Annulla/Ripeti e password. Ogni finestra chiede
+  di salvare solo i suoi documenti e l'app si chiude con l'ultima finestra.
+- **Riordino delle schede** (novità): trascina una scheda sopra un'altra per cambiarle posto.
+- **Traduzione tolta** (rimosso): lo strumento "Traduci" e i pacchetti lingua non ci sono più, così l'app e l'installer
+  sono più leggeri. I modelli di traduzione scaricati in passato vengono cancellati al primo avvio; i pacchetti
+  "PDFz - Lingue" installati su Windows si possono togliere da Impostazioni → App.
+
 ## 1.0.2
 Aggiornamenti più semplici: il link diretto all'installer giusto per ogni sistema.
 

@@ -2,7 +2,7 @@ import { TabsMenu } from "./components/TabsMenu";
 import { OpenMenu, PhotoScan } from "./components/PhotoScan";
 import { useIsMobile, useMedia } from "./panels/fields";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronUp, FolderOpen, Menu, Printer, Redo2, Save, Undo2, X, FilePlus2, Lock } from "lucide-react";
+import { AppWindow, ChevronUp, FolderOpen, Menu, Printer, Redo2, Save, Undo2, X, FilePlus2, Lock } from "lucide-react";
 import { api, desktop, download, humanSize, isLocalEngine, onDesktopError, type Capabilities, type DocInfo, type FontInfo, type ToolResponse } from "./api";
 import { loadPdf, pageSizes, type PDFDoc, type PageSize } from "./pdf";
 import { Ctx, type AppCtx, type Pending, type Tab } from "./context";
@@ -17,6 +17,7 @@ import { Sidebar } from "./components/Sidebar";
 import { SaveAsIcon } from "./components/SaveAsIcon";
 import { isSignedContent, isSignedFile, sendToP7m } from "./panels/p7mInbox";
 import { sendToCreatePdf } from "./panels/createInbox";
+import { Popover } from "./components/Popover";
 import { ThemeMenu, useTheme } from "./components/ThemeMenu";
 import { Notifiche } from "./components/Notifiche";
 import { useStored } from "./hooks";
@@ -25,6 +26,8 @@ import { aggiungiMessaggio } from "./messaggi";
 interface Toast { id: number; msg: string; kind: "ok" | "err" | "info" }
 
 let tabSeq = 0;
+// tipo dei dati trascinati quando si sposta una scheda (riordino o nuova finestra)
+const TAB_DRAG = "application/x-pdfz-tab";
 let dialogSeq = 0;
 const loadedFonts = new Set<string>();
 const isDirtyTab = (t: Tab) => t.index !== t.savedIndex && t.history.length > 1;
@@ -440,12 +443,68 @@ export default function App() {
         } else if (!(await saveTab(t))) return;
       }
     }
-    setTabs((ts) => {
-      const rest = ts.filter((x) => x.key !== key);
-      setActive((a) => (a === key ? (rest.length ? rest[rest.length - 1].key : null) : a));
-      return rest;
-    });
+    dropTab(key);
   };
+  const dropTab = (key: string) => setTabs((ts) => {
+    const rest = ts.filter((x) => x.key !== key);
+    setActive((a) => (a === key ? (rest.length ? rest[rest.length - 1].key : null) : a));
+    return rest;
+  });
+
+  // Scheda spostata in una nuova finestra (trascinata fuori dalla finestra o dal menu del tasto destro), con almeno
+  // 2 schede aperte. Il documento passa così com'è: modifiche non salvate, Annulla/Ripeti, percorso e password.
+  // I dati vanno al motore, che dà un biglietto da usare una volta sola; la nuova finestra lo ritira all'avvio.
+  // Nell'app Android c'è una sola finestra.
+  const canDetach = !isLocalEngine() && tabs.length >= 2;
+  const moveToNewWindow = async (key: string, at?: { x: number; y: number }) => {
+    if (key === active) {
+      const hadPending = !!pendingRef.current;
+      if (!(await resolvePending())) return;
+      if (hadPending) await nextCommit();   // la versione appena applicata deve essere nella scheda che si sposta
+    }
+    const t = tabsRef.current.find((x) => x.key === key);
+    if (!t) return;
+    try {
+      const biglietto = await api.depositaScheda({ history: t.history, index: t.index, savedIndex: t.savedIndex, savedPath: t.savedPath, password: t.password });
+      const opened = desktop.available() ? await desktop.newWindow(`scheda=${biglietto}`) : openBrowserWindow(biglietto, at);
+      if (!opened) {
+        if (!desktop.available()) notify("Nuova finestra bloccata", "Il browser non ha aperto la nuova finestra: consenti le finestre a comparsa per PDFz e riprova.");
+        return;   // la scheda resta qui
+      }
+    } catch (e: any) {
+      toast(e.message, "err");
+      return;
+    }
+    dropTab(key);
+  };
+  // riordino trascinando una scheda sopra un'altra
+  const moveTabTo = (from: string, to: string) => setTabs((ts) => {
+    const i = ts.findIndex((x) => x.key === from), j = ts.findIndex((x) => x.key === to);
+    if (i < 0 || j < 0 || i === j) return ts;
+    const r = [...ts];
+    r.splice(j, 0, r.splice(i, 1)[0]);
+    return r;
+  });
+  const dragTab = useRef<string | null>(null);
+  const [tabMenu, setTabMenu] = useState<string | null>(null);
+  const tabMenuAnchor = useRef<HTMLElement | null>(null);
+
+  // finestra aperta da una scheda spostata: ritira la scheda (una sola volta) e toglie il biglietto dall'indirizzo
+  useEffect(() => {
+    const q = new URLSearchParams(location.search);
+    const biglietto = q.get("scheda");
+    if (!biglietto) return;
+    q.delete("scheda");
+    const rest = q.toString();
+    window.history.replaceState(null, "", `${location.pathname}${rest ? `?${rest}` : ""}${location.hash}`);
+    api.ritiraScheda(biglietto).then((s) => {
+      if (!Array.isArray(s.history) || !s.history[s.index]) throw new Error("La scheda spostata non è valida.");
+      const key = `t${++tabSeq}`;
+      setTabs((ts) => [...ts, { key, history: s.history, index: s.index, savedIndex: s.savedIndex, savedPath: s.savedPath, password: s.password }]);
+      setActive(key);
+      setCurrentPage(0);
+    }).catch((e) => toast(e.message, "err"));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // chiusura dell'app desktop (X della finestra): l'app ferma la chiusura e chiede qui cosa fare delle modifiche
   const closingRef = useRef(false);
@@ -580,23 +639,13 @@ export default function App() {
     doc, pdf, sizes, currentPage, tabs, fonts, caps, run, setInteraction, setOverlays,
     gotoPage: (p) => setGoto({ page: p, n: Date.now() }), openFiles, toast, fontCss, fontStyle, setMainView,
     openDoc: (d) => addTab(d), addDownload, pickTool: (id) => pickTool(id), setPending, ask, askText, notify,
-    adoptVersion: (fromId, d) => {
-      // la traduzione diventa la nuova versione della scheda da cui è partita (Annulla torna all'originale)
-      const t = tabs.find((x) => x.history[x.index]?.id === fromId) || tabs.find((x) => x.history.some((h) => h.id === fromId));
-      if (!t) { addTab(d); return; }
-      setTabs((ts) => ts.map((x) => x.key === t.key
-        ? { ...x, history: [...x.history.slice(0, x.index + 1), d], index: x.index + 1 }
-        : x));
-      setActive(t.key);
-      pickToolNow(null);
-    },
     panelLayout: { width: panelW, collapsed: panelCollapsed, setWidth: setPanelW, setCollapsed: setPanelCollapsed, sheetDown, setSheetDown },
   };
 
   const q = filter.trim().toLowerCase();
-  // strumenti che il motore di questo dispositivo non ha (es. traduzione nell'app Android)
-  const available = (t: (typeof TOOLS)[number]) => !(t.id === "translate" && caps && caps.translate === false) && (!t.androidOnly || isLocalEngine());
-  const visibleTools = useMemo(() => TOOLS.filter((t) => available(t) && (!q || `${t.label} ${t.description} ${t.keywords || ""}`.toLowerCase().includes(q))), [q, caps]); // eslint-disable-line react-hooks/exhaustive-deps
+  // strumenti solo per l'app Android (es. Scatta foto)
+  const available = (t: (typeof TOOLS)[number]) => !t.androidOnly || isLocalEngine();
+  const visibleTools = useMemo(() => TOOLS.filter((t) => available(t) && (!q || `${t.label} ${t.description} ${t.keywords || ""}`.toLowerCase().includes(q))), [q]); // eslint-disable-line react-hooks/exhaustive-deps
   const toolDef = tool ? TOOL_BY_ID[tool] : null;
   const noDocTools = new Set(["create_pdf", "merge", "compare", "p7m"]);
   const dirty = tab ? isDirtyTab(tab) : false;
@@ -611,7 +660,7 @@ export default function App() {
 
   return (
     <Ctx.Provider value={ctx}>
-      <div className="app" onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)} onDrop={onDrop}>
+      <div className="app" onDragOver={(e) => { if (!e.dataTransfer.types.includes("Files")) return; e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)} onDrop={onDrop}>
         <header className="topbar">
           <button className="btn icon ghost mobile-only" onClick={() => setDrawer(true)} title="Strumenti" aria-label="Apri il menu degli strumenti"><Menu size={20} /></button>
           <Logo />
@@ -632,7 +681,20 @@ export default function App() {
               const d = t.history[t.index];
               const isDirty = isDirtyTab(t);
               return (
-                <div key={t.key} className={`tab ${t.key === active ? "active" : ""}`} onClick={() => pickTab(t.key)} title={d.name}>
+                <div key={t.key} className={`tab ${t.key === active ? "active" : ""}`} onClick={() => pickTab(t.key)}
+                  title={canDetach ? `${d.name}\nTrascinala fuori dalla finestra per aprirla in una nuova finestra` : d.name}
+                  draggable={canDetach}
+                  onDragStart={(e) => { dragTab.current = t.key; e.dataTransfer.setData(TAB_DRAG, t.key); e.dataTransfer.effectAllowed = "move"; }}
+                  onDragOver={(e) => { if (dragTab.current && dragTab.current !== t.key) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; } }}
+                  onDrop={(e) => { if (!dragTab.current) return; e.preventDefault(); e.stopPropagation(); moveTabTo(dragTab.current, t.key); }}
+                  onDragEnd={(e) => {
+                    const k = dragTab.current;
+                    dragTab.current = null;
+                    // lasciata fuori dalla finestra (nessuno l'ha presa): nuova finestra
+                    const out = e.clientX <= 0 || e.clientY <= 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight;
+                    if (k && e.dataTransfer.dropEffect === "none" && out) moveToNewWindow(k, { x: e.screenX, y: e.screenY });
+                  }}
+                  onContextMenu={(e) => { if (!canDetach) return; e.preventDefault(); tabMenuAnchor.current = e.currentTarget; setTabMenu(t.key); }}>
                   {isDirty && <span className="dot" title="Modifiche non salvate" />}
                   <span className="name">{d.name}</span>
                   <span className="x" onClick={(e) => { e.stopPropagation(); closeTab(t.key); }}><X size={14} /></span>
@@ -640,6 +702,12 @@ export default function App() {
               );
             })}
           </div>}
+          {tabMenu && (
+            <Popover anchor={tabMenuAnchor} onClose={() => setTabMenu(null)} width={260} className="menu tab-pop" role="menu" label="Scheda">
+              <button role="menuitem" onClick={() => { setTabMenu(null); moveToNewWindow(tabMenu); }}><AppWindow size={15} /> Sposta in una nuova finestra</button>
+              <button role="menuitem" onClick={() => { setTabMenu(null); closeTab(tabMenu); }}><X size={15} /> Chiudi la scheda</button>
+            </Popover>
+          )}
           {doc && <span style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>{humanSize(doc.size)}{dirty ? " · non salvato" : ""}</span>}
           {/* app Android: niente elenco dei download (i file vanno in Documenti/PDFz e si apre "Condividi") */}
           {!isLocalEngine() && <Downloads entries={downloads} setEntries={setDownloads} flash={dlFlash} />}
@@ -746,6 +814,16 @@ export default function App() {
       </div>
     </Ctx.Provider>
   );
+}
+
+/** Versione nel browser: apre la nuova finestra con il biglietto della scheda, della stessa misura e dove è stata
+ *  lasciata la scheda. false se il browser l'ha bloccata. */
+function openBrowserWindow(biglietto: string, at?: { x: number; y: number }) {
+  const q = new URLSearchParams(location.search);
+  q.set("scheda", biglietto);
+  const pos = at ? `,left=${Math.max(0, Math.round(at.x - 120))},top=${Math.max(0, Math.round(at.y - 20))}` : "";
+  const size = `width=${Math.max(1024, window.outerWidth || window.innerWidth)},height=${Math.max(640, window.outerHeight || window.innerHeight)}`;
+  return !!window.open(`${location.pathname}?${q}`, "_blank", `popup,${size}${pos}`);
 }
 
 /** Stampa con il visualizzatore PDF integrato del motore web (finestra di stampa di sistema). */

@@ -14,6 +14,15 @@ export interface DocInfo {
   parent: string | null;
 }
 
+/** Scheda spostata in un'altra finestra: passa dal motore con un biglietto (vedi App.moveToNewWindow). */
+export interface SchedaSpostata {
+  history: DocInfo[];
+  index: number;
+  savedIndex: number;
+  savedPath?: string;
+  password?: string;
+}
+
 export interface OutputInfo {
   id: string;
   name: string;
@@ -47,7 +56,6 @@ export interface Capabilities {
   libreoffice: boolean;
   ms_office: boolean;
   platform: string;
-  translate?: boolean;
   input_formats: string[];
   version: string;
   /** indirizzo dello spazio degli aggiornamenti (vuoto = avviso disattivato) */
@@ -84,13 +92,9 @@ const jsonPost = async (url: string, body: unknown): Promise<any> =>
   handle(await fetch(url, { method: "POST", headers: headers({ "Content-Type": "application/json" }), body: JSON.stringify(body) }));
 
 export const api = {
-  async trLanguages(): Promise<any> { return handle(await fetch("api/translate/languages", { headers: headers() })); },
-  async trAvailable(refresh = false): Promise<any[]> { return handle(await fetch(`api/translate/available${refresh ? "?refresh=true" : ""}`, { headers: headers() })); },
-  async trInstall(body: { key?: string; job?: string; asset?: string }): Promise<any> { return jsonPost("api/translate/install", body); },
-  async trRemove(key: string): Promise<any> { return jsonPost("api/translate/remove", { key }); },
-  async trDetect(doc: string): Promise<{ code: string; name: string }> { return jsonPost("api/translate/detect", { doc }); },
+  async depositaScheda(s: SchedaSpostata): Promise<string> { return (await jsonPost("api/schede", s)).biglietto; },
+  async ritiraScheda(biglietto: string): Promise<SchedaSpostata> { return handle(await fetch(`api/schede/${encodeURIComponent(biglietto)}`, { headers: headers() })); },
   async heartbeat(): Promise<{ open?: string[]; actions?: { action: string; paths: string[] }[] }> { return handle(await fetch("api/heartbeat", { headers: headers() })); },
-  async progress(job: string): Promise<any> { return handle(await fetch(`api/progress/${job}`, { headers: headers() })); },
   async user(): Promise<{ name: string; login: string }> {
     return handle(await fetch("api/user", { headers: headers() }));
   },
@@ -243,6 +247,10 @@ export const desktop = {
   },
   async reveal(path: string): Promise<boolean> {
     return window.pywebview!.api.reveal(path);
+  },
+  /** Apre un'altra finestra di PDFz; query = parametri dell'indirizzo (es. "scheda=<biglietto>"). */
+  async newWindow(query: string): Promise<boolean> {
+    return desktopCall("Nuova finestra non aperta", false, () => window.pywebview!.api.nuova_finestra(query));
   },
 };
 

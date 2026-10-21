@@ -110,9 +110,13 @@ Le decisioni per cui si sono valutate più strade hanno una sezione propria, con
 | 2026-10-08 | 1.0.0 | APK firmato con una chiave di firma fissa (keystore fuori dal repository, nei secrets di GitHub) | Con la firma debug ogni build ha una firma diversa e i telefoni rifiutano l'aggiornamento (la chiave è diventata `pdfz-release.jks` il 2026-10-16) |
 | 2026-10-08 | 1.0.0 | Modifiche non applicate e chiusura: la domanda la fa la pagina (finestra dell'app), non una finestra di sistema; la finestra desktop ferma la chiusura e chiama `window.hdpdfRequestClose` da un altro thread | Servono 3 scelte (Salva/Applica e salva, Esci senza salvare, Annulla) e il salvataggio passa dalla pagina; `evaluate_js` dentro l'evento di chiusura bloccherebbe la finestra |
 
+| 2026-10-21 | 1.1.0 | Tolta la traduzione offline: strumento Traduci, motore CTranslate2/SentencePiece, pacchetti e MSI `PDFz-Lingue-*`. All'avvio l'app desktop cancella i modelli già scaricati in `<dati dell'app>\lingue` | Richiesta dell'utente: alleggerire l'app (installer, build e cartella `vendor` più piccoli) |
+| 2026-10-21 | 1.1.0 | Scheda in una nuova finestra (con 2 o più schede: trascinata fuori dalla finestra o "Sposta in una nuova finestra" dal tasto destro). Il documento passa così com'è (modifiche non salvate, Annulla/Ripeti, percorso, password) con un **biglietto monouso** del motore (`POST/GET /api/schede`, scade in 2 minuti), mai nell'indirizzo. App desktop: ogni finestra ha la sua `Api` (modifiche e chiusura per finestra), `quit()` chiude solo la sua, l'app termina con l'ultima; "Apri con" va alla finestra aperta più vecchia. Linux (browser): `window.open`. Non su Android/iPhone (una sola finestra) | Richiesta dell'utente; password e documenti non devono finire nell'URL o nella cronologia |
+
 ## Decisioni ancora aperte
 
-- Repository `akito996/pdfz` pubblico o privato: l'avviso di nuova versione funziona solo se le release sono pubbliche.
+- Repository `akito996/pdfz`: pubblico dalla 1.0.2 (serve all'avviso di nuova versione). Alternativa valutata: tornare
+  privato e pubblicare gli installer da un secondo repository pubblico solo per i download.
 - iPhone: come distribuirlo (TestFlight con Apple Developer Program 99 €/anno, oppure solo prove con Apple ID gratuito).
 - macOS/Linux: includere Tesseract nell'app invece di chiederlo installato sul computer.
 - Voci solo tecniche fuori dalla campanella (piattaforma `"build"` in `novita.json`).

@@ -2,6 +2,46 @@
   "_info": "Novità di ogni versione, mostrate nella campanella dell'app e copiate dalla build in versione-<piattaforma>.json. tipo: nuovo | modifica | correzione | installer | ottimizzazione | rimosso. piattaforme: windows, macos, linux, android, ios.",
   "versioni": [
     {
+      "versione": "1.1.0",
+      "data": "2026-10-21",
+      "titolo": "PDFz 1.1.0: schede in una nuova finestra e app più leggera",
+      "voci": [
+        {
+          "tipo": "nuovo",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux"
+          ],
+          "dove": "Schede dei documenti",
+          "titolo": "Trascina una scheda fuori per aprirla in una nuova finestra",
+          "dettaglio": "Con due o più documenti aperti, trascina una scheda fuori dalla finestra (oppure tasto destro → \"Sposta in una nuova finestra\"). Il documento passa così com'è, con le modifiche non salvate, Annulla/Ripeti e la password."
+        },
+        {
+          "tipo": "nuovo",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux"
+          ],
+          "dove": "Schede dei documenti",
+          "titolo": "Riordino delle schede",
+          "dettaglio": "Trascina una scheda sopra un'altra per cambiarle posto."
+        },
+        {
+          "tipo": "rimosso",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux"
+          ],
+          "dove": "Revisione",
+          "titolo": "Tolta la traduzione: app e installer più leggeri",
+          "dettaglio": "Lo strumento \"Traduci\" e i pacchetti lingua non ci sono più. I modelli scaricati in passato si cancellano da soli; i pacchetti \"PDFz - Lingue\" installati su Windows si tolgono da Impostazioni → App."
+        }
+      ]
+    },
+    {
       "versione": "1.0.2",
       "data": "2026-10-16",
       "titolo": "PDFz 1.0.2: link diretto al download per ogni sistema",

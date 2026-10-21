@@ -90,12 +90,11 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "8.0.x"
-      # lingue OCR e pacchetti di traduzione (centinaia di MB): lo script li scarica solo se mancano
+      # lingue OCR (Tesseract): lo script le scarica solo se mancano
       - uses: actions/cache@v6
         with:
           path: |
             vendor/tessdata
-            vendor/lingue
           key: vendor-windows-${{ hashFiles('packaging/build-windows.ps1') }}
           restore-keys: vendor-windows-
       - name: Build

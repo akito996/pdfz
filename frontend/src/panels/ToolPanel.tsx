@@ -27,7 +27,6 @@ const TocPanel = lazyPanel(() => import("./RevisionPanels"), "TocPanel");
 const P7mPanel = lazyPanel(() => import("./P7mPanel"), "P7mPanel");
 const ShapesPanel = lazyPanel(() => import("./ShapesPanel"), "ShapesPanel");
 const CommentsPanel = lazyPanel(() => import("./CommentsPanel"), "CommentsPanel");
-const TranslatePanel = lazyPanel(() => import("./TranslatePanel"), "TranslatePanel");
 const PasswordInfoPanel = lazyPanel(() => import("./PasswordInfoPanel"), "PasswordInfoPanel");
 const StampPanel = lazyPanel(() => import("./StampPanel"), "StampPanel");
 import { isLocalEngine } from "../api";
@@ -142,7 +141,6 @@ function ToolPanelInner({ def, onClose }: { def: ToolDef; onClose: () => void })
     case "properties": return <PropertiesPanel {...props} />;
     case "toc": return <TocPanel {...props} />;
     case "p7m": return <P7mPanel {...props} />;
-    case "translate": return <TranslatePanel {...props} />;
     case "comments": return <CommentsPanel {...props} />;
     case "pwinfo": return <PasswordInfoPanel {...props} />;
     case "shapes": return <ShapesPanel key={def.id} {...props} />;

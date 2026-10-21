@@ -14,7 +14,7 @@
   La copia e' uno "specchio" (robocopy /MIR) del codice: ogni volta copia solo i file cambiati e toglie quelli
   cancellati nel progetto. NON tocca (e non copia) le cartelle che la build crea o scarica da sola, che cosi' restano
   nella copia fra una build e l'altra (build piu' veloci): .venv, node_modules, dist, build, www, .gradle, ...
-  vendor (OCR, lingue) e mobile\cache (motore Pyodide) si copiano senza mai cancellare niente nella copia.
+  vendor (OCR, Ghostscript) e mobile\cache (motore Pyodide) si copiano senza mai cancellare niente nella copia.
 
 .EXAMPLE
   .\packaging\copia-e-build.ps1 -Piattaforma windows
@@ -51,7 +51,7 @@ function Copy-Project([string]$dest) {
   $common = @("/R:2", "/W:2", "/NFL", "/NDL", "/NP", "/NJH", "/XJ")
   & robocopy.exe $Source $dest /MIR /XD @skipDirs /XF @skipFiles @common | Out-Host
   if ($LASTEXITCODE -ge 8) { throw "Copia del progetto non riuscita (robocopy codice $LASTEXITCODE)" }
-  # file scaricati una volta (OCR, lingue, motore Pyodide): si aggiungono senza mai cancellare nella copia
+  # file scaricati una volta (OCR, Ghostscript, motore Pyodide): si aggiungono senza mai cancellare nella copia
   foreach ($sub in @("vendor", "mobile\cache")) {
     $from = Join-Path $Source $sub
     if (Test-Path $from) {

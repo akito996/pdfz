@@ -7,7 +7,7 @@ type Pending = { resolve: (r: Response) => void };
 // richieste che servono le librerie caricate in sottofondo (Word/Excel, firma digitale, file firmati…):
 // aspettano che siano pronte. Tutte le altre (aprire, modificare, creare PDF da foto…) partono subito.
 // Se una richiesta "leggera" scopre di aver bisogno di una libreria non ancora caricata, il motore la ripete da solo.
-const HEAVY = /^\/api\/(p7m|translate)\/|^\/api\/tools\/(convert_from_pdf|file_to_pdf|sign_cert|validate|translate|translation_export)$/;
+const HEAVY = /^\/api\/p7m\/|^\/api\/tools\/(convert_from_pdf|file_to_pdf|sign_cert|validate)$/;
 
 export function startLocalEngine(onProgress: (label: string, pct: number) => void): Promise<void> {
   const worker = new Worker(new URL("./engine.worker.ts", import.meta.url), { type: "module" });

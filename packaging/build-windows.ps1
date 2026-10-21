@@ -19,15 +19,6 @@ param(
   # vuoto = la versione scritta in backend\hdpdf\__init__.py (unica fonte del numero), formato MAJOR.MINOR.PATCH es. 1.0.0
   [string]$Version = "",
   [string[]]$OcrLanguages = @("ita", "eng", "fra", "deu", "spa"),
-  # lingue di traduzione da preparare (ognuna <-> inglese; le altre si scaricano dall'app)
-  [string[]]$TranslateLanguages = @("it", "fr", "de", "es", "zh", "ja", "ar", "ru"),
-  # come dividere le lingue negli MSI separati (un MSI non puo' superare 2 GB);
-  # le lingue richieste non elencate qui finiscono ognuna in un MSI proprio
-  [string[]]$LangMsiGroups = @("it,fr,de,es", "zh,ja,ar,ru"),
-  [switch]$NoTranslatePacks,
-  # di norma le lingue vanno in MSI separati (PDFz-Lingue-<gruppo>-x.y.z-x64.msi);
-  # con questa opzione finiscono nell'MSI principale (un solo file, ma molto piu' grande)
-  [switch]$PacksInMainMsi,
   [switch]$WithGhostscript,
   [string]$GhostscriptVersion = "10.05.1",
   [switch]$SkipTests,
@@ -46,9 +37,9 @@ if ("$Root" -match 'OneDrive' -or "$Root" -match '&') {
   Write-Warning "Stai compilando dentro $Root. Usa la copia in C:\Build:  .\packaging\copia-e-build.ps1 -Piattaforma windows"
 }
 # cartelle (con copia-e-build.ps1: C:\Build\PDFz-Windows\...):
-#   dist\                MSI, MSI delle lingue, versione-windows.json
+#   dist\                MSI, versione-windows.json
 #   dist\PDFz\           l'app compilata da PyInstaller (sorgente dell'MSI)
-#   build\               file di lavoro (PyInstaller, test, MSI delle lingue): si possono cancellare quando si vuole
+#   build\               file di lavoro (PyInstaller, test): si possono cancellare quando si vuole
 if (-not $OutDir) { $OutDir = Join-Path $Root "dist" }
 try { New-Item -ItemType Directory -Force -Path $OutDir -ErrorAction Stop | Out-Null }
 catch { throw "Non riesco a creare $OutDir ($($_.Exception.Message)). Creala a mano o usa -OutDir con un'altra cartella." }
@@ -235,7 +226,6 @@ if (Test-Path (Join-Path $gsBin "gswin64c.exe")) {
 }
 
 Step "Eseguibile (PyInstaller)"
-$env:HDPDF_BUNDLE_LANGS = $(if ($PacksInMainMsi -and -not $NoTranslatePacks) { "1" } else { "0" })
 # Cartella di lavoro di PyInstaller: build\pyinstaller della copia in C:\Build. In OneDrive, con --clean PyInstaller
 # cancella e ricrea migliaia di file e OneDrive li bloccava -> "PermissionError [WinError 5] Accesso negato" (202610.010).
 $pyiWork = Join-Path $WorkDir "pyinstaller"
@@ -255,48 +245,11 @@ if ($LASTEXITCODE) { throw "PyInstaller non riuscito" }
 
 }  # fine blocco saltato con -OnlyMsi
 
-# pacchetti lingua: anche con -OnlyMsi (vanno negli MSI separati, non nell'eseguibile)
-if (-not $NoTranslatePacks) {
-  Step "Pacchetti lingua per la traduzione ($($TranslateLanguages -join ', '))"
-  $langDir = Join-Path $Root "vendor\lingue"
-  New-Item -ItemType Directory -Force -Path $langDir | Out-Null
-  $index = Invoke-RestMethod -UseBasicParsing -Uri "https://raw.githubusercontent.com/argosopentech/argospm-index/main/index.json"
-  $wanted = @()
-  foreach ($l in $TranslateLanguages) { if ($l -ne "en") { $wanted += "en-$l"; $wanted += "$l-en" } }
-  foreach ($key in $wanted) {
-    $from, $to = $key.Split("-")
-    $dest = Join-Path $langDir "translate-${from}_${to}"
-    if (Test-Path (Join-Path $dest "model")) { continue }
-    $pkg = $index | Where-Object { $_.from_code -eq $from -and $_.to_code -eq $to } | Select-Object -First 1
-    if (-not $pkg) { Write-Warning "  pacchetto $key non disponibile"; continue }
-    $url = $pkg.links | Where-Object { $_ -like "http*" } | Select-Object -First 1
-    Write-Host "  scarico $key ($url)"
-    $zip = Join-Path $env:TEMP "hdpdf-$key.zip"
-    Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $zip
-    $tmp = Join-Path $env:TEMP "hdpdf-$key"
-    if (Test-Path $tmp) { Remove-Item -Recurse -Force $tmp }
-    Expand-Archive -Path $zip -DestinationPath $tmp -Force
-    $inner = Get-ChildItem $tmp -Directory | Select-Object -First 1
-    if (Test-Path $dest) { Remove-Item -Recurse -Force $dest }
-    Move-Item $inner.FullName $dest
-    Remove-Item -Recurse -Force (Join-Path $dest "stanza") -ErrorAction SilentlyContinue   # non serve
-    Remove-Item -Force $zip; Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
-  }
-  # pacchetti di lingue non piu' richieste (build precedenti): via, cosi' non finiscono nell'installer
-  $keep = $wanted | ForEach-Object { "translate-" + $_.Replace("-", "_") }
-  Get-ChildItem $langDir -Directory | Where-Object { $keep -notcontains $_.Name } | ForEach-Object {
-    Write-Host "  rimuovo $($_.Name) (non richiesto)"; Remove-Item -Recurse -Force $_.FullName
-  }
-  $mb = [math]::Round(((Get-ChildItem $langDir -Recurse -File | Measure-Object Length -Sum).Sum / 1MB))
-  Write-Host "  pacchetti lingua: $mb MB"
-}
-
-
 # un file MSI non puo' superare 2 GB
 $appMb = [math]::Round(((Get-ChildItem $AppDir -Recurse -File | Measure-Object Length -Sum).Sum / 1MB))
 Write-Host "Dimensione dell'applicazione: $appMb MB"
 if ($appMb -gt 1900) {
-  throw "L'applicazione supera 1,9 GB e non entra in un MSI. Riduci le lingue, per esempio:`n  -TranslateLanguages it,fr,de,es`ne rilancia lo script. Le altre lingue si possono scaricare dall'app."
+  throw "L'applicazione supera 1,9 GB e non entra in un MSI: controlla cosa e' finito in $AppDir."
 }
 
 Step "Installer MSI (WiX v5)"
@@ -322,66 +275,11 @@ $code = $LASTEXITCODE
 Pop-Location
 if ($code) { throw "WiX non riuscito" }
 
-$langDir = Join-Path $Root "vendor\lingue"
-$langMsis = @()
-if (-not $NoTranslatePacks -and -not $PacksInMainMsi -and (Test-Path $langDir) -and (Get-ChildItem $langDir -Directory)) {
-  Step "Installer dei pacchetti lingue (separati)"
-  $names = @{ it="Italiano"; fr="Francese"; de="Tedesco"; es="Spagnolo"; pt="Portoghese"; zh="Cinese semplificato"; ja="Giapponese"; ar="Arabo"; ru="Russo"; ko="Coreano"; nl="Olandese"; pl="Polacco"; tr="Turco"; uk="Ucraino"; hi="Hindi" }
-  # gruppi: quelli di -LangMsiGroups (solo le lingue richieste), poi un gruppo per ogni lingua rimasta
-  $groups = @()
-  $used = @()
-  foreach ($g in $LangMsiGroups) {
-    $langs = @($g.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ -and ($TranslateLanguages -contains $_) -and $_ -ne "en" })
-    if ($langs.Count) { $groups += ,$langs; $used += $langs }
-  }
-  foreach ($l in $TranslateLanguages) { if ($l -ne "en" -and $used -notcontains $l) { $groups += ,@($l); $used += $l } }
-
-  $stage = Join-Path $WorkDir "lingue-msi"
-  if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }
-  foreach ($langs in $groups) {
-    $gid = ($langs -join "-")
-    $gname = ($langs | ForEach-Object { if ($names[$_]) { $names[$_] } else { $_ } }) -join ", "
-    # UpgradeCode stabile per gruppo, derivato dal nome del gruppo: NON cambiare la formula, serve agli aggiornamenti
-    $md5 = [System.Security.Cryptography.MD5]::Create().ComputeHash([Text.Encoding]::UTF8.GetBytes("PDFz-Lingue-$gid"))
-    $upg = ([guid]::new($md5)).ToString()
-    # cartella del gruppo: collegamenti ai file (niente copia di centinaia di MB), oppure copia se non si puo'
-    $gdir = Join-Path $stage $gid
-    New-Item -ItemType Directory -Force -Path $gdir | Out-Null
-    $count = 0
-    foreach ($l in $langs) {
-      foreach ($pack in @("translate-${l}_en", "translate-en_${l}")) {
-        $src = Join-Path $langDir $pack
-        if (-not (Test-Path $src)) { Write-Warning "  manca ${pack}: non sara' nell'MSI $gid"; continue }
-        Get-ChildItem $src -Recurse -File | ForEach-Object {
-          $rel = $_.FullName.Substring($langDir.Length + 1)
-          $dst = Join-Path $gdir $rel
-          New-Item -ItemType Directory -Force -Path (Split-Path $dst) | Out-Null
-          try { New-Item -ItemType HardLink -Path $dst -Target $_.FullName -ErrorAction Stop | Out-Null } catch { Copy-Item $_.FullName $dst }
-        }
-        $count++
-      }
-    }
-    if (-not $count) { continue }
-    $gMb = [math]::Round(((Get-ChildItem $gdir -Recurse -File | Measure-Object Length -Sum).Sum / 1MB))
-    if ($gMb -gt 1900) { throw "Il gruppo di lingue $gid pesa $gMb MB: oltre il limite di un MSI. Dividilo con -LangMsiGroups (es. ""it,fr"",""de,es"")." }
-    $out = Join-Path $OutDir "PDFz-Lingue-$gid-$Version-x64.msi"
-    Write-Host "  $gname  ($gMb MB)"
-    Push-Location packaging\wix
-    wix build Lingue.wxs -ext WixToolset.UI.wixext -culture it-IT -arch x64 -d "Version=$MsiVersion" -d "GroupId=$gid" -d "GroupName=$gname" -d "UpgradeCode=$upg" -bindpath "Lingue=$gdir" -o $out
-    $code = $LASTEXITCODE
-    Pop-Location
-    if ($code) { throw "WiX (pacchetto lingue $gid) non riuscito" }
-    $langMsis += $out
-  }
-}
-
 Step "Fatto"
 # file per l'avviso di nuova versione: se non riesce l'MSI resta valido, quindi solo un avviso
 try { & (Join-Path $PSScriptRoot "scrivi-versione.ps1") -Piattaforma windows -File (Split-Path $msi -Leaf) -Root $Root -OutDir $OutDir }
 catch { Write-Warning "versione-windows.json non creato: $($_.Exception.Message)" }
 Write-Host ("Installer: $msi  ({0:N0} MB)" -f ((Get-Item $msi).Length / 1MB)) -ForegroundColor Green
-foreach ($m in $langMsis) { Write-Host ("Pacchetto lingue: $m  ({0:N0} MB)" -f ((Get-Item $m).Length / 1MB)) -ForegroundColor Green }
-if ($langMsis) { Write-Host "I pacchetti lingue si installano solo sui PC che traducono (anche solo alcuni gruppi)." }
 Write-Host "Installazione silenziosa:  msiexec /i `"$msi`" /qn DESKTOPSHORTCUT=0"
 Write-Host "Solo per l'utente corrente (senza amministratore):  msiexec /i `"$msi`" /qn HDSCOPE=user"
 Write-Host "Cartella dei risultati: $OutDir" -ForegroundColor Green

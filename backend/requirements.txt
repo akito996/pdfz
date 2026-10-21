@@ -8,9 +8,6 @@ pyhanko>=0.25
 pyhanko-certvalidator>=0.26
 requests>=2.31          # OCSP/CRL per la verifica dei .p7m
 cryptography>=42
-# Traduzione offline (modelli Argos Translate, senza torch)
-ctranslate2>=4.4
-sentencepiece>=0.2
 # Conversioni
 pdf2docx>=0.5.8
 opencv-python-headless>=4.8,<5   # usato da pdf2docx; la 5.x e' una major nuova non ancora verificata

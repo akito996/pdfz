@@ -40,8 +40,10 @@ Come viene ricordata la scelta: l'installazione scrive `InstallScope` in `HKMU\S
 (HKMU = HKLM per tutti gli utenti, HKCU per "solo per me"). Il nuovo MSI legge `HKCU\...\InstallScope` (`HDPREVUSER`):
 se vale `user`, `HDSCOPE` diventa `user`, altrimenti `machine`. `FindRelatedProducts` nella sequenza UI è spostata
 dopo `HdCtxMachine`, cioè dopo aver deciso il contesto.
-I pacchetti lingue (`PDFz-Lingue-<gruppo>-X.Y.Z-x64.msi`) si installano sempre per tutto il PC e si registrano in
-`HKLM\Software\agjin\PDFz Lingue\<gruppo>` (l'app li trova da lì).
+I pacchetti lingue per la traduzione (`PDFz-Lingue-<gruppo>-X.Y.Z-x64.msi`, fino alla 1.0.2) non esistono più: la
+traduzione è stata tolta nella 1.1.0. Dove erano installati restano finché non si tolgono da **Impostazioni → App**
+(voce "PDFz - Lingue (…)"); non danno fastidio all'app. I modelli scaricati dall'app in `<dati dell'app>\lingue` li
+cancella PDFz da solo al primo avvio della nuova versione (`cleanup.rimuovi_modelli_traduzione`).
 
 **Regola (decisa il 2026-10-05):** si installa sempre **per tutti gli utenti**; "solo per me" solo per chi
 non ha i permessi da amministratore. Negli aggiornamenti **non** si passa `HDSCOPE`.

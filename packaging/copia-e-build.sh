@@ -44,7 +44,7 @@ rsync -a --delete \
   --exclude='_work' --exclude='_data' --exclude='Claude outputs' --exclude='vendor' --exclude='cache' \
   --exclude='/mobile/ios/' --exclude='*.pyc' --exclude='tsconfig.tsbuildinfo' --exclude='.DS_Store' \
   "$SORGENTE/" "$DEST/"
-# dati OCR gia' scaricati: si aggiungono senza mai cancellare (le lingue di traduzione e Ghostscript per Windows non servono)
+# dati OCR gia' scaricati: si aggiungono senza mai cancellare (Ghostscript per Windows non serve)
 if [ -d "$SORGENTE/vendor/tessdata" ]; then
   mkdir -p "$DEST/vendor/tessdata"
   rsync -a "$SORGENTE/vendor/tessdata/" "$DEST/vendor/tessdata/"

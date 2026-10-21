@@ -88,7 +88,7 @@ def _work_dirs() -> list[Path]:
 
 def apply_setup_mode(mode: str) -> dict:
     """Chiamato dall'installer MSI (`PDFz.exe --setup-data <modo>`) per tutti i profili del PC:
-    * keep     → aggiornamento: non si tocca niente (impostazioni, preferiti, lingue scaricate, firme…);
+    * keep     → aggiornamento: non si tocca niente (impostazioni, preferiti, firme…);
     * settings → si tiene SOLO il file delle impostazioni (preferiti, etichette, tema…), tutto il resto
                  della versione vecchia viene eliminato; una copia di sicurezza resta nella cartella;
     * clean    → installazione pulita: si elimina tutto.
@@ -124,3 +124,15 @@ def apply_setup_mode(mode: str) -> dict:
         if w.exists():
             shutil.rmtree(w, ignore_errors=True)
     return done
+
+
+def rimuovi_modelli_traduzione() -> bool:
+    """La traduzione è stata tolta nella 1.1.0: i modelli scaricati dalle versioni precedenti (centinaia di MB in
+    <dati dell'app>/lingue) non servono più e si cancellano una volta, all'avvio. True se c'erano."""
+    from . import config
+
+    d = config.data_dir() / "lingue"
+    if not d.is_dir():
+        return False
+    shutil.rmtree(d, ignore_errors=True)
+    return True

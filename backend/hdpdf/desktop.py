@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import shutil
 import socket
 import sys
@@ -71,14 +72,24 @@ class Api:
         self._window = None
         self._unsaved = False
         self._quit_ok = False
+        self._apri_finestra = None   # funzione di run(): apre un'altra finestra di PDFz
 
     def set_unsaved(self, value: bool) -> bool:
         """La UI comunica se ci sono modifiche non salvate o non applicate (usato alla chiusura)."""
         self._unsaved = bool(value)
         return True
 
+    def nuova_finestra(self, query: str) -> bool:
+        """Apre un'altra finestra di PDFz (scheda trascinata fuori). query = parametri dell'indirizzo, es. "scheda=<biglietto>";
+        i dati della scheda li ritira la nuova finestra dal server con il biglietto."""
+        if not self._apri_finestra or not re.fullmatch(r"[A-Za-z0-9_=&-]{1,200}", query or ""):
+            return False
+        self._apri_finestra(query)
+        return True
+
     def quit(self) -> bool:
-        """La UI ha deciso di uscire (dopo aver salvato o scelto di non salvare): chiude la finestra."""
+        """La UI ha deciso di chiudere la finestra (dopo aver salvato o scelto di non salvare). Chiude solo questa
+        finestra: l'app termina quando si chiude l'ultima."""
         self._quit_ok = True
         # in un thread: destroy() dentro una chiamata da JavaScript bloccherebbe la finestra
         threading.Thread(target=self._window.destroy, daemon=True, name="quit").start()
@@ -320,6 +331,12 @@ def run(files: list[str] | None = None, action: str | None = None) -> None:
     mode = ui_mode()
     log.info("Avvio %s (%s, interfaccia: %s)", APP_NAME, sys.platform, mode)
     store.cleanup()
+    try:
+        from .cleanup import rimuovi_modelli_traduzione
+        if rimuovi_modelli_traduzione():
+            log.info("Modelli di traduzione delle versioni precedenti cancellati (funzione tolta)")
+    except Exception:  # noqa: BLE001 - spazio da liberare, non deve fermare l'avvio
+        log.warning("Pulizia dei modelli di traduzione non riuscita", exc_info=True)
 
     port = _free_port()
     app = create_app(require_token=True)
@@ -357,20 +374,61 @@ def run(files: list[str] | None = None, action: str | None = None) -> None:
 
     import webview
 
-    api = Api()
-    window = webview.create_window(
-        APP_NAME, f"http://127.0.0.1:{port}/?t={API_TOKEN}", js_api=api,
-        width=1440, height=900, min_size=(1024, 640), text_select=True,
-    )
-    api._window = window
+    base_url = f"http://127.0.0.1:{port}/?t={API_TOKEN}"
+    finestre: list = []   # finestre aperte, dalla più vecchia: la prima ancora aperta riceve i file da "Apri con"
+
+    def apri_finestra(query: str = ""):
+        """Una finestra di PDFz: la principale all'avvio, poi una per ogni scheda trascinata fuori.
+        Ognuna ha la sua Api (modifiche non salvate e chiusura sono per finestra)."""
+        api = Api()
+        api._apri_finestra = apri_finestra
+        w = webview.create_window(
+            APP_NAME, base_url + (f"&{query}" if query else ""), js_api=api,
+            width=1440, height=900, min_size=(1024, 640), text_select=True,
+        )
+        api._window = w
+        finestre.append(w)
+
+        def ask_ui_to_close():
+            # la UI chiede "Salvare / applicare le modifiche?" con la sua finestra e poi chiama api.quit();
+            # se la pagina non risponde (non caricata, bloccata) si usa la conferma di sistema
+            try:
+                handled = w.evaluate_js("window.hdpdfRequestClose ? window.hdpdfRequestClose() : false")
+            except Exception:  # noqa: BLE001
+                log.warning("Richiesta di chiusura alla pagina non riuscita", exc_info=True)
+                handled = False
+            if not handled and _ask_quit():
+                api.quit()
+
+        def on_closing():
+            # niente evaluate_js qui: durante la chiusura bloccherebbe la finestra (deadlock).
+            # Con modifiche non salvate o non applicate la chiusura si ferma e la domanda la fa la pagina, da un altro thread.
+            if api._quit_ok or not api._unsaved:
+                return True
+            threading.Thread(target=ask_ui_to_close, daemon=True, name="chiusura").start()
+            return False
+
+        def on_closed():
+            if w in finestre:
+                finestre.remove(w)
+
+        w.events.closing += on_closing
+        w.events.closed += on_closed
+        return w
+
+    window = apri_finestra()
 
     def push_paths(paths: list[str], act: str = "apri") -> None:
+        # alla finestra principale se è ancora aperta, altrimenti alla più vecchia rimasta
+        target = finestre[0] if finestre else None
+        if target is None:
+            return
         try:
             req = json.dumps({"action": act, "paths": paths})
-            window.evaluate_js(f"window.hdpdfAction ? window.hdpdfAction({req}) : "
+            target.evaluate_js(f"window.hdpdfAction ? window.hdpdfAction({req}) : "
                                f"(window.__hdpdfPendingActions = (window.__hdpdfPendingActions || []).concat([{req}]))")
-            window.restore()
-            window.show()
+            target.restore()
+            target.show()
         except Exception:
             log.exception("Apertura file dalla seconda istanza non riuscita")
 
@@ -381,27 +439,7 @@ def run(files: list[str] | None = None, action: str | None = None) -> None:
             # in un thread separato: l'evento "loaded" non deve attendere il JavaScript
             threading.Thread(target=push_paths, args=([str(Path(f).resolve()) for f in files], action), daemon=True).start()
 
-    def ask_ui_to_close():
-        # la UI chiede "Salvare / applicare le modifiche?" con la sua finestra e poi chiama api.quit();
-        # se la pagina non risponde (non caricata, bloccata) si usa la conferma di sistema
-        try:
-            handled = window.evaluate_js("window.hdpdfRequestClose ? window.hdpdfRequestClose() : false")
-        except Exception:  # noqa: BLE001
-            log.warning("Richiesta di chiusura alla pagina non riuscita", exc_info=True)
-            handled = False
-        if not handled and _ask_quit():
-            api.quit()
-
-    def on_closing():
-        # niente evaluate_js qui: durante la chiusura bloccherebbe la finestra (deadlock).
-        # Con modifiche non salvate o non applicate la chiusura si ferma e la domanda la fa la pagina, da un altro thread.
-        if api._quit_ok or not api._unsaved:
-            return True
-        threading.Thread(target=ask_ui_to_close, daemon=True, name="chiusura").start()
-        return False
-
     window.events.loaded += on_loaded
-    window.events.closing += on_closing
     try:
         gui = "edgechromium" if sys.platform.startswith("win") else None
         webview.start(gui=gui, private_mode=False, storage_path=str(config.data_dir() / "webview"))

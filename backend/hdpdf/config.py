@@ -193,14 +193,6 @@ def ms_office_available() -> bool:
     return False
 
 
-def _has_module(name: str) -> bool:
-    import importlib.util
-    try:
-        return importlib.util.find_spec(name) is not None
-    except Exception:  # noqa: BLE001
-        return False
-
-
 def capabilities() -> dict:
     return {
         # l'OCR usa il Tesseract integrato in MuPDF: bastano i file lingua
@@ -210,6 +202,4 @@ def capabilities() -> dict:
         "libreoffice": bool(soffice_cmd()),
         "ms_office": ms_office_available(),
         "platform": os.environ.get("HDPDF_PLATFORM") or sys.platform,
-        # traduzione offline: serve il motore CTranslate2 (non disponibile nell'app Android)
-        "translate": _has_module("ctranslate2"),
     }

@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 # Build: pyinstaller packaging/hdpdf.spec --noconfirm   (dalla radice del progetto)
 from pathlib import Path
-from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs, collect_submodules
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 import sys
 
@@ -27,9 +27,7 @@ datas = [
     (str(ROOT / "THIRD-PARTY-NOTICES.md"), "."),
 ]
 import os
-# i pacchetti lingua vanno nell'MSI separato, a meno che lo script chieda di includerli (-PacksInMainMsi)
-_subs = ["tessdata", "ghostscript"] + (["lingue"] if os.environ.get("HDPDF_BUNDLE_LANGS") == "1" else [])
-for sub in _subs:
+for sub in ("tessdata", "ghostscript"):
     p = ROOT / "vendor" / sub
     if not p.exists():
         continue
@@ -51,8 +49,7 @@ datas += collect_data_files("pdf2docx")
 datas += collect_data_files("pptx")
 if IS_WIN or IS_MAC:   # su Linux la finestra è il browser in modalità app (vedi desktop.ui_mode)
     datas += collect_data_files("webview")
-datas += collect_data_files("ctranslate2")
-binaries = collect_dynamic_libs("ctranslate2") + collect_dynamic_libs("sentencepiece")
+binaries = []
 
 hidden = (
     collect_submodules("hdpdf")
@@ -60,8 +57,6 @@ hidden = (
     + collect_submodules("uvicorn")
     + collect_submodules("pyhanko_certvalidator")  # fetcher OCSP/CRL caricati dinamicamente (verifica .p7m)
     + ["requests"]
-    # i "converters" di ctranslate2 (trasformano modelli Hugging Face) non servono: l'app usa modelli già pronti
-    + collect_submodules("ctranslate2", filter=lambda n: ".converters" not in n) + ["sentencepiece"]
     + (["win32com", "win32com.client", "pythoncom", "pywintypes", "clr", "webview.platforms.winforms",
         "webview.platforms.edgechromium"] if IS_WIN else [])
     + (["webview.platforms.cocoa"] if IS_MAC else [])
@@ -75,11 +70,11 @@ a = Analysis(
     hiddenimports=hidden,
     excludes=["tkinter", "matplotlib", "IPython", "pytest", "scipy", "pandas", "PyQt5", "PyQt6",
               "PySide2", "PySide6", "notebook", "jupyter",
-              "torch", "transformers", "stanza", "argostranslate", "tensorflow",
+              # la traduzione e' stata tolta nella 1.1.0: niente motori di traduzione anche se installati sul PC di build
+              "torch", "transformers", "stanza", "argostranslate", "tensorflow", "ctranslate2", "sentencepiece",
               # pdfplumber usa pypdfium2 solo per le anteprime (to_image), che l'app non usa
               "pypdfium2", "pypdfium2_raw",
-              # arrivavano con i "converters" di ctranslate2 (~15 MB): servono solo per creare modelli, non per tradurre
-              "ctranslate2.converters", "huggingface_hub", "hf_xet", "transformers", "safetensors", "tokenizers",
+              "huggingface_hub", "hf_xet", "safetensors", "tokenizers",
               # strumenti di sviluppo inclusi per sbaglio da alcune librerie
               "pip", "IPython", "pydoc_data", "lib2to3", "idlelib", "numpy.f2py", "numpy.distutils"],
     # python-pptx legge i modelli XML con percorsi relativi ai propri sorgenti

@@ -49,3 +49,16 @@ def test_open_external_blocks_executables(d):
     it = store.add_bytes(b"MZ", "programma.exe", kind="output")
     with pytest.raises(desktop.AvvisoUtente, match="antivirus"):
         desktop.Api().open_external(it.id)
+
+
+def test_nuova_finestra_solo_parametri_sicuri(d):
+    """Scheda trascinata fuori: la pagina chiede un'altra finestra passando solo il biglietto nell'indirizzo."""
+    desktop, _ = d
+    api = desktop.Api()
+    assert api.nuova_finestra("scheda=abc") is False   # senza run() (nessuna finestra) non succede niente
+    aperte = []
+    api._apri_finestra = aperte.append
+    assert api.nuova_finestra("scheda=Ab3_-x9") is True
+    for cattivo in ("", "scheda=a b", "x=1#y", "scheda=<script>", "a" * 201, "../file"):
+        assert api.nuova_finestra(cattivo) is False
+    assert aperte == ["scheda=Ab3_-x9"]

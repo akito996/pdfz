@@ -1,5 +1,5 @@
 import {
-  BadgeCheck, Languages, MessagesSquare, Shapes, SquareCheckBig,
+  BadgeCheck, MessagesSquare, Shapes, SquareCheckBig,
   Archive, BookOpen, Combine, Copy, Crop, Droplets, Eraser, FileCheck2, FileCog, FileDiff,
   FileImage, FileInput, FileKey2, FileLock2, FileOutput, FileSearch, FileSignature, FileText,
   FileX2, Hash, ImagePlus, ImageOff, Info, Layers, ListOrdered, ListTree, LockOpen, Maximize2,
@@ -35,7 +35,7 @@ export interface Field {
 
 export type PanelKind =
   | "form" | "edit_text" | "add_text" | "images" | "pages" | "organize" | "merge" | "compare" | "sign" | "redact" | "info"
-  | "validate" | "properties" | "toc" | "create_pdf" | "p7m" | "shapes" | "comments" | "translate" | "pwinfo";
+  | "validate" | "properties" | "toc" | "create_pdf" | "p7m" | "shapes" | "comments" | "pwinfo";
 
 export interface ToolDef {
   id: string;
@@ -405,11 +405,6 @@ export const TOOLS: ToolDef[] = [
     id: "comments", label: "Commenti e revisioni", category: "Revisione", icon: MessagesSquare, panel: "comments",
     description: "Note, evidenziazioni, proposte di modifica (barra, sostituisci, inserisci), risposte e stato di revisione.",
     keywords: "commento nota evidenzia sottolinea barra revisione revisore accetta rifiuta risposta annotazioni",
-  },
-  {
-    id: "translate", label: "Traduci", category: "Revisione", icon: Languages, panel: "translate",
-    description: "Traduci il PDF sul PC (senza internet) mantenendo l'impaginazione; originale e traduzione affiancati.",
-    keywords: "traduzione traduci lingua inglese francese tedesco spagnolo cinese translate",
   },
   {
     id: "properties", label: "Modifica proprietà", category: "Revisione", icon: FileCog, panel: "properties",

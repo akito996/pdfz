@@ -12,7 +12,6 @@ Gli installer di ogni versione sono nella pagina **Releases**: <https://github.c
 | Piattaforma | File | Note |
 |---|---|---|
 | Windows 10/11 (64 bit) | `PDFz-X.Y.Z-x64.msi` | l'applicazione, con tutte le funzioni |
-| Windows, traduzione | `PDFz-Lingue-<gruppo>-X.Y.Z-x64.msi` | facoltativi: pacchetti di traduzione offline (gruppi `it-fr-de-es` e `zh-ja-ar-ru`, ognuno ↔ inglese) |
 | macOS (Apple Silicon) | `PDFz-X.Y.Z-macOS-arm64.dmg` | trascinare l'app in Applicazioni; il primo avvio su un altro Mac va confermato (vedi sotto) |
 | Linux (x86_64) | `PDFz-X.Y.Z-x86_64.AppImage` | un solo file: `chmod +x` e doppio clic |
 | Android | `PDFz-X.Y.Z-android.apk` | da installare consentendo le "origini sconosciute" |
@@ -38,12 +37,13 @@ e il pulsante Scarica. Le novità di ogni versione sono in `CHANGELOG.md`.
 | **Pagine** | Unisci, Organizza (griglia con selezione multipla, trascina, ruota, duplica, elimina, estrai, pagina bianca, inserisci pagine da altri PDF col riquadro **+**), Estrai, Rimuovi, Ruota, Ritaglia, Ridimensiona (con vista a miniature e selezione tutte/nessuna/pari/dispari/intervalli), Numeri di pagina, Crea indice |
 | **Firma e sicurezza** | File firmati .p7m/.p7s (verifica stile ArubaSign con elenco CA AgID, revoca OCSP/CRL, marca temporale, estrazione del documento, rapporto PDF), Firma disegnata, da immagine (3 firme salvate sul dispositivo) o da testo, inserita con un clic alla sua dimensione e ridimensionabile; firma digitale con certificato .pfx/.p12 (PAdES), Aggiungi/Rimuovi password, Rimuovi firma digitale, Sanitizza, Sblocca moduli, Appiattisci |
 | **Ottimizza e analizza** | Comprimi, Confronta, OCR, Info complete, Convalida |
-| **Revisione** | Commenti e revisioni (note, evidenziazioni, proposte di modifica, risposte, stati), Traduci (offline, layout mantenuto, vista affiancata), Modifica proprietà, Modifica indice (segnalibri) |
+| **Revisione** | Commenti e revisioni (note, evidenziazioni, proposte di modifica, risposte, stati), Modifica proprietà, Modifica indice (segnalibri) |
 | **Converti** | PDF → Word, Excel, PowerPoint, ODT/ODS/ODP, RTF, CSV, TXT, HTML, PNG/JPG, PDF/A. Office/immagini/testo/HTML/XPS/EPUB → PDF |
 
 Inoltre: menu strumenti con **Preferiti**, etichette e sezioni comprimibili; tema chiaro/scuro/sistema e **5 temi colore**
 (Rubino, Oro, Onice, Avorio, Bordeaux) dal menu **Tema**; pannello **download** in alto a destra (come in Chrome) con i file
-salvati e convertiti; schede multiple; annulla/ripeti illimitato (<kbd>Ctrl</kbd>+<kbd>Z</kbd>/<kbd>Y</kbd>); ricerca nel testo;
+salvati e convertiti; schede multiple (con 2 o più schede, una scheda trascinata fuori dalla finestra, o "Sposta in una
+nuova finestra" dal tasto destro, si apre in una finestra nuova; trascinata su un'altra scheda cambia posto); annulla/ripeti illimitato (<kbd>Ctrl</kbd>+<kbd>Z</kbd>/<kbd>Y</kbd>); ricerca nel testo;
 miniature; stampa; apertura di PDF protetti; "Apri con" da Esplora file; istanza singola.
 
 Le conversioni Office usano **Microsoft Office** se è installato (massima fedeltà); se manca, LibreOffice;
@@ -51,8 +51,7 @@ per PDF → Word/Excel/PowerPoint c'è comunque un motore integrato.
 
 **Android e iPhone/iPad.** Ci sono quasi tutti gli strumenti: modifica, pagine, firma (immagine e certificato), commenti,
 OCR (Tesseract WebAssembly), conversioni in Word/Excel/PowerPoint/testo/immagini, protezione, oscuramento, confronto, file `.p7m`,
-"Scatta foto" per creare un PDF dalle foto. Mancano la **traduzione** (il motore CTranslate2 non esiste per WebAssembly),
-**PDF/A** e la compressione con Ghostscript, le conversioni **ODT/ODS/ODP** e da Office a PDF (servono LibreOffice o Office).
+"Scatta foto" per creare un PDF dalle foto. Mancano **PDF/A** e la compressione con Ghostscript, le conversioni **ODT/ODS/ODP** e da Office a PDF (servono LibreOffice o Office).
 L'APK pesa circa 90 MB.
 
 ## Architettura
@@ -90,9 +89,7 @@ backend/hdpdf/
   tools/meta.py    proprietà, segnalibri, info
   tools/convert.py conversioni
   tools/ocr.py     OCR
-  translate.py     traduzione offline (CTranslate2 + pacchetti Argos), pacchetti lingua
   tools/annots.py  forme, commenti e revisioni
-  tools/translate_pdf.py PDF tradotto con lo stesso layout
   p7m.py           file firmati CAdES (.p7m/.p7s), elenco CA AgID, rapporto di verifica
   aggiornamenti.py avviso di nuova versione (GitHub Releases)
 backend/tests/     test automatici di tutti gli strumenti
@@ -113,11 +110,7 @@ Gli script copiano il progetto in una cartella di build e compilano lì:
 .\packaging\copia-e-build.ps1 -Piattaforma linux        # in WSL → C:\Build\PDFz-Linux\dist\PDFz-<versione>-x86_64.AppImage
 ```
 
-La build Windows produce l'MSI dell'applicazione e un MSI per ogni gruppo di lingue di traduzione
-(`PDFz-Lingue-<gruppo>-<versione>-x64.msi`; predefiniti `it-fr-de-es` e `zh-ja-ar-ru`, scelta con `-LangMsiGroups`).
-Si installano solo sui PC che traducono; l'app li trova da sola. Opzioni di `build-windows.ps1`: `-TranslateLanguages it,fr,de,es,pt`,
-`-NoTranslatePacks` (nessun pacchetto: si scaricano dall'app), `-PacksInMainMsi` (tutto in un unico MSI),
-`-WithGhostscript` (compressione avanzata e PDF/A).
+La build Windows produce un solo MSI. Opzione di `build-windows.ps1`: `-WithGhostscript` (compressione avanzata e PDF/A).
 
 ```bash
 # sul Mac
@@ -137,11 +130,11 @@ Dettagli, opzioni e prerequisiti:
 ## Distribuzione sui PC Windows
 
 ```bat
-msiexec /i PDFz-1.0.2-x64.msi /qn                    :: silenziosa
-msiexec /i PDFz-1.0.2-x64.msi /qn DESKTOPSHORTCUT=0  :: senza icona sul desktop
-msiexec /i PDFz-1.0.2-x64.msi /qn HDSCOPE=user       :: solo per l'utente corrente
-msiexec /i PDFz-1.0.2-x64.msi /qn HDCONTEXTMENU=0    :: senza la voce nel menu del tasto destro
-msiexec /x PDFz-1.0.2-x64.msi /qn                    :: disinstallazione
+msiexec /i PDFz-1.1.0-x64.msi /qn                    :: silenziosa
+msiexec /i PDFz-1.1.0-x64.msi /qn DESKTOPSHORTCUT=0  :: senza icona sul desktop
+msiexec /i PDFz-1.1.0-x64.msi /qn HDSCOPE=user       :: solo per l'utente corrente
+msiexec /i PDFz-1.1.0-x64.msi /qn HDCONTEXTMENU=0    :: senza la voce nel menu del tasto destro
+msiexec /x PDFz-1.1.0-x64.msi /qn                    :: disinstallazione
 ```
 
 * Installazione per tutti gli utenti in `C:\Program Files\PDFz`, collegamento nel menu Start.
@@ -192,9 +185,6 @@ Per aggiungere uno strumento: una funzione con `@tool("nome")` in `backend/hdpdf
   vanno prima passati all'OCR.
 * **Firma digitale**: supporta certificati software .pfx/.p12. Smart card e token (CNS, firma remota
   dei provider italiani) richiedono un'estensione PKCS#11 o l'integrazione con l'API del provider.
-* **Traduzione**: automatica (qualità simile ai traduttori online di qualche anno fa); per documenti ufficiali va
-  riletta. Le scansioni vanno prima passate all'OCR. Ogni pacchetto lingua pesa 60–100 MB: l'installer con 9 lingue
-  è grande; con `-TranslateLanguages it,fr,de` lo si riduce, con `-NoTranslatePacks` si escludono (si scaricano dall'app).
 * **File .p7m**: l'attendibilità si basa sull'elenco italiano AgID (TSL-IT); firme di certificatori esteri risultano
   "valide con avvisi". La firma XML dell'elenco non viene verificata (lo si scarica in HTTPS dal sito AgID).
   Le controfirme vengono segnalate ma non verificate. Serve internet per aggiornare l'elenco e per il controllo di revoca.

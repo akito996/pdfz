@@ -27,7 +27,7 @@ Anche il repository `C:\Dev\10_PDFz` rispetta le due condizioni. Le regole "senz
 | Script | Cosa fa | Produce in |
 |---|---|---|
 | `packaging\copia-e-build.ps1` | **Da lanciare dalla radice del repository.** Copia il progetto in `C:\Build\PDFz-<Windows/Android>` (robocopy /MIR, solo file cambiati) e lancia lo script di build **dalla copia**; con `linux` copia e compila in WSL | — |
-| `packaging\build-windows.ps1` | dipendenze Python → **test** → interfaccia (TypeScript + Vite) → PyInstaller → MSI (WiX v5) → `versione-windows.json` | `<copia>\dist\`: `PDFz-<ver>-x64.msi`, `PDFz-Lingue-<gruppo>-<ver>-x64.msi`, `versione-windows.json`, app compilata `PDFz\` |
+| `packaging\build-windows.ps1` | dipendenze Python → **test** → interfaccia (TypeScript + Vite) → PyInstaller → MSI (WiX v5) → `versione-windows.json` | `<copia>\dist\`: `PDFz-<ver>-x64.msi`, `versione-windows.json`, app compilata `PDFz\` |
 | `packaging\build-android.ps1` | interfaccia in modalità android → motore Pyodide (`mobile\scripts\prepare-engine.mjs`) → Capacitor sync → Gradle | `<copia>\dist\`: `PDFz-<ver>-android.apk`, `versione-android.json` |
 | `packaging\scrivi-versione.ps1` | crea `versione-<piattaforma>.json` da `frontend\src\novita.json` | accanto a MSI/APK (`-OutDir`; senza, `<copia>\dist`) |
 
@@ -39,12 +39,12 @@ sincronizzata nel cloud mostrano un avviso.
 **Cosa copia `copia-e-build.ps1`:** tutto il codice, con `/MIR` (aggiunge i file cambiati, toglie quelli cancellati nel progetto).
 **Non** copia e **non** cancella nella copia le cartelle che la build crea o scarica: `.venv`, `node_modules`, `dist`, `build`, `www`,
 `.gradle`, `.kotlin`, `__pycache__`, `.pytest_cache`, `_work`, `_data`, `Claude outputs` → restano fra una build e l'altra (build più veloci).
-`vendor` (OCR, lingue) e `mobile\cache` (motore Pyodide) si copiano con `/E /XO`, senza mai cancellare nella copia.
+`vendor` (lingue OCR) e `mobile\cache` (motore Pyodide) si copiano con `/E /XO`, senza mai cancellare nella copia.
 Attenzione: una modifica fatta **dentro** `C:\Build\...` viene sovrascritta alla build successiva: si modifica solo nel repository.
 
 Cartelle dentro ogni copia:
 - `dist\` risultati (MSI/APK, `versione-*.json`, app compilata `dist\PDFz\` per Windows);
-- `build\` file di lavoro (PyInstaller `build\pyinstaller`, test `build\pytest-tmp`, `build\lingue-msi`, Android `build\android-tmp`, `build\npm-cache`): cancellabili.
+- `build\` file di lavoro (PyInstaller `build\pyinstaller`, test `build\pytest-tmp`, Android `build\android-tmp`, `build\npm-cache`): cancellabili.
 
 ```powershell
 cd C:\Dev\10_PDFz
@@ -61,7 +61,7 @@ explorer C:\Build\PDFz-Android\dist
 1. controlla che il tag sia uguale a `__version__` in `backend\hdpdf\__init__.py` (se no si ferma);
 2. scrive l'indirizzo degli aggiornamenti in `UPDATE_BASE_URL` di `aggiornamenti.py` (`packaging/imposta-url-aggiornamenti.sh`):
    la variabile di repository `UPDATE_BASE_URL` se c'è, altrimenti `https://github.com/akito996/pdfz/releases/latest/download/`;
-3. compila, con i test, **Windows** (`build-windows.ps1`: MSI + MSI lingue), **macOS** (`build-macos.sh`, DMG `arm64` per Mac
+3. compila, con i test, **Windows** (`build-windows.ps1`: MSI), **macOS** (`build-macos.sh`, DMG `arm64` per Mac
    Apple Silicon; niente versione per Mac Intel), **Linux** (`build-linux.sh`, AppImage x86_64, su Ubuntu 24.04) e
    **Android** (`build-android.ps1` su Windows, APK firmato con la chiave `pdfz-release.jks`);
 4. crea `versione-<piattaforma>.json` (`packaging/scrivi_versione.py`);
@@ -143,8 +143,8 @@ fa l'APK di prova (debug), che non si installa sopra quello firmato.
 ## Test automatici
 
 - Comando (dentro lo script): `python -m pytest -q -p no:cacheprovider --basetemp build\pytest-tmp` nella cartella `backend` della copia.
-- File: `tests\test_tools.py`, `test_p7m.py`, `test_setup_mode.py`, `test_translate.py`.
-- Risultato atteso su Windows: **69 passed, 2 skipped** (71 test; i 2 saltati richiedono LibreOffice o simili). Su Linux con LibreOffice: 71 passed.
+- File: `tests\test_tools.py`, `test_p7m.py`, `test_setup_mode.py`, `test_desktop.py`.
+- Risultato atteso su Windows: **73 passed, 2 skipped** (75 test; i 2 saltati richiedono LibreOffice o simili). Su Linux con LibreOffice: 75 passed.
 - `tests\test_tools.py` usa `HDPDF_WORKDIR = backend\tests\_work` e `HDPDF_DATADIR = backend\tests\_data`;
   `_work` viene **svuotata a ogni esecuzione**.
 - Sul PC di build c'è Microsoft Word: il test `test_convert_from_pdf[docx]` usa quindi **Word via COM** (vedi `conversioni.md`).

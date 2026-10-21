@@ -71,6 +71,8 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   (`apply` restituisce `true` se riuscito). L'app chiede Applica / Non applicare / Annulla quando si lascia lo strumento.
 - **Chiusura dell'app desktop**: `desktop.py` ferma la chiusura e chiama `window.hdpdfRequestClose` da un altro thread; la pagina
   chiede salva/applica e poi chiama `api.quit()`. Mai `evaluate_js` dentro l'evento `closing` (blocca la finestra).
+  **Più finestre** (scheda trascinata fuori): `apri_finestra()` in `run()` crea ogni finestra con la sua `Api`; `quit()` chiude
+  solo la sua, l'app termina con l'ultima. La scheda passa con un biglietto monouso (`/api/schede`), mai nell'indirizzo.
 - **Colori**: solo variabili CSS (`--brand`, `--on-brand`, `rgba(var(--brand-rgb), …)`), mai codici del vecchio marchio o
   colori dell'interfaccia scritti a mano. Nuova palette: vedi `docs/branding.md`. Icone: solo da `branding/genera_marchio.py`.
 - **Firma Android**: chiave `pdfz-release.jks` (alias `pdfz`) dell'autore, **mai nel repository**. Nella pipeline arriva dai
@@ -80,13 +82,13 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   In locale si lavora sul ramo `pdfz` (storia nuova, collegato a `origin/main`). Il ramo locale `main` contiene la storia
   del progetto precedente: **mai da pubblicare** (contiene il vecchio marchio); si può rinominare o eliminare quando non serve più.
 
-## Stato attuale (2026-10-16)
+## Stato attuale (2026-10-21)
 
-- Versione nel codice: **1.0.2** di PDFz. Marchio applicato ovunque: **icona e favicon 17 "Foglio oro"** (foglio PDF d'oro
+- Versione nel codice: **1.1.0** di PDFz. Marchio applicato ovunque: **icona e favicon 17 "Foglio oro"** (foglio PDF d'oro
   su rosso con "PDF" e la "z" piccola, nero solo per le finiture), palette predefinita Rubino,
   5 palette selezionabili, avvisi solo con le finestre dell'app (provati nel browser: Oscura, domanda annidata dopo
-  "Applica", Salva con nome Android, errore di salvataggio desktop simulato). Test: 76 passati, 2 saltati.
-- Prova WiX riuscita (MSI e pacchetto lingue compilano con i nomi nuovi); PyInstaller, Gradle, Xcode e AppImage non provati
+  "Applica", Salva con nome Android, errore di salvataggio desktop simulato). Test: 73 passati, 2 saltati.
+- Prova WiX riuscita (MSI compilato con i nomi nuovi); PyInstaller, Gradle, Xcode e AppImage non provati
   dopo il cambio di nome.
 - Codice su GitHub `akito996/pdfz` (ramo `main`, storia nuova che parte dal commit iniziale di PDFz 1.0.0).
 - **Release v1.0.0 pubblicata** (2026-10-16, pipeline riuscita in 12 minuti): Windows (MSI + 2 MSI lingue), macOS arm64 (DMG),
@@ -97,25 +99,37 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   Android (APK firmato con la chiave di PDFz, verificato nel registro). Correzioni Android/tablet del menu Tema (tagliato dalla
   barra in alto) e della campanella (resta aperta, segna lette all'apertura, tutte le voci, messaggi recenti). Provate nel
   browser in vista telefono, non ancora su un telefono vero.
-- **Versione 1.0.2 = download diretto per piattaforma** (pronta, tag `v1.0.2` da pubblicare quando il repository è pubblico): `versione-<sistema>.json` contiene
-  `url` (link diretto all'installer di quella versione: MSI, DMG, AppImage, APK), `size` e `pagina`; la campanella mostra
-  sistema, file, dimensione, "Scarica", link da copiare e come installare. Provato con un aggiornamento simulato.
+- **Release v1.0.2 pubblicata** (2026-10-16, pipeline 10 minuti, "Latest"): download diretto per piattaforma.
+  `versione-<sistema>.json` contiene `url` (link diretto all'installer di quella versione: MSI, DMG, AppImage, APK), `size`
+  e `pagina`; la campanella mostra sistema, file, dimensione, "Scarica", link da copiare e come installare.
+  **Repository reso pubblico dall'utente**: verificato senza login che `releases/latest/download/versione-*.json` e i 4 link
+  diretti rispondono (200, dimensioni giuste) e che un'app 1.0.1 vede la 1.0.2 con il link del proprio sistema.
 - Marchio: serie 1 (icone 1-5) scartata dall'utente perché simile a marchi esistenti e tolta dallo script; serie 2
   (6-10) e 3 (11-15) non scelte ma ancora disponibili; all'utente è piaciuta la 11 ("PDF" a capo, "z" piccola),
   messa in un foglio PDF nella serie 4 (16-18): scelta e applicata la **17** (inviata su GitHub).
+- **Versione 1.1.0** (2026-10-21, commit e tag `v1.1.0` inviati su GitHub):
+  - **traduzione tolta** per alleggerire l'app: strumento Traduci, `translate.py`, `tools/translate_pdf.py`, CTranslate2 e
+    SentencePiece, MSI `PDFz-Lingue-*` (`Lingue.wxs`), opzioni lingue di `build-windows.ps1`, cache `vendor/lingue` nella
+    pipeline. All'avvio l'app desktop cancella `<dati>\lingue` (`cleanup.rimuovi_modelli_traduzione`);
+  - **schede in una nuova finestra**: con 2+ schede, trascinata fuori dalla finestra o "Sposta in una nuova finestra" dal
+    tasto destro; trascinata su un'altra scheda cambia posto. Provato con pywebview vero su Windows (seconda finestra,
+    chiusura della principale) e nel browser (menu, riordino, rilascio fuori simulato). Non su Android/iPhone.
 
 ## Punti aperti
 
 1. **Copia di riserva della chiave Android**: `C:\Dev\PDFz-chiave-android` (`pdfz-release.jks` + `password.txt`, creata
    il 2026-10-16, impronta SHA-256 `2D:2F:3F:BC:…:A6:83:D3:D6`, valida fino al 2054) va copiata in un posto sicuro;
    `keystore-base64.txt` si può cancellare. Secrets GitHub già impostati.
-2. **Repository pubblico o privato**: con il repository privato le app non leggono `versione-*.json` né scaricano gli
-   installer (serve l'accesso a GitHub): l'avviso e il download diretto funzionano solo con release pubbliche.
+2. **Avviso e download provati solo dal motore**: manca la prova su un PC/telefono vero con la 1.0.1 installata
+   (campanella → Scarica → installazione sopra).
 3. **Web app per iPhone** pronta sul ramo `claude/heuristic-austin-71ab67` (commit 79f9323, sessione separata): non ancora
-   unita in `pdfz`/`main` né pubblicata; con repository privato niente GitHub Pages (vedi `docs/web-app-iphone.md` sul ramo).
+   unita in `pdfz`/`main` né pubblicata; ora che il repository è pubblico si può usare GitHub Pages (vedi
+   `docs/web-app-iphone.md` sul ramo).
 4. **Verifica dei marchi registrati** per l'icona 17 e il nome PDFz prima di pubblicare (TMview, WIPO Global Brand
    Database, store: vedi `docs/branding.md`). Un foglio con "PDF" ricorda l'icona generica dei file PDF.
 5. **Firma del codice** assente (Authenticode Windows, notarizzazione Apple): SmartScreen e Gatekeeper mostrano un avviso.
 6. Non provate dopo le modifiche: chiusura nella finestra desktop vera e l'errore di salvataggio con pywebview vero.
-7. Note minori: negli strumenti che producono solo un file (conversioni) cambiare un'opzione e uscire fa comparire la domanda
+7. **Nuove finestre (1.1.0)** da provare su macOS (Cocoa) e Linux (finestra del browser). La cartella locale
+   `vendor/lingue` (2 GB, ignorata da git) non serve più e si può cancellare.
+8. Note minori: negli strumenti che producono solo un file (conversioni) cambiare un'opzione e uscire fa comparire la domanda
    "applicare?"; nei Commenti non è coperto il testo di una nota ancora in scrittura sulla pagina.
