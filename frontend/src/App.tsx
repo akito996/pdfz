@@ -520,24 +520,27 @@ export default function App() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- schede fra finestre già aperte (finestre.ts)
-  // trascino: scheda che sta uscendo da questa finestra; inArrivo: scheda che un'altra finestra sta trascinando;
+  // trascino: scheda che sta uscendo da questa finestra; inArrivo: scheda che un'altra finestra sta trascinando
+  // (finito: l'altra finestra ha già visto la fine del trascinamento, ma il rilascio qui può arrivare dopo);
   // cedute: biglietto → scheda di questa finestra consegnata a un'altra (si toglie quando l'altra la prende)
   const trascino = useRef<{ key: string; biglietto?: string; presa: boolean } | null>(null);
-  const inArrivo = useRef<string | null>(null);
+  const inArrivo = useRef<{ biglietto: string; finito: boolean } | null>(null);
   const cedute = useRef(new Map<string, string>());
   const [dropScheda, setDropScheda] = useState(false);
   const chiudiFinestra = () => {
     if (desktop.available()) window.pywebview!.api.quit();
     else window.close();   // nel browser si chiudono solo le finestre aperte dall'app
   };
-  /** Un'altra finestra ha preso una scheda di questa: la scheda si toglie; senza più schede la finestra si chiude. */
+  /** Un'altra finestra ha preso una scheda di questa: la scheda si toglie; senza più schede la finestra si chiude.
+   *  La chiusura non aspetta la fine del trascinamento: con il mouse la scheda sparisce dalla pagina mentre la si
+   *  trascina ancora, e l'evento di fine può non arrivare più. */
   const schedaCeduta = (biglietto: string) => {
     if (trascino.current?.biglietto === biglietto) trascino.current.presa = true;
     const key = cedute.current.get(biglietto);
     if (!key) return;
     cedute.current.delete(biglietto);
     dropTab(key);
-    setTimeout(() => { if (!tabsRef.current.length && !pendingRef.current) chiudiFinestra(); }, 300);
+    setTimeout(() => { if (!tabsRef.current.length && !pendingRef.current) chiudiFinestra(); }, 600);
   };
   /** "Riunisci": tutte le schede di questa finestra vanno nella finestra «verso». */
   const cediTutte = async (verso: string) => {
@@ -558,7 +561,7 @@ export default function App() {
   /** Scheda di un'altra finestra lasciata qui: si avvisa subito l'altra finestra (che la toglie) e si ritira. */
   const arrivaScheda = async () => {
     for (let i = 0; i < 30 && !inArrivo.current; i++) await new Promise((r) => setTimeout(r, 50));   // biglietto in viaggio
-    const b = inArrivo.current;
+    const b = inArrivo.current?.biglietto;
     inArrivo.current = null;
     if (!b) { toast("La scheda non è arrivata: riprova a trascinarla.", "err"); return; }
     invia({ tipo: "presa", da: MIA_FINESTRA, biglietto: b });
@@ -569,8 +572,11 @@ export default function App() {
       if (m.tipo === "ciao") invia({ tipo: "ci-sono", da: MIA_FINESTRA });
       setAltre((a) => (a.includes(m.da) ? a : [...a, m.da]));
     } else if (m.tipo === "addio") setAltre((a) => a.filter((x) => x !== m.da));
-    else if (m.tipo === "trascina") inArrivo.current = m.biglietto;
-    else if (m.tipo === "fine-trascina") { if (inArrivo.current === m.biglietto) { inArrivo.current = null; setDropScheda(false); } }
+    else if (m.tipo === "trascina") inArrivo.current = { biglietto: m.biglietto, finito: false };
+    else if (m.tipo === "fine-trascina") {
+      if (inArrivo.current?.biglietto === m.biglietto) inArrivo.current.finito = true;
+      setDropScheda(false);
+    }
     else if (m.tipo === "presa") schedaCeduta(m.biglietto);
     else if (m.tipo === "riunisci") cediTutte(m.da);
     else if (m.tipo === "consegna" && m.verso === MIA_FINESTRA) {
@@ -734,8 +740,10 @@ export default function App() {
   const dirty = tab ? isDirtyTab(tab) : false;
   const pickTab = (k: string) => { if (k !== active) guard(() => { setActive(k); setCurrentPage(0); }); };
 
-  // una scheda trascinata da un'altra finestra di PDFz (non da questa: quella si riordina sulle schede)
-  const schedaDaFuori = (e: React.DragEvent) => !dragTab.current && (!!inArrivo.current || e.dataTransfer.types.includes(TAB_DRAG));
+  // una scheda trascinata da un'altra finestra di PDFz (non da questa: quella si riordina sulle schede). Al rilascio
+  // vale anche se l'altra finestra ha già finito il trascinamento: i due avvisi possono arrivare in qualsiasi ordine
+  const schedaDaFuori = (e: React.DragEvent, rilascio = false) => !dragTab.current &&
+    ((!!inArrivo.current && (rilascio || !inArrivo.current.finito)) || e.dataTransfer.types.includes(TAB_DRAG));
   const onDragOverApp = (e: React.DragEvent) => {
     if (e.dataTransfer.types.includes("Files")) { e.preventDefault(); setDragOver(true); return; }
     if (!schedaDaFuori(e)) return;
@@ -747,7 +755,7 @@ export default function App() {
     e.preventDefault();
     setDragOver(false);
     setDropScheda(false);
-    if (schedaDaFuori(e)) { arrivaScheda(); return; }
+    if (schedaDaFuori(e, true)) { arrivaScheda(); return; }
     const files = Array.from(e.dataTransfer.files || []);
     if (files.length) openFiles(files);
   };
@@ -811,14 +819,20 @@ export default function App() {
                     const nessuno = e.dataTransfer.dropEffect === "none";
                     const out = e.clientX <= 0 || e.clientY <= 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight;
                     const at = { x: e.screenX, y: e.screenY };
-                    // un'altra finestra di PDFz può averla presa: la risposta arriva subito dopo il rilascio
+                    // un'altra finestra di PDFz può averla presa: la risposta arriva dopo il rilascio
+                    const b = tr.biglietto;
                     setTimeout(() => {
                       if (tr.presa) return;
-                      if (tr.biglietto) cedute.current.delete(tr.biglietto);
                       // lasciata fuori dalla finestra (nessuno l'ha presa): nuova finestra
-                      if (nessuno && out && tabsRef.current.length >= 2) moveToNewWindow(tr.key, at, tr.biglietto);
-                      else if (tr.biglietto) api.buttaScheda(tr.biglietto);
-                    }, tr.biglietto ? 400 : 0);
+                      if (nessuno && out && tabsRef.current.length >= 2) {
+                        if (b) cedute.current.delete(b);
+                        moveToNewWindow(tr.key, at, b);
+                        return;
+                      }
+                      // il rilascio in un'altra finestra può arrivare ancora: il biglietto resta valido qualche secondo,
+                      // poi, se nessuno l'ha preso, si butta (Map.delete è vero solo se c'era ancora)
+                      if (b) setTimeout(() => { if (cedute.current.delete(b)) api.buttaScheda(b); }, 5000);
+                    }, tr.biglietto ? 700 : 0);
                   }}
                   onContextMenu={(e) => { if (!canDrag) return; e.preventDefault(); tabMenuAnchor.current = e.currentTarget; setTabMenu(t.key); }}>
                   {isDirty && <span className="dot" title="Modifiche non salvate" />}

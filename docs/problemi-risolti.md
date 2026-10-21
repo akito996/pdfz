@@ -6,6 +6,20 @@ Il più recente in cima.
 > Le voci con numeri `AAAAMM.NNN` (es. 202610.014) sono della fase di sviluppo prima di PDFz 1.0.0, quando le versioni
 > avevano quel formato. Restano perché spiegano cosa non rifare.
 
+## 1.2.1 — La finestra di partenza resta aperta dopo aver ceduto la sua ultima scheda
+
+- **Sintomo:** trascinata l'unica scheda di una finestra in un'altra finestra di PDFz, la finestra di partenza resta
+  aperta (vuota o, a volte, con la scheda ancora lì, mentre l'altra segnala "La scheda non è più disponibile").
+- **Causa:** con il mouse vero i due avvisi fra finestre possono arrivare in qualsiasi ordine. Se la fine del
+  trascinamento arrivava alla finestra di partenza prima che l'altra prendesse la scheda, la finestra di partenza
+  buttava il biglietto dopo 400 ms e la finestra di arrivo, ricevuto "fine-trascina", smetteva di aspettare la scheda.
+  Riprodotto con pywebview vero (ordine "lento": fine del trascinamento 1,5 s prima del rilascio).
+- **Soluzione:** `App.tsx` — il biglietto resta valido 5 s dopo la fine del trascinamento (si butta solo se nessuno
+  l'ha preso); la finestra di arrivo accetta il rilascio anche dopo "fine-trascina" (`inArrivo.finito`); la finestra
+  che cede l'ultima scheda si chiude da sola senza aspettare l'evento di fine (con il mouse la scheda sparisce mentre la
+  si trascina e l'evento può non arrivare). Provato in tre ordini: veloce, lento, senza evento di fine.
+- **Da non rifare:** contare sull'ordine degli eventi fra finestre diverse (drop, dragend, messaggi).
+
 ## 1.2.0 — Modifica testo fa sparire le righe attorno e perde lettere sulle pagine ruotate
 
 - **Sintomo:**

@@ -2,6 +2,24 @@
   "_info": "Novità di ogni versione, mostrate nella campanella dell'app e copiate dalla build in versione-<piattaforma>.json. tipo: nuovo | modifica | correzione | installer | ottimizzazione | rimosso. piattaforme: windows, macos, linux, android, ios.",
   "versioni": [
     {
+      "versione": "1.2.1",
+      "data": "2026-10-21",
+      "titolo": "PDFz 1.2.1: la finestra vuota si chiude",
+      "voci": [
+        {
+          "tipo": "correzione",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux"
+          ],
+          "dove": "Schede dei documenti",
+          "titolo": "La finestra rimasta vuota si chiude",
+          "dettaglio": "Trascinando in un'altra finestra di PDFz l'ultima scheda di una finestra, la finestra rimasta vuota si chiude sempre e la scheda arriva a destinazione."
+        }
+      ]
+    },
+    {
       "versione": "1.2.0",
       "data": "2026-10-21",
       "titolo": "PDFz 1.2.0: schede in una sola finestra e Modifica testo più affidabile",

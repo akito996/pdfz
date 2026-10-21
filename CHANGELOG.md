@@ -1,5 +1,12 @@
 # Novità
 
+## 1.2.1
+Correzione per le schede spostate fra finestre.
+
+- **Finestra vuota chiusa** (correzione, Windows, macOS, Linux): trascinando in un'altra finestra di PDFz l'ultima
+  scheda di una finestra, la finestra rimasta vuota si chiude sempre (a volte restava aperta, e in qualche caso la
+  scheda non passava all'altra finestra).
+
 ## 1.2.0
 Schede che tornano in una sola finestra e "Modifica testo" più affidabile.
 

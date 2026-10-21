@@ -91,7 +91,7 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
 
 ## Stato attuale (2026-10-21)
 
-- Versione nel codice: **1.2.0** di PDFz. Marchio applicato ovunque: **icona e favicon 17 "Foglio oro"** (foglio PDF d'oro
+- Versione nel codice: **1.2.1** di PDFz. Marchio applicato ovunque: **icona e favicon 17 "Foglio oro"** (foglio PDF d'oro
   su rosso con "PDF" e la "z" piccola, nero solo per le finiture), palette predefinita Rubino,
   5 palette selezionabili, avvisi solo con le finestre dell'app (provati nel browser: Oscura, domanda annidata dopo
   "Applica", Salva con nome Android, errore di salvataggio desktop simulato). Test: 73 passati, 2 saltati.
@@ -140,6 +140,10 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
     anteprima con casella trasparente) e sulle pagine ruotate il testo resta intero (stessa direzione dell'originale).
     Provato nel motore (2 test nuovi) e nella finestra desktop vera. Test: 77 passati, 2 saltati con PyMuPDF 1.28.2 e 2.0;
   - **PyMuPDF 2.0** unito dal ramo `claude/elastic-payne-8e66cf` (sessione separata): vedi punto aperto 7.
+
+- **Versione 1.2.1** (2026-10-21, commit e tag `v1.2.1` inviati su GitHub): trascinata in un'altra finestra la sua ultima scheda, la
+  finestra di partenza si chiude in ogni ordine degli eventi (biglietto valido 5 s, rilascio accettato anche dopo la fine
+  del trascinamento, chiusura senza aspettare l'evento di fine). Provato con pywebview vero in 3 ordini.
 
 ## Punti aperti
 
