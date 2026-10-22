@@ -172,6 +172,11 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   file per file, non inviata): riprovata nel browser in vista telefono con il codice della 1.2.1 e l'icona 24; corretto
   il nome della scheda schiacciato sopra la campanella sui telefoni stretti. Mai provata su un iPhone vero.
 
+- **Release v1.3.0 pubblicata** (2026-10-22, "Latest", commit `18569f7`, pipeline #8 riuscita in 6 minuti): icona 24,
+  web app per iPhone unita, barra stretta corretta. Workflow della web app saltato (Pages non ancora acceso). Verificato
+  senza login: 4 link diretti (MSI 131,6 MB, DMG 160,0 MB, AppImage 175,1 MB, APK 64,6 MB), `latest` = 1.3.0, un'app
+  1.2.1 vede la 1.3.0 (1 novità sui PC, 2 su Android). Link mandati all'utente.
+
 ## Punti aperti
 
 1. **Copia di riserva della chiave Android**: `C:\Dev\PDFz-chiave-android` (`pdfz-release.jks` + `password.txt`, creata
