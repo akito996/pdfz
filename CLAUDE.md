@@ -61,8 +61,11 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   (`https://github.com/akito996/pdfz/releases/download/vX.Y.Z/<file>`), verificati senza login (richiesta del 2026-10-22:
   "ogni volta che facciamo una modifica").
 - **Aggiornamenti**: l'app legge `UPDATE_BASE_URL` (scritto prima della build da `packaging/imposta-url-aggiornamenti.sh`):
-  variabile di repository `UPDATE_BASE_URL` oppure `https://github.com/akito996/pdfz/releases/latest/download/`.
-  Funziona solo con release pubbliche.
+  variabile di repository `UPDATE_BASE_URL` oppure `https://github.com/akito996/pdfz/releases/latest/download/`
+  (funziona solo con release pubbliche). Per il repository privato: sito su **Cloudflare** (`docs/cloudflare-aggiornamenti.md`,
+  `.github/workflows/cloudflare.yml` dopo ogni release): pagina, `versione-*.json`, `/download/vX.Y.Z/<file>` dall'archivio
+  R2 (funzione `cloudflare/functions/download`), web app in `/app/`; si accende con `CLOUDFLARE_PAGES` = `true`.
+  **Mai rendere privato il repository prima della versione ponte** compilata con `UPDATE_BASE_URL` = sito Cloudflare.
 - **Script di build su Windows: mai passare da cmd.exe** (niente `npm run`, `npx`, `.cmd`, `.bat`): node.exe/java.exe diretti,
   npm con `--ignore-scripts`. Non modificare la ricerca SDK/Java di `build-android.ps1`.
 - **Avvisi e domande solo con le finestre dell'app** (`ConfirmDialog` tramite `ask`/`askText`/`notify` del contesto):
@@ -87,7 +90,7 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
 - **iPhone: ogni modifica vale anche per la web app** (richiesta dell'utente, 2026-10-22). La web app usa la stessa
   interfaccia (`vite --mode web`, `VITE_WEB_APP`) e lo stesso motore Pyodide dell'app Android: dopo ogni modifica si
   controlla anche lei (`mobile/scripts/build-web.mjs --out <cartella di prova>` e prova in vista telefono, 375 px).
-  Si pubblica con `.github/workflows/pages.yml` a ogni tag, quando la variabile `PAGES_WEB_APP` è `true`.
+  Si pubblica su Cloudflare in `/app/` con `.github/workflows/cloudflare.yml` dopo ogni release.
 - **Firma Android**: chiave `pdfz-release.jks` (alias `pdfz`) dell'autore, **mai nel repository**. Nella pipeline arriva dai
   secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`; in locale dalle variabili `HDPDF_KEYSTORE*`.
 - **Git**: si lavora in `C:\Dev\10_PDFz` (GitHub: `akito996/pdfz`, ramo `main`). Autore dei commit `agjin`
@@ -167,8 +170,7 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   salvataggio con `navigator.share({ files })` (finestra "File pronto" se iPhone chiede un tocco), altrimenti download.
   `prepare-engine.mjs` ora scrive archivi riproducibili (stesso codice = stessi byte). Provata nel browser del PC in
   vista telefono (apri, ruota, numeri di pagina, salva, ricarica senza rete, aggiornamento). Workflow
-  `.github/workflows/pages.yml` pronto, si accende con la variabile `PAGES_WEB_APP` = `true` e Pages da "GitHub Actions"
-  (il repository è pubblico: gratuito). **Unita al codice il 2026-10-22** (dal ramo `claude/heuristic-austin-71ab67`,
+  pubblicazione su Cloudflare in `/app/` (`cloudflare.yml`; prima c'era `pages.yml` per GitHub Pages, tolto). **Unita al codice il 2026-10-22** (dal ramo `claude/heuristic-austin-71ab67`,
   file per file, non inviata): riprovata nel browser in vista telefono con il codice della 1.2.1 e l'icona 24; corretto
   il nome della scheda schiacciato sopra la campanella sui telefoni stretti. Mai provata su un iPhone vero.
 
@@ -177,6 +179,10 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   senza login: 4 link diretti (MSI 131,6 MB, DMG 160,0 MB, AppImage 175,1 MB, APK 64,6 MB), `latest` = 1.3.0, un'app
   1.2.1 vede la 1.3.0 (1 novità sui PC, 2 su Android). Link mandati all'utente.
 
+- **Sito degli aggiornamenti su Cloudflare** (2026-10-22, inviato, non ancora acceso): `cloudflare.yml` (al posto di
+  `pages.yml`), `packaging/sito_aggiornamenti.py`, `cloudflare/functions/download`. Provati in locale pagina, file di
+  versione e funzione dei download (R2 simulato); la pubblicazione vera aspetta la configurazione dell'autore.
+
 ## Punti aperti
 
 1. **Copia di riserva della chiave Android**: `C:\Dev\PDFz-chiave-android` (`pdfz-release.jks` + `password.txt`, creata
@@ -184,9 +190,10 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
    `keystore-base64.txt` si può cancellare. Secrets GitHub già impostati.
 2. **Avviso e download provati solo dal motore**: manca la prova su un PC/telefono vero con la 1.0.1 installata
    (campanella → Scarica → installazione sopra).
-3. **Web app per iPhone** unita al codice (2026-10-22, non inviata): per pubblicarla l'autore accende GitHub Pages
-   (Settings → Pages → Source "GitHub Actions" e variabile `PAGES_WEB_APP` = `true`), poi al tag successivo esce su
-   `https://akito996.github.io/pdfz/`. Da provare su un iPhone vero (schermata Home, Condividi › "Salva in File",
+3. **Repository privato e sito su Cloudflare** (preparati il 2026-10-22, `docs/cloudflare-aggiornamenti.md`): l'autore
+   crea account, archivio R2 `pdfz-installer`, token, secrets `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` e variabili
+   `CLOUDFLARE_PAGES` = `true`, `UPDATE_BASE_URL` = `https://pdfz.pages.dev/`; prova con "Run workflow" (tag v1.3.0);
+   poi **versione ponte** e solo dopo il repository privato. Web app per iPhone in `https://<sito>/app/`. Da provare su un iPhone vero (schermata Home, Condividi › "Salva in File",
    memoria con PDF grandi). L'indirizzo va deciso prima di distribuirla (i dati dell'app restano legati all'indirizzo).
 4. **Verifica dei marchi registrati** per l'icona 24 e il nome PDFz prima di pubblicare (TMview, WIPO Global Brand
    Database, store: vedi `docs/branding.md`). Un foglio con "PDF" ricorda l'icona generica dei file PDF.

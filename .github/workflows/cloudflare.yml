@@ -1,0 +1,136 @@
+# Sito degli aggiornamenti su Cloudflare (docs/cloudflare-aggiornamenti.md): quando la release di un tag vX.Y.Z è pronta
+# (workflow "Release" riuscito) prende gli installer dalla GitHub Release, li carica nell'archivio R2 e pubblica su
+# Cloudflare Pages la pagina degli aggiornamenti, i versione-<sistema>.json letti dalle app e la web app per iPhone (/app).
+# Serve perché con il repository privato le GitHub Releases non sono più scaricabili da chi non ha l'accesso.
+#
+# Si accende con la variabile del repository CLOUDFLARE_PAGES = "true"; senza, il workflow risulta "saltato".
+# Una volta sola (lo fa l'autore, vedi docs/cloudflare-aggiornamenti.md):
+#   1. Cloudflare: archivio R2 "pdfz-installer" e token API con i permessi "Cloudflare Pages: Edit" e
+#      "Workers R2 Storage: Edit";
+#   2. GitHub, Settings -> Secrets and variables -> Actions:
+#        secrets    CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
+#        variabili  CLOUDFLARE_PAGES = true, UPDATE_BASE_URL = https://<progetto>.pages.dev/ (con la / finale)
+#                   facoltative: CLOUDFLARE_PROJECT (predefinito pdfz), CLOUDFLARE_R2_BUCKET (predefinito pdfz-installer)
+#   3. al tag successivo (o con "Run workflow" indicando il tag) il sito si aggiorna.
+# UPDATE_BASE_URL entra anche nelle app compilate da release.yml: cambiarlo vuol dire che le app nuove cercano lì.
+name: Sito aggiornamenti (Cloudflare)
+
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag della versione da pubblicare sul sito (es. v1.4.0)"
+        required: true
+
+permissions:
+  contents: read
+
+# una pubblicazione per volta; quella in corso non si interrompe
+concurrency:
+  group: cloudflare
+  cancel-in-progress: false
+
+jobs:
+  sito:
+    name: Pubblica su Cloudflare
+    if: >-
+      vars.CLOUDFLARE_PAGES == 'true' &&
+      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      TAG: ${{ github.event.inputs.tag || github.event.workflow_run.head_branch }}
+      UPDATE_BASE_URL: ${{ vars.UPDATE_BASE_URL }}
+      PROGETTO: ${{ vars.CLOUDFLARE_PROJECT || 'pdfz' }}
+      ARCHIVIO: ${{ vars.CLOUDFLARE_R2_BUCKET || 'pdfz-installer' }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Controlli
+        shell: bash
+        run: |
+          case "$TAG" in v[0-9]*.[0-9]*.[0-9]*) ;; *) echo "::error::'$TAG' non è un tag di versione vX.Y.Z"; exit 1 ;; esac
+          case "$UPDATE_BASE_URL" in https://*) ;; *) echo "::error::Imposta la variabile UPDATE_BASE_URL (https://<progetto>.pages.dev/)"; exit 1 ;; esac
+          [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || { echo "::error::Mancano i secrets CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID"; exit 1; }
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+      - name: Versione
+        shell: bash
+        run: |
+          version="$(sed -n 's/^__version__ = "\(.*\)"/\1/p' backend/hdpdf/__init__.py)"
+          [ "${TAG#v}" = "$version" ] || { echo "::error::Il tag $TAG non corrisponde a __version__ = \"$version\""; exit 1; }
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            mobile/package-lock.json
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      # motore Python della web app (Pyodide + pacchetti): prepare-engine.mjs lo scarica solo se manca
+      - uses: actions/cache@v6
+        with:
+          path: mobile/cache
+          key: web-pyodide-${{ hashFiles('mobile/scripts/prepare-engine.mjs') }}
+      - name: Librerie
+        run: |
+          (cd frontend && npm ci --no-audit --no-fund)
+          (cd mobile && npm ci --no-audit --no-fund)
+      - name: Installer dalla GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p assets
+          gh release download "$TAG" --dir assets --pattern 'PDFz-*'
+          # codice sorgente della versione: la licenza AGPL lo chiede a chi distribuisce l'app (repository privato)
+          git archive --format=zip --prefix="PDFz-$VERSION/" -o "assets/PDFz-$VERSION-sorgente.zip" HEAD
+          ls -lh assets
+      - name: Installer nell'archivio R2
+        run: |
+          for f in assets/*; do
+            echo "-> $ARCHIVIO/$TAG/$(basename "$f")"
+            npx --yes wrangler@4 r2 object put "$ARCHIVIO/$TAG/$(basename "$f")" --file "$f" --remote \
+              --content-type application/octet-stream
+          done
+      - name: Pulizia dell'archivio (tiene le ultime 5 versioni)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # ogni versione occupa circa 530 MB (4 installer + sorgente) e R2 gratuito arriva a 10 GB: le versioni più
+          # vecchie si tolgono (i nomi dei file sono sempre gli stessi, wrangler non sa elencare l'archivio)
+          gh release list --limit 40 --json tagName --jq '.[].tagName' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+            | sort -rV | tail -n +6 | while read -r vecchio; do
+            v="${vecchio#v}"
+            for f in "PDFz-$v-x64.msi" "PDFz-$v-macOS-arm64.dmg" "PDFz-$v-x86_64.AppImage" "PDFz-$v-android.apk" "PDFz-$v-sorgente.zip"; do
+              npx --yes wrangler@4 r2 object delete "$ARCHIVIO/$vecchio/$f" --remote >/dev/null 2>&1 || true
+            done
+            echo "tolta dall'archivio: $vecchio"
+          done
+      - name: Web app per iPhone
+        working-directory: mobile
+        run: node scripts/build-web.mjs --out ../cloudflare/sito/app
+      - name: Pagina e file di versione
+        run: python3 packaging/sito_aggiornamenti.py --out cloudflare/sito --base "$UPDATE_BASE_URL" --tag "$TAG" --installer assets
+      - name: Pubblica su Cloudflare Pages
+        working-directory: cloudflare
+        run: |
+          # configurazione del progetto Pages: cartella del sito e archivio R2 per cloudflare/functions/download
+          cat > wrangler.toml <<EOF
+          name = "$PROGETTO"
+          pages_build_output_dir = "sito"
+          compatibility_date = "2025-06-01"
+
+          [[r2_buckets]]
+          binding = "INSTALLER"
+          bucket_name = "$ARCHIVIO"
+          EOF
+          npx --yes wrangler@4 pages project create "$PROGETTO" --production-branch main 2>/dev/null || true
+          npx --yes wrangler@4 pages deploy --branch main --commit-dirty=true
+          echo "Sito degli aggiornamenti: $UPDATE_BASE_URL"

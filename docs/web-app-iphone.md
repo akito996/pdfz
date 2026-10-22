@@ -7,8 +7,9 @@ alla schermata Home, si apre a tutto schermo come un'app e, dopo il primo avvio,
 
 Stato: **unita al progetto, non ancora pubblicata**. Dal 2026-10-22 la web app sta nello stesso codice delle altre app
 e **ogni modifica vale anche per lei** (richiesta dell'utente): stessa interfaccia (`vite --mode web`) e stesso motore
-dell'app Android. Il repository è pubblico, quindi GitHub Pages è gratuito: il workflow `pages.yml` la pubblica a ogni
-tag `vX.Y.Z` appena l'autore lo accende (vedi [Pubblicazione: 3 strade](#pubblicazione-3-strade)).
+dell'app Android. Si pubblica su **Cloudflare**, insieme alla pagina degli aggiornamenti, in `https://<sito>/app/`
+(`.github/workflows/cloudflare.yml`, vedi `cloudflare-aggiornamenti.md`): il repository diventerà privato e GitHub Pages
+non sarebbe più gratuito.
 
 ## Come si installa sull'iPhone
 
@@ -55,7 +56,7 @@ Aprendo il sito in Safari su iPhone l'app ricorda una volta, con un avviso, come
 - **Elenco AgID** (verifica dei file firmati .p7m): il sito AgID non permette il download da una pagina web (CORS),
   quindi la web app usa la copia inclusa nella build, aggiornata a ogni nuova versione pubblicata.
 - **Strumenti**: gli stessi dell'app Android (niente traduzione offline).
-- **Indirizzo fisso**: i dati restano legati all'indirizzo della web app (es. `https://akito996.github.io/pdfz/`).
+- **Indirizzo fisso**: i dati restano legati all'indirizzo della web app (es. `https://pdfz.pages.dev/app/`).
   Cambiare indirizzo dopo vuol dire reinstallarla sui telefoni e perdere impostazioni e firme salvate.
 
 ## Compilare e provare in locale
@@ -90,7 +91,7 @@ Per provarla su un iPhone vero serve **https** (il service worker funziona solo 
 | `mobile/web/sw.js` | modello del service worker |
 | `mobile/scripts/build-web.mjs` | build completa: interfaccia (Vite) → motore (`prepare-engine.mjs --www`) → `sw.js` con versione ed elenco dei file; scrive anche `.nojekyll` e `_headers` (Cloudflare/Netlify) |
 | `branding/genera_marchio.py` | icone `icon-192.png`, `icon-512.png`, `icon-maskable-192/512.png` (a tutta tela, per Android) e `apple-touch-icon.png` |
-| `.github/workflows/pages.yml` | pubblicazione su GitHub Pages a ogni tag `vX.Y.Z` (spento, vedi sotto) |
+| `.github/workflows/cloudflare.yml` | pubblicazione su Cloudflare Pages in `/app/` dopo ogni release (vedi `cloudflare-aggiornamenti.md`) |
 
 **Service worker** (`sw.js`): conosce ogni file della versione con l'impronta del suo contenuto (SHA-256) e lo salva
 in una cache con la chiave `percorso?v=impronta`. All'installazione salva l'interfaccia; i file del motore li salva la
@@ -116,7 +117,7 @@ Serve un sito **https** che serva file statici fino a 18 MB l'uno (il più grand
      repository `pdfz`): comando di build
      `cd frontend && npm ci --ignore-scripts && cd ../mobile && npm ci --ignore-scripts && node scripts/build-web.mjs`,
      cartella da pubblicare `mobile/www-web`, variabile `NODE_VERSION=22`.
-  2. *Caricamento dalla pipeline* (il repository non viene collegato a Cloudflare): nel job di `pages.yml`, al posto di
+  2. *Caricamento dalla pipeline* (il repository non viene collegato a Cloudflare): nel job di pubblicazione (ora `cloudflare.yml`), al posto di
      `upload-pages-artifact`/`deploy-pages`, il passo
      `npx wrangler@3 pages deploy mobile/www-web --project-name=pdfz --branch=main` con i secrets
      `CLOUDFLARE_API_TOKEN` (permesso "Cloudflare Pages: Edit") e `CLOUDFLARE_ACCOUNT_ID`.
@@ -129,8 +130,7 @@ Serve un sito **https** che serva file statici fino a 18 MB l'uno (il più grand
   2. Settings → Secrets and variables → Actions → Variables: `PAGES_WEB_APP` = `true`;
   3. al tag successivo (o con "Run workflow") la web app viene pubblicata.
 
-**Consiglio: GitHub Pages** ora che il repository è pubblico: niente account in più e pubblicazione automatica insieme
-alle altre app. Se si vuole un dominio proprio (strada 💎) conviene deciderlo prima di dare l'indirizzo agli utenti.
+**Scelta (2026-10-22): Cloudflare Pages** (⚖️), perché il repository diventa privato: la web app sta in `/app/` del sito degli aggiornamenti (`cloudflare-aggiornamenti.md`). Le altre strade restano descritte qui sopra.
 
 Licenza: come per l'APK, la web app contiene MuPDF (AGPL-3.0): chi la usa ha diritto al codice sorgente
 (`THIRD-PARTY-NOTICES.md`): con il repository pubblico il sorgente è già disponibile.
