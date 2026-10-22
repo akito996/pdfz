@@ -13,6 +13,7 @@ Serve a ritrovare in fretta le informazioni senza rileggere vecchie chat.
 | [installer-e-aggiornamenti.md](installer-e-aggiornamenti.md) | Come l'MSI riconosce la versione precedente, "tutti gli utenti / solo per me", Intune, aggiornamenti su Android | Prima di installare/aggiornare su un PC o di distribuire |
 | [avviso-nuova-versione.md](avviso-nuova-versione.md) | `versione-<piattaforma>.json`, controllo aggiornamenti dalle GitHub Releases, `UPDATE_BASE_URL` | Quando si pubblica una versione o l'avviso non compare |
 | [macos-linux-iphone.md](macos-linux-iphone.md) | Build per Mac (DMG), Linux (AppImage, anche da Windows con WSL) e iPhone (Xcode), prerequisiti e limiti | Prima di compilare o installare su Mac, Linux o iPhone |
+| [web-app-iphone.md](web-app-iphone.md) | Web app per iPhone ("Aggiungi alla schermata Home"): installazione, limiti, build `build-web.mjs`, service worker, 3 strade per pubblicarla | Prima di pubblicare o provare la versione web, o se l'iPhone non aggiorna/salva |
 | [conversioni.md](conversioni.md) | Motori di conversione (Word, LibreOffice, pdf2docx…) e gestione dei file bloccati | Quando si tocca "Converti" o compare `PermissionError` |
 | [branding.md](branding.md) | Marchio PDFz: icone, favicon, temi colore e come cambiarli | Prima di cambiare colori, logo, icone o aggiungere un tema |
 | [decisioni.md](decisioni.md) | Registro delle decisioni (data, versione, opzioni valutate, scelta, motivo) | Prima di cambiare qualcosa "che sembra strano" |
@@ -21,7 +22,7 @@ Serve a ritrovare in fretta le informazioni senza rileggere vecchie chat.
 Altri file utili nella radice del progetto: `README.md` (panoramica e comandi), `CHANGELOG.md` (novità per versione,
 usate anche come note della GitHub Release), `frontend/src/novita.json` (novità mostrate nella campanella dell'app).
 
-Ultimo aggiornamento: **1.2.1** — 2026-10-21 (chiusura della finestra rimasta vuota).
+Ultimo aggiornamento: **1.3.0** — 2026-10-22 (icona 24, web app per iPhone unita, barra stretta).
 
 **Flusso:** si modifica nel repository `C:\Dev\10_PDFz` (GitHub `akito996/pdfz`, ramo `main`); si compila con
 `packaging\copia-e-build.ps1` (o `.sh`) nelle copie `C:\Build\PDFz-Windows`, `C:\Build\PDFz-Android`, `~/Build/PDFz-Linux`

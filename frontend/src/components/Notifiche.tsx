@@ -38,6 +38,8 @@ const ORDINE: Tipo[] = ["nuovo", "modifica", "correzione", "ottimizzazione", "in
  *  (al caricamento del modulo, prima che parta il motore) era ancora falso: su Android risultava "windows".
  *  App desktop: Windows, macOS o Linux dal browser integrato. */
 function piattaforma(): string {
+  // web app (VITE_WEB_APP in .env.web): si aggiorna da sola con il service worker (web/pwa.ts), niente controllo qui
+  if (import.meta.env.VITE_WEB_APP === "1") return "web";
   if (import.meta.env.MODE === "ios") return "ios";
   if (import.meta.env.MODE === "android") return "android";
   const ua = navigator.userAgent;
@@ -46,7 +48,7 @@ function piattaforma(): string {
   return "windows";
 }
 const PIATTAFORMA = piattaforma();
-const NOMI: Record<string, string> = { windows: "Windows", android: "Android", ios: "iPhone", macos: "macOS", linux: "Linux" };
+const NOMI: Record<string, string> = { windows: "Windows", android: "Android", ios: "iPhone", macos: "macOS", linux: "Linux", web: "web" };
 const VER = /^(\d+)\.(\d+)\.(\d+)$/;
 /** Versioni MAJOR.MINOR.PATCH (dalla 1.0.0), confrontate numero per numero.
  *  Le vecchie AAAAMM.NNN (fino alla 202610.015) contano come più vecchie di qualsiasi 1.0.0 o successiva. */
@@ -57,7 +59,9 @@ const piuNuova = (a: string, b: string | null) => {
   for (let i = 0; i < x.length; i++) if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) > (y[i] ?? 0);
   return false;
 };
-const perMe = (v: Voce) => !v.piattaforme?.length || v.piattaforme.includes(PIATTAFORMA);
+// la web app è la versione per iPhone senza App Store: valgono anche le novità scritte per "ios"
+const perMe = (v: Voce) => !v.piattaforme?.length || v.piattaforme.includes(PIATTAFORMA)
+  || (PIATTAFORMA === "web" && v.piattaforme.includes("ios"));
 const filtra = (v: Versione): Versione => ({ ...v, voci: v.voci.filter(perMe) });
 const fmtData = (d?: string) => {
   if (!d) return "";
@@ -82,7 +86,7 @@ let aperta = false;
 
 async function controllaAggiornamento(base: string): Promise<Update | null> {
   // l'avviso esiste per Windows (MSI), macOS (DMG), Linux (AppImage) e Android (APK);
-  // sull'iPhone gli aggiornamenti passano da TestFlight / App Store
+  // sull'iPhone gli aggiornamenti passano da TestFlight / App Store; la web app li riceve dal service worker (web/pwa.ts)
   if (!["windows", "macos", "linux", "android"].includes(PIATTAFORMA)) return null;
   if (isLocalEngine()) {
     // app Android: il motore non ha rete; la richiesta la fa l'app (CapacitorHttp, senza limiti CORS)

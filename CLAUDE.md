@@ -33,7 +33,7 @@ node node_modules/vite/bin/vite.js build
 # motore in modalita' server per provare l'interfaccia nel browser (dalla cartella backend; vite dev usa la porta 8765)
 ../.venv/Scripts/python -m hdpdf --server --port 8765
 # marchio: proposte + applicazione di icona e favicon scelti (dalla radice)
-.venv/Scripts/python branding/genera_marchio.py --serie 4 --icona 17 --favicon 17
+.venv/Scripts/python branding/genera_marchio.py --serie 6 --icona 24 --favicon 24
 ```
 
 Build locali: `packaging/build-windows.ps1`, `build-android.ps1`, `build-macos.sh`, `build-linux.sh`, `build-ios.sh`
@@ -56,6 +56,10 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   macOS Apple Silicon (DMG), Linux (AppImage) e Android (APK firmato) e crea la GitHub Release con installer e `versione-*.json`.
   Pubblica quello che si è compilato: un sistema fallito o Android senza chiave non bloccano gli altri (mai APK di prova in release).
   Niente build per Mac Intel (pikepdf e cryptography non hanno più pacchetti x86_64).
+  **Ogni modifica si pubblica come nuova versione** (PATCH per correzioni, MINOR per funzioni nuove) e alla fine si
+  mandano sempre all'utente i link diretti di download per ogni sistema
+  (`https://github.com/akito996/pdfz/releases/download/vX.Y.Z/<file>`), verificati senza login (richiesta del 2026-10-22:
+  "ogni volta che facciamo una modifica").
 - **Aggiornamenti**: l'app legge `UPDATE_BASE_URL` (scritto prima della build da `packaging/imposta-url-aggiornamenti.sh`):
   variabile di repository `UPDATE_BASE_URL` oppure `https://github.com/akito996/pdfz/releases/latest/download/`.
   Funziona solo con release pubbliche.
@@ -78,21 +82,28 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
 - **Modifica testo**: la riga originale si cancella con una fascia sottile all'altezza delle minuscole (`_area_da_cancellare`
   in `tools/content.py`), mai con il riquadro della riga: dipende dalle metriche del carattere e cancellava le righe vicine.
 - **Colori**: solo variabili CSS (`--brand`, `--on-brand`, `rgba(var(--brand-rgb), …)`), mai codici del vecchio marchio o
-  colori dell'interfaccia scritti a mano. Nuova palette: vedi `docs/branding.md`. Icone: solo da `branding/genera_marchio.py`.
+  colori dell'interfaccia scritti a mano. Nuova palette: vedi `docs/branding.md`. Icone: solo da `branding/genera_marchio.py`
+  (scrive anche le icone della web app: `icon-192`, `icon-maskable-*`, `apple-touch-icon`).
+- **iPhone: ogni modifica vale anche per la web app** (richiesta dell'utente, 2026-10-22). La web app usa la stessa
+  interfaccia (`vite --mode web`, `VITE_WEB_APP`) e lo stesso motore Pyodide dell'app Android: dopo ogni modifica si
+  controlla anche lei (`mobile/scripts/build-web.mjs --out <cartella di prova>` e prova in vista telefono, 375 px).
+  Si pubblica con `.github/workflows/pages.yml` a ogni tag, quando la variabile `PAGES_WEB_APP` è `true`.
 - **Firma Android**: chiave `pdfz-release.jks` (alias `pdfz`) dell'autore, **mai nel repository**. Nella pipeline arriva dai
   secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`; in locale dalle variabili `HDPDF_KEYSTORE*`.
 - **Git**: si lavora in `C:\Dev\10_PDFz` (GitHub: `akito996/pdfz`, ramo `main`). Autore dei commit `agjin`
-  (email noreply di GitHub, impostata nel repository locale). Commit e push solo quando l'utente lo chiede; messaggi in italiano.
+  (email noreply di GitHub, impostata nel repository locale). Commit, push e tag: a fine di ogni modifica, con la nuova
+  versione (l'utente l'ha chiesto il 2026-10-22, vedi Release); messaggi in italiano.
   In locale si lavora sul ramo `pdfz` (storia nuova, collegato a `origin/main`). Il ramo locale `main` contiene la storia
   del progetto precedente: **mai da pubblicare** (contiene il vecchio marchio); si può rinominare o eliminare quando non serve più.
   Sul PC Git Credential Manager ha due account GitHub (akito996 e ServicedeskHDgroup): per inviare si usa **akito996**,
   esplicito: `git push https://akito996@github.com/akito996/pdfz.git pdfz:main` (con l'altro account: errore 403).
   Il token di `gh` (akito996) legge i registri della pipeline ma non può annullarla.
 
-## Stato attuale (2026-10-21)
+## Stato attuale (2026-10-22)
 
-- Versione nel codice: **1.2.1** di PDFz. Marchio applicato ovunque: **icona e favicon 17 "Foglio oro"** (foglio PDF d'oro
-  su rosso con "PDF" e la "z" piccola, nero solo per le finiture), palette predefinita Rubino,
+- Versione nel codice: **1.3.0** di PDFz. Marchio applicato ovunque (2026-10-22, versione 1.3.0): **icona e favicon 24
+  "Foglio senza fondo"** — documento bianco con contorno nero, piega d'oro, "PDF" rosso, "z" nera, nessun fondo attorno
+  (iPhone e icona adattiva Android su fondo bianco); prima la 19 (2026-10-21) e la 17 "Foglio oro" (inviata), palette predefinita Rubino,
   5 palette selezionabili, avvisi solo con le finestre dell'app (provati nel browser: Oscura, domanda annidata dopo
   "Applica", Salva con nome Android, errore di salvataggio desktop simulato). Test: 73 passati, 2 saltati.
 - Prova WiX riuscita (MSI compilato con i nomi nuovi); PyInstaller, Gradle, Xcode e AppImage non provati
@@ -114,6 +125,9 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
 - Marchio: serie 1 (icone 1-5) scartata dall'utente perché simile a marchi esistenti e tolta dallo script; serie 2
   (6-10) e 3 (11-15) non scelte ma ancora disponibili; all'utente è piaciuta la 11 ("PDF" a capo, "z" piccola),
   messa in un foglio PDF nella serie 4 (16-18): scelta e applicata la **17** (inviata su GitHub).
+  **Serie 5** (2026-10-21): la 17 con più bianco (19 Foglio bianco, 20 Fondo bianco, 21 Contorno bianco, 22 Etichetta
+  bianca, 23 Foglio rosso su bianco), perché la 17 era "fastidiosa per gli occhi": scelta e applicata la **19**.
+  **Serie 6** (2026-10-22): la **24**, disegnata sulle indicazioni dell'utente ("la 19 ancora non ci siamo"), applicata.
 - **Release v1.1.0 pubblicata** (2026-10-21, "Latest"), tag `v1.1.0` sul commit `1aaee3c`:
   - **traduzione tolta** per alleggerire l'app: strumento Traduci, `translate.py`, `tools/translate_pdf.py`, CTranslate2 e
     SentencePiece, MSI `PDFz-Lingue-*` (`Lingue.wxs`), opzioni lingue di `build-windows.ps1`, cache `vendor/lingue` nella
@@ -146,6 +160,17 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   (1 novità sui PC, nessuna su Android). Correzione: trascinata in un'altra finestra la sua ultima scheda, la
   finestra di partenza si chiude in ogni ordine degli eventi (biglietto valido 5 s, rilascio accettato anche dopo la fine
   del trascinamento, chiusura senza aspettare l'evento di fine). Provato con pywebview vero in 3 ordini.
+- **Web app per iPhone** (`docs/web-app-iphone.md`): dalla cartella `mobile`, `node scripts/build-web.mjs` → `www-web/`
+  (`vite --mode web` + motore Pyodide + service worker `mobile/web/sw.js` scritto a mano) e `node scripts/serve.mjs www-web`
+  per provarla su http://localhost:8790. Nell'interfaccia: `frontend/src/web/pwa.ts` (uso offline, avviso di nuova
+  versione con `ask`) e `VITE_WEB_APP` in `frontend/.env.web`; manifest con icone 192/512/maskable da `genera_marchio.py`;
+  salvataggio con `navigator.share({ files })` (finestra "File pronto" se iPhone chiede un tocco), altrimenti download.
+  `prepare-engine.mjs` ora scrive archivi riproducibili (stesso codice = stessi byte). Provata nel browser del PC in
+  vista telefono (apri, ruota, numeri di pagina, salva, ricarica senza rete, aggiornamento). Workflow
+  `.github/workflows/pages.yml` pronto, si accende con la variabile `PAGES_WEB_APP` = `true` e Pages da "GitHub Actions"
+  (il repository è pubblico: gratuito). **Unita al codice il 2026-10-22** (dal ramo `claude/heuristic-austin-71ab67`,
+  file per file, non inviata): riprovata nel browser in vista telefono con il codice della 1.2.1 e l'icona 24; corretto
+  il nome della scheda schiacciato sopra la campanella sui telefoni stretti. Mai provata su un iPhone vero.
 
 ## Punti aperti
 
@@ -154,10 +179,11 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
    `keystore-base64.txt` si può cancellare. Secrets GitHub già impostati.
 2. **Avviso e download provati solo dal motore**: manca la prova su un PC/telefono vero con la 1.0.1 installata
    (campanella → Scarica → installazione sopra).
-3. **Web app per iPhone** pronta sul ramo `claude/heuristic-austin-71ab67` (commit 79f9323, sessione separata): non ancora
-   unita in `pdfz`/`main` né pubblicata; ora che il repository è pubblico si può usare GitHub Pages (vedi
-   `docs/web-app-iphone.md` sul ramo).
-4. **Verifica dei marchi registrati** per l'icona 17 e il nome PDFz prima di pubblicare (TMview, WIPO Global Brand
+3. **Web app per iPhone** unita al codice (2026-10-22, non inviata): per pubblicarla l'autore accende GitHub Pages
+   (Settings → Pages → Source "GitHub Actions" e variabile `PAGES_WEB_APP` = `true`), poi al tag successivo esce su
+   `https://akito996.github.io/pdfz/`. Da provare su un iPhone vero (schermata Home, Condividi › "Salva in File",
+   memoria con PDF grandi). L'indirizzo va deciso prima di distribuirla (i dati dell'app restano legati all'indirizzo).
+4. **Verifica dei marchi registrati** per l'icona 24 e il nome PDFz prima di pubblicare (TMview, WIPO Global Brand
    Database, store: vedi `docs/branding.md`). Un foglio con "PDF" ricorda l'icona generica dei file PDF.
 5. **Firma del codice** assente (Authenticode Windows, notarizzazione Apple): SmartScreen e Gatekeeper mostrano un avviso.
 6. Non provate dopo le modifiche: chiusura nella finestra desktop vera e l'errore di salvataggio con pywebview vero.
@@ -170,3 +196,5 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
    `vendor/lingue` (2 GB, ignorata da git) non serve più e si può cancellare.
 9. Note minori: negli strumenti che producono solo un file (conversioni) cambiare un'opzione e uscire fa comparire la domanda
    "applicare?"; nei Commenti non è coperto il testo di una nota ancora in scrittura sulla pagina.
+10. Un hook del team (`hd-dev`) blocca i nuovi confronti con la modalità di build di Vite (`MODE`) nel codice, anche
+   nei testi: usare variabili `VITE_*` nei file `frontend/.env.<modalità>` (come `VITE_WEB_APP`).

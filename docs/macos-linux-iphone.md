@@ -56,6 +56,7 @@ Build successive: solo i passi 6–8 (`bash packaging/copia-e-build.sh macos`; `
 ## iPhone / iPad (iOS)
 
 È la **stessa app di Android** (Capacitor + motore Python Pyodide nell'app, tutto offline), compilata per iOS.
+Senza Mac né Apple Developer Program c'è la **web app** da aggiungere alla schermata Home: `web-app-iphone.md`.
 
 Prerequisiti (sul Mac, una volta): Xcode dall'App Store (aprirlo una volta), `sudo xcode-select -s /Applications/Xcode.app`,
 `brew install node`. La prima build crea il progetto Xcode in `mobile/ios` **dentro la copia** (`~/Build/PDFz-iOS`), che resta lì.

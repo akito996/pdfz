@@ -3,12 +3,13 @@
 Tutto è fatto di forme geometriche (nessun carattere esterno, quindi nessuna licenza da rispettare) nei colori
 del marchio: rosso, oro, nero, bianco. Le proposte sono a serie (SERIE), ogni icona con il suo favicon (stesso
 numero); con --icona/--favicon la scelta viene applicata a tutte le piattaforme (Windows, macOS, Linux, Android,
-iPhone, interfaccia web). IN USO: icona e favicon 17 "Foglio oro" (serie 4, scelta del 2026-10-16).
+iPhone, interfaccia web). IN USO: icona e favicon 24 "Foglio senza fondo" (serie 6, 2026-10-22: indicazioni
+dell'utente — z nera, documento bianco con contorno nero, piega d'oro, PDF rosso, nessun fondo attorno).
 Le icone 1-5 (serie 1) sono state scartate e tolte da qui: restano solo come immagini in branding/proposte.
 
     python branding/genera_marchio.py                       # proposte dell'ultima serie in branding/proposte (+ anteprima)
     python branding/genera_marchio.py --serie 2             # rifà le proposte di una serie precedente
-    python branding/genera_marchio.py --serie 4 --icona 17 --favicon 17   # applica la scelta ovunque
+    python branding/genera_marchio.py --serie 6 --icona 24 --favicon 24   # applica la scelta ovunque
 
 Richiede PyMuPDF (da SVG a PNG) e Pillow (ICO, ICNS, BMP): sono già nel .venv del progetto.
 Nota: il motore SVG di PyMuPDF non gestisce sfumature né clipPath, per questo il disegno è piatto e le forme
@@ -312,18 +313,20 @@ ROSSO_SCURO = "#8E0B20"
 
 
 def foglio_pdf(pagina: str, piega: str, testo: str, filo: str, z: str, cornice_oro: bool = False,
-               box=(290, 196, 734, 830), c: float = 140, h: float = 140, con_filo: bool = True) -> str:
+               box=(290, 196, 734, 830), c: float = 140, h: float = 140, con_filo: bool = True,
+               finitura: str = NERO, etichetta: str | None = None, spessore: float = 11, ombra: bool = True) -> str:
     """Foglio con l'angolo piegato e, dentro, "PDF" su una riga e la "z" piccola centrata sotto.
-    Angoli morbidi: il foglio ha un contorno dello stesso colore con gli spigoli arrotondati; sotto, un contorno nero
-    sottile (finitura) e un'ombra nera leggera."""
+    Angoli morbidi: il foglio ha un contorno dello stesso colore con gli spigoli arrotondati; sotto, un contorno
+    sottile (finitura, nero salvo indicazione, larga «spessore») e un'ombra nera leggera (ombra=False: niente ombra).
+    etichetta = fascia colorata dietro "PDF"."""
     x0, y0, x1, y1 = box
     sc = (x1 - x0) / 480                         # proporzioni del disegno di base (foglio largo 480)
     d = f"M{x0},{y0} H{x1 - c} L{x1},{y0 + c} V{y1} H{x0} Z"
     dp = f"M{x1 - c},{y0} V{y0 + c} H{x1} Z"
-    t, nero = 36 * sc, 36 * sc + 2 * 11 * sc     # contorno morbido e contorno nero (11 px di finitura)
+    t, nero = 36 * sc, 36 * sc + 2 * spessore * sc   # contorno morbido e contorno della finitura
     out = [f'<path transform="translate({14 * sc:.1f} {22 * sc:.1f})" fill="{NERO}" stroke="{NERO}" stroke-width="{nero:.1f}" '
-           f'stroke-linejoin="round" opacity="0.28" d="{d}"/>',
-           f'<path fill="{NERO}" stroke="{NERO}" stroke-width="{nero:.1f}" stroke-linejoin="round" d="{d}"/>']
+           f'stroke-linejoin="round" opacity="0.28" d="{d}"/>'] if ombra else []
+    out.append(f'<path fill="{finitura}" stroke="{finitura}" stroke-width="{nero:.1f}" stroke-linejoin="round" d="{d}"/>')
     if cornice_oro:                              # bordo d'oro largo dentro il contorno nero
         out.append(f'<path fill="{ORO}" stroke="{ORO}" stroke-width="{t:.1f}" stroke-linejoin="round" d="{d}"/>')
         k = 30 * sc
@@ -331,10 +334,14 @@ def foglio_pdf(pagina: str, piega: str, testo: str, filo: str, z: str, cornice_o
         out.append(f'<path fill="{pagina}" stroke="{pagina}" stroke-width="{t * 0.5:.1f}" stroke-linejoin="round" d="{di}"/>')
     else:
         out.append(f'<path fill="{pagina}" stroke="{pagina}" stroke-width="{t:.1f}" stroke-linejoin="round" d="{d}"/>')
-    out.append(f'<path fill="{NERO}" stroke="{NERO}" stroke-width="{nero:.1f}" stroke-linejoin="round" d="{dp}"/>')
+    out.append(f'<path fill="{finitura}" stroke="{finitura}" stroke-width="{nero:.1f}" stroke-linejoin="round" d="{dp}"/>')
     out.append(f'<path fill="{piega}" stroke="{piega}" stroke-width="{t:.1f}" stroke-linejoin="round" d="{dp}"/>')
     cx = (x0 + x1) / 2
     ty = y0 + 220 * sc
+    if etichetta:
+        m = 34 * sc
+        out.append(f'<rect x="{x0 + m:.1f}" y="{ty - m:.1f}" width="{x1 - x0 - 2 * m:.1f}" height="{h + 2 * m:.1f}" '
+                   f'rx="{26 * sc:.1f}" fill="{etichetta}"/>')
     out.append(parola("PDF", cx - larghezza("PDF", h) / 2, ty, h, testo))
     if con_filo:
         out.append(f'<rect x="{cx - 60 * sc:.1f}" y="{ty + h + 32 * sc:.1f}" width="{120 * sc:.1f}" height="{14 * sc:.1f}" '
@@ -369,6 +376,71 @@ ICONE.update({
 SERIE[4] = [16, 17, 18]
 
 
+# ------------------------------------------------------------------ serie 5 (2026-10-21): la 17 con più bianco
+# Richiesta: l'icona 17 è "fastidiosa per gli occhi" (rosso e oro pieni, molto saturi): stessa icona con un po' di
+# bianco. Il bianco prende il posto di una delle superfici grandi (foglio, fondo) o fa da cornice e respiro.
+def icona_19(cornice: str) -> str:
+    """Foglio bianco: foglio PDF bianco su rosso, "PDF" e z rossi, piega d'oro; finiture nere."""
+    kind, k = CORNICI[cornice]
+    return forma(kind, ROSSO) + gruppo(k, foglio_pdf(BIANCO, ORO, ROSSO, ORO, ROSSO))
+
+
+def icona_20(cornice: str) -> str:
+    """Fondo bianco: il foglio d'oro della 17, con "PDF" e z rossi, su fondo bianco con un contorno chiaro."""
+    kind, k = CORNICI[cornice]
+    return forma(kind, BIANCO) + bordo(kind, BORDO_CHIARO, 24) + gruppo(k, foglio_pdf(ORO, ORO_CHIARO, ROSSO, NERO, ROSSO))
+
+
+def icona_21(cornice: str) -> str:
+    """Contorno bianco: la 17 con il contorno del foglio bianco invece che nero (stacca dal rosso senza durezza)."""
+    kind, k = CORNICI[cornice]
+    return forma(kind, ROSSO) + gruppo(k, foglio_pdf(ORO, ORO_CHIARO, ROSSO, ROSSO, ROSSO, finitura=BIANCO))
+
+
+def icona_22(cornice: str) -> str:
+    """Etichetta bianca: la 17 con una fascia bianca dietro "PDF" (scritta rossa più leggibile, meno oro)."""
+    kind, k = CORNICI[cornice]
+    return forma(kind, ROSSO) + gruppo(k, foglio_pdf(ORO, ORO_CHIARO, ROSSO, BIANCO, ROSSO, etichetta=BIANCO))
+
+
+def icona_23(cornice: str) -> str:
+    """Fondo bianco, foglio rosso: foglio PDF rosso con "PDF" bianco e z d'oro, su fondo bianco."""
+    kind, k = CORNICI[cornice]
+    return forma(kind, BIANCO) + bordo(kind, BORDO_CHIARO, 24) + gruppo(k, foglio_pdf(ROSSO, ORO, BIANCO, ORO, ORO))
+
+
+ICONE.update({
+    19: ("Foglio bianco", "Foglio PDF bianco su rosso, PDF e z rossi, piega d'oro", icona_19, ROSSO),
+    20: ("Fondo bianco", "Il foglio d'oro della 17 su fondo bianco", icona_20, BIANCO),
+    21: ("Contorno bianco", "La 17 con il contorno del foglio bianco invece che nero", icona_21, ROSSO),
+    22: ("Etichetta bianca", "La 17 con una fascia bianca dietro la scritta PDF", icona_22, ROSSO),
+    23: ("Foglio rosso su bianco", "Foglio PDF rosso, PDF bianco e z d'oro, su fondo bianco", icona_23, BIANCO),
+})
+SERIE[5] = [17, 19, 20, 21, 22, 23]   # la 17 (in uso) per confronto
+
+
+# ------------------------------------------------------------------ serie 6 (2026-10-22): indicazioni precise dell'utente
+# "z nera, documento bianco con contorno nero, piega della pagina oro, PDF rosso, lo sfondo fuori non ci deve essere".
+# Niente quadrato di fondo: il foglio da solo su trasparente (solo l'iPhone vuole un'immagine piena: lì fondo bianco).
+FOGLIO_24 = dict(box=(206, 64, 818, 932), c=190, h=190, spessore=20, ombra=False)
+
+
+def foglio_24() -> str:
+    return foglio_pdf(BIANCO, ORO, ROSSO, ORO, NERO, **FOGLIO_24)
+
+
+def icona_24(cornice: str) -> str:
+    """Foglio bianco con contorno nero, piega d'oro, "PDF" rosso e z nera; nessun fondo attorno."""
+    kind, k = CORNICI[cornice]
+    if cornice == "ios":
+        return forma(kind, BIANCO) + gruppo(k, foglio_24())
+    return gruppo(k, foglio_24())
+
+
+ICONE[24] = ("Foglio senza fondo", "Foglio bianco con contorno nero, piega d'oro, PDF rosso, z nera; nessun fondo", icona_24, BIANCO)
+SERIE[6] = [19, 24]   # la 19 per confronto
+
+
 # ------------------------------------------------------------------ favicon (pensati per 16-32 px), uno per icona
 def favicon(n: int) -> str:
     # serie 2: lo stesso disegno dell'icona, più grande, con tratti più spessi e senza i dettagli invisibili a 16 px
@@ -396,6 +468,20 @@ def favicon(n: int) -> str:
             f'<path fill="{ORO}" d="M322,196 H702 V300 C702,470 600,640 512,846 C424,640 322,470 322,300 Z"/>'
             f'<rect x="494" y="560" width="36" height="300" fill="{NERO}"/>'
             f'<path transform="translate(432 340) scale(1.6)" fill="{ROSSO}" d="{Z_SPESSA}"/></g>')
+    if n == 24:
+        return foglio_24()
+    if n in (19, 21, 22):
+        box, c = (190, 44, 834, 952), 200
+        if n == 19:
+            return foglio_pdf(BIANCO, ORO, ROSSO, ORO, ROSSO, box=box, c=c, h=200, con_filo=False)
+        if n == 21:
+            return foglio_pdf(ORO, ORO_CHIARO, ROSSO, ROSSO, ROSSO, box=box, c=c, h=200, con_filo=False, finitura=BIANCO)
+        return foglio_pdf(ORO, ORO_CHIARO, ROSSO, BIANCO, ROSSO, box=box, c=c, h=200, con_filo=False, etichetta=BIANCO)
+    if n in (20, 23):   # fondo bianco: quadrato arrotondato a tutta tela con il foglio dentro
+        box, c = (236, 110, 788, 914), 170
+        sheet = (foglio_pdf(ORO, ORO_CHIARO, ROSSO, NERO, ROSSO, box=box, c=c, h=170, con_filo=False) if n == 20 else
+                 foglio_pdf(ROSSO, ORO, BIANCO, ORO, ORO, box=box, c=c, h=170, con_filo=False))
+        return forma("squircle", BIANCO, FAV) + bordo("squircle", BORDO_CHIARO, 40, FAV) + sheet
     if n in (16, 17, 18):
         box, c = (190, 44, 834, 952), 200
         if n == 16:
@@ -442,6 +528,12 @@ FAVICON = {
     16: "Foglio PDF rosso, scritte oro",
     17: "Foglio PDF d'oro, scritte rosse",
     18: "Foglio PDF rosso con bordo d'oro",
+    19: "Foglio PDF bianco, scritte rosse, piega d'oro",
+    20: "Foglio d'oro su quadrato bianco",
+    21: "Foglio d'oro con contorno bianco",
+    22: "Foglio d'oro con fascia bianca dietro PDF",
+    23: "Foglio rosso su quadrato bianco",
+    24: "Foglio bianco, contorno nero, z nera, senza fondo",
 }
 
 
@@ -577,7 +669,8 @@ def foglio(numeri: list[int], titolo: str) -> Image.Image:
         # icona rotonda e adattiva Android, come le vede il telefono
         for j, cor in enumerate(("tondo", "pieno")):
             ic = png(svg(fn(cor)), 80)
-            if cor == "pieno":
+            if cor == "pieno":   # sul telefono sotto c'è il colore di fondo dell'icona adattiva
+                ic = Image.alpha_composite(Image.new("RGBA", (80, 80), ICONE[n][3]), ic)
                 mask = Image.new("L", (80, 80), 0)
                 ImageDraw.Draw(mask).ellipse((0, 0, 79, 79), fill=255)
                 ic.putalpha(mask)
@@ -624,6 +717,11 @@ def applica(n: int, m: int) -> None:
         salva(png(svg(favicon(m)), sz), pub / f"favicon-{sz}.png", optimize=True)
     salva(png(app_svg, 512), pub / "icon-512.png", optimize=True)
     salva(png(svg(fn("ios")), 180, rgb=fondo), pub / "apple-touch-icon.png", optimize=True)
+    # web app (manifest): 192 e 512 come l'icona dell'app, più la versione "maskable" a tutta tela e senza trasparenza,
+    # che il telefono ritaglia nella sua forma: il disegno della cornice "pieno" (68%) sta nel cerchio sicuro (80%)
+    salva(png(app_svg, 192), pub / "icon-192.png", optimize=True)
+    for sz in (192, 512):
+        salva(png(svg(fn("pieno")), sz, rgb=fondo), pub / f"icon-maskable-{sz}.png", optimize=True)
 
     # installer desktop
     a = ROOT / "packaging" / "assets"

@@ -6,6 +6,17 @@ Il più recente in cima.
 > Le voci con numeri `AAAAMM.NNN` (es. 202610.014) sono della fase di sviluppo prima di PDFz 1.0.0, quando le versioni
 > avevano quel formato. Restano perché spiegano cosa non rifare.
 
+## 1.3.0 — Telefono stretto: il nome del documento finisce sotto la campanella
+
+- **Sintomo:** su un telefono largo 375 px (iPhone, molti Android) il nome del documento aperto, nella barra in alto,
+  si sovrappone alla campanella ("Iph" con la campanella sopra).
+- **Causa:** `.tabs-menu` (contenitore del nome) poteva restringersi fino a 0 (`min-width: 0`), ma il suo pulsante
+  aveva un minimo di contenuto (nome di almeno 2,5 caratteri, freccia, margini): il contenitore restava largo 15 px e
+  il pulsante usciva sopra la campanella. I pulsanti a 40 px (schermi touch) lasciavano troppo poco posto.
+- **Soluzione:** `styles.css`, fino a 420 px: pulsanti della barra larghi 34 px, spazio tra i pulsanti 2 px, nome del
+  documento con almeno 64 px (`flex: 1 1 64px`). Provato in vista telefono 375×812 nella web app.
+- **Da non rifare:** `min-width: 0` sul contenitore di un elemento che ha un minimo di contenuto.
+
 ## 1.2.1 — La finestra di partenza resta aperta dopo aver ceduto la sua ultima scheda
 
 - **Sintomo:** trascinata l'unica scheda di una finestra in un'altra finestra di PDFz, la finestra di partenza resta
@@ -103,6 +114,20 @@ Il più recente in cima.
 - **Da non rifare:** finestrelle o menu con `position: absolute` dentro la barra in alto (`.topbar`): usare `Popover`.
   Provando la versione mobile in `localhost:8790`, attenzione al service worker della web app: può servire la pagina vecchia
   (DevTools › Application › Service workers › Unregister).
+
+## 1.0.0 (web app per iPhone) — Ogni build cambiava 33 MB del motore
+
+- **Sintomo:** preparando la web app due volte con lo stesso codice, 21 file del motore su 59 (33,6 MB: MuPDF,
+  OpenCV, pydantic, il codice di PDFz…) avevano un contenuto diverso. Con il service worker ogni nuova versione avrebbe
+  fatto riscaricare tutti quei MB ai telefoni, invece dei pochi file cambiati davvero.
+- **Causa:** `prepare-engine.mjs` rifà alcuni archivi (librerie alleggerite, `hdpdf.zip`, librerie precompilate) e nei
+  file dentro l'archivio scriveva l'ora della build: fflate (`zipSync`) e `zipfile.writestr` di Python con il solo nome
+  del file usano l'ora corrente.
+- **Soluzione:** data fissa per fflate (`mtime: ZIP_DATA`), data e attributi del file originale nella precompilazione
+  (`zipfile.ZipInfo(name, date_time=info.date_time)`), file di `hdpdf.zip` in ordine alfabetico. Verificato: due build
+  di fila danno 59 file identici.
+- **Da non rifare:** scrivere archivi con la data corrente (o in un ordine che dipende dal sistema) in ciò che finisce
+  nella web app.
 
 ## 1.0.0 — Avvisi "come JavaScript" invece delle finestre dell'app
 

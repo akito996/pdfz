@@ -1,6 +1,45 @@
 {
-  "_info": "Novità di ogni versione, mostrate nella campanella dell'app e copiate dalla build in versione-<piattaforma>.json. tipo: nuovo | modifica | correzione | installer | ottimizzazione | rimosso. piattaforme: windows, macos, linux, android, ios.",
+  "_info": "Novità di ogni versione, mostrate nella campanella dell'app e copiate dalla build in versione-<piattaforma>.json. tipo: nuovo | modifica | correzione | installer | ottimizzazione | rimosso. piattaforme: windows, macos, linux, android, ios, web (la web app per iPhone mostra anche le voci ios).",
   "versioni": [
+    {
+      "versione": "1.3.0",
+      "data": "2026-10-22",
+      "titolo": "PDFz 1.3.0: nuova icona e PDFz per iPhone",
+      "voci": [
+        {
+          "tipo": "modifica",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android",
+            "ios"
+          ],
+          "dove": "Icona dell'app",
+          "titolo": "Nuova icona",
+          "dettaglio": "Documento bianco con il contorno nero, piega d'oro, \"PDF\" rosso e la \"z\" nera, senza sfondo attorno."
+        },
+        {
+          "tipo": "nuovo",
+          "piattaforme": [
+            "ios"
+          ],
+          "dove": "iPhone",
+          "titolo": "PDFz sulla schermata Home dell'iPhone",
+          "dettaglio": "Aggiungi PDFz dalla schermata Condividi di Safari: si apre a tutto schermo e funziona anche senza internet. Per salvare un file usa il menu Condividi (\"Salva in File\")."
+        },
+        {
+          "tipo": "correzione",
+          "piattaforme": [
+            "android",
+            "ios"
+          ],
+          "dove": "Barra in alto",
+          "titolo": "Nome del documento sempre leggibile",
+          "dettaglio": "Sui telefoni stretti il nome del documento aperto non finisce più sotto la campanella."
+        }
+      ]
+    },
     {
       "versione": "1.2.1",
       "data": "2026-10-21",

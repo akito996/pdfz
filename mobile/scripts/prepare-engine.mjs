@@ -6,6 +6,7 @@
 // I download restano in mobile/cache: le build successive non riscaricano niente.
 //
 //   node scripts/prepare-engine.mjs
+//   node scripts/prepare-engine.mjs --www www-web                   (altra cartella: la web app, vedi build-web.mjs)
 //   PYODIDE_DIR=/percorso/pyodide node scripts/prepare-engine.mjs   (cartella "pyodide" già estratta)
 import fs from "node:fs";
 import path from "node:path";
@@ -16,7 +17,8 @@ import crypto from "node:crypto";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const MOBILE = path.resolve(HERE, "..");
 const ROOT = path.resolve(MOBILE, "..");
-const WWW = path.join(MOBILE, "www");
+const wwwArg = process.argv.indexOf("--www");
+const WWW = wwwArg > 0 ? path.resolve(process.argv[wwwArg + 1]) : path.join(MOBILE, "www");
 const CACHE = path.join(MOBILE, "cache");
 const PYODIDE_VERSION = "0.29.5";   // Python 3.13, ABI pyemscripten_2025_0 (come la ruota WebAssembly di PyMuPDF)
 const CDN = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
@@ -53,6 +55,9 @@ async function download(url, dest) {
 }
 
 const norm = (n) => n.toLowerCase().replace(/[-_.]+/g, "-");
+// data fissa nei file dentro gli archivi rifatti qui: con lo stesso codice due build danno gli stessi byte, così
+// la web app (service worker, build-web.mjs) a ogni nuova versione riscarica solo i file cambiati davvero
+const ZIP_DATA = new Date(2020, 0, 1);
 
 // Alleggerisce una libreria (.whl): toglie i file che l'app non usa e aggiorna l'elenco RECORD.
 function slimWheel(file, drop) {
@@ -63,7 +68,7 @@ function slimWheel(file, drop) {
   const rec = Object.keys(files).find((n) => n.endsWith(".dist-info/RECORD"));
   if (rec) files[rec] = strToU8(strFromU8(files[rec]).split("\n").filter((l) => !drop(l.split(",")[0])).join("\n"));
   const before = fs.statSync(file).size;
-  fs.writeFileSync(file, zipSync(files, { level: 9 }));
+  fs.writeFileSync(file, zipSync(files, { level: 9, mtime: ZIP_DATA }));
   return before - fs.statSync(file).size;
 }
 const sha256 = (file) => crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
@@ -147,7 +152,7 @@ log(`${manifest.wheels.basic.length + manifest.wheels.full.length} librerie`);
 step("Codice di PDFz (backend/hdpdf)");
 const files = {};
 (function walk(dir, rel) {
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1))) {
     if (e.name === "__pycache__" || e.name.endsWith(".pyc")) continue;
     const p = path.join(dir, e.name);
     const r = rel ? `${rel}/${e.name}` : e.name;
@@ -157,7 +162,7 @@ const files = {};
 })(path.join(ROOT, "backend", "hdpdf"), "hdpdf");
 const fontsDir = path.join(ROOT, "fonts");
 if (fs.existsSync(fontsDir)) for (const f of fs.readdirSync(fontsDir)) files[`fonts/${f}`] = new Uint8Array(fs.readFileSync(path.join(fontsDir, f)));
-fs.writeFileSync(path.join(WWW, "py", "hdpdf.zip"), zipSync(files, { level: 6 }));
+fs.writeFileSync(path.join(WWW, "py", "hdpdf.zip"), zipSync(files, { level: 6, mtime: ZIP_DATA }));
 log(`${Object.keys(files).length} file`);
 
 // ------------------------------------------------------------------ OCR
@@ -214,9 +219,15 @@ try {
   const pyo = await loadPyodide({ indexURL: outPy + path.sep });
   pyo.runPython(`
 import zipfile, importlib._bootstrap_external as be
+def voce(name, info):
+    # stessa data e attributi del file originale (non l'ora della build): archivio uguale a ogni build
+    z = zipfile.ZipInfo(name, date_time=info.date_time)
+    z.external_attr = info.external_attr
+    return z
 def precompile(src, dst):
     n = 0
-    with zipfile.ZipFile(src) as zin, zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zout:
+    with zipfile.ZipFile(src) as zin, zipfile.ZipFile(dst, "w") as zout:
+        scrivi = lambda name, info, data: zout.writestr(voce(name, info), data, zipfile.ZIP_DEFLATED, 9)
         for info in zin.infolist():
             data = zin.read(info)
             name = info.filename
@@ -224,12 +235,12 @@ def precompile(src, dst):
                 try:
                     code = compile(data, name, "exec", dont_inherit=True, optimize=2)
                 except SyntaxError:
-                    zout.writestr(name, data)
+                    scrivi(name, info, data)
                     continue
-                zout.writestr(name + "c", bytes(be._code_to_timestamp_pyc(code, 0, 0)))
+                scrivi(name + "c", info, bytes(be._code_to_timestamp_pyc(code, 0, 0)))
                 n += 1
             else:
-                zout.writestr(name, data)
+                scrivi(name, info, data)
     return n
 `);
   const precompile = (file) => {

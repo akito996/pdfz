@@ -142,6 +142,39 @@ export default function App() {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), kind === "err" ? 10000 : 6000);
   }, []);
 
+  // web app per iPhone (VITE_WEB_APP, docs/web-app-iphone.md): service worker con uso offline, avviso di nuova
+  // versione e conferma del menu "Condividi" quando il telefono la chiede, tutto con le finestre dell'app
+  useEffect(() => {
+    if (import.meta.env.VITE_WEB_APP !== "1") return;
+    let stop = () => {};
+    let alive = true;
+    Promise.all([import("./web/pwa"), import("./android/files")]).then(([pwa, files]) => {
+      if (!alive) return;
+      files.impostaConfermaCondividi(async (nome) => (await ask("File pronto",
+        <>"{nome}" è pronto. Tocca <b>Condividi</b> e scegli "Salva in File" o l'app con cui aprirlo.</>,
+        [{ label: "Annulla", value: "cancel" }, { label: "Condividi", value: "share", kind: "primary" }])) === "share");
+      stop = pwa.avviaWebApp({
+        nuovaVersione: async (v) => {
+          // stesso numero di adesso (es. correzione pubblicata di nuovo): niente numero nel testo
+          const current = await api.caps().then((c) => c.version).catch(() => null);
+          if (v === current) v = null;
+          const open = tabsRef.current.length > 0;
+          const unsavedNow = tabsRef.current.some(isDirtyTab) || !!pendingRef.current;
+          return (await ask("Nuova versione di PDFz",
+            <>
+              È pronta {v ? <>la versione <b>{v}</b></> : "una nuova versione"}. Per usarla l'app si ricarica
+              {open ? " e i documenti aperti si chiudono" : ""}. Se rimandi, parte da sola la prossima volta che chiudi e riapri PDFz.
+              {unsavedNow && <><br /><br /><b>Hai modifiche non salvate:</b> scegli "Più tardi" e salvale prima di aggiornare.</>}
+            </>,
+            [{ label: "Più tardi", value: "later" }, { label: "Aggiorna ora", value: "update", kind: unsavedNow ? "danger" : "primary" }])) === "update";
+        },
+        prontoOffline: () => toast("PDFz è pronto anche senza internet.", "ok"),
+        consiglio: (testo) => toast(testo, "info"),
+      });
+    }).catch(() => {});
+    return () => { alive = false; stop(); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // carica il PDF della versione corrente
   useEffect(() => {
     let cancel = false;
@@ -358,11 +391,13 @@ export default function App() {
 
   // app Android: "Salva" scrive in Documenti/PDFz con lo stesso nome (sostituisce), senza aprire "Condividi";
   // "Salva con nome" chiede il nome. savedPath qui contiene il nome scelto.
+  // Web app (iPhone): in tutti e due i casi si apre il menu "Condividi" con il file ("Salva in File", altre app…).
   const saveAndroid = async (askName: boolean) => {
     if (!doc || !tab) return;
     let name = tab.savedPath || doc.name;
     if (askName) {
-      const typed = await askText("Salva con nome", "Scegli il nome del file: viene salvato in Documenti/PDFz.",
+      const { doveSalva } = await import("./android/files");
+      const typed = await askText("Salva con nome", `Scegli il nome del file: ${doveSalva()}`,
         name.replace(/\.pdf$/i, ""), { suffix: ".pdf", ok: "Salva", placeholder: "Nome del file" });
       if (!typed) return;
       name = typed.replace(/[\\/:*?"<>|]+/g, "-").replace(/\.pdf$/i, "") + ".pdf";

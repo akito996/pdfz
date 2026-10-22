@@ -1,5 +1,16 @@
 # Novità
 
+## 1.3.0
+Nuova icona, PDFz per iPhone come web app e barra in alto sistemata sui telefoni stretti.
+
+- **Nuova icona** (tutti i sistemi): documento bianco con il contorno nero, piega della pagina d'oro, "PDF" rosso e la
+  "z" nera, senza sfondo attorno. Sull'iPhone e nelle icone adattive di Android il fondo è bianco.
+- **PDFz per iPhone** (novità): web app da aggiungere alla schermata Home (Safari → Condividi → "Aggiungi alla schermata
+  Home"); si apre a tutto schermo e, dopo il primo avvio, funziona senza internet. Stesse funzioni dell'app Android; i
+  file si salvano con il menu Condividi ("Salva in File"). Da qui in avanti ogni modifica vale anche per l'iPhone.
+- **Barra in alto sui telefoni stretti** (correzione, Android e iPhone): il nome del documento non viene più schiacciato
+  sotto la campanella; i pulsanti della barra sono un po' più stretti per fargli posto.
+
 ## 1.2.1
 Correzione per le schede spostate fra finestre.
 

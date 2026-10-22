@@ -16,6 +16,7 @@ Gli installer di ogni versione sono nella pagina **Releases**: <https://github.c
 | Linux (x86_64) | `PDFz-X.Y.Z-x86_64.AppImage` | un solo file: `chmod +x` e doppio clic |
 | Android | `PDFz-X.Y.Z-android.apk` | da installare consentendo le "origini sconosciute" |
 | iPhone / iPad | `PDFz-X.Y.Z-iOS.ipa` | non è nelle Releases: si compila su un Mac con Xcode (`docs/macos-linux-iphone.md`) |
+| iPhone / iPad, web app | cartella `mobile/www-web` | da Safari "Condividi › Aggiungi alla schermata Home"; non ancora pubblicata (`docs/web-app-iphone.md`) |
 
 Quando esce una versione nuova l'app la segnala nella **campanella** (Windows, macOS, Linux, Android), con le novità
 e il pulsante Scarica. Le novità di ogni versione sono in `CHANGELOG.md`.
@@ -119,23 +120,30 @@ La build Windows produce un solo MSI. Opzione di `build-windows.ps1`: `-WithGhos
 ./packaging/copia-e-build.sh ios                        # → ~/Build/PDFz-iOS/dist/
 ```
 
+```bash
+# web app per iPhone (dalla cartella mobile; su Windows con node.exe diretto)
+node scripts/build-web.mjs                              # → mobile/www-web (sito statico da pubblicare in https)
+node scripts/serve.mjs www-web                          # prova: http://localhost:8790
+```
+
 A ogni tag `X.Y.Z` (o `vX.Y.Z`, uguale a `__version__` in `backend/hdpdf/__init__.py`) la pipeline di GitHub
 (`.github/workflows/release.yml`) compila Windows, macOS Apple Silicon, Linux e Android e pubblica la GitHub Release.
 
 Dettagli, opzioni e prerequisiti:
 - `docs/build-e-test.md`: build Windows e Android, test, pipeline, chiave di firma Android;
 - `docs/macos-linux-iphone.md`: Mac, Linux (anche da Windows con WSL), iPhone;
+- `docs/web-app-iphone.md`: web app per iPhone (schermata Home, uso offline, pubblicazione);
 - `docs/avviso-nuova-versione.md`: come l'app trova le versioni nuove;
 - `docs/installer-e-aggiornamenti.md`: come si comporta l'installer Windows.
 
 ## Distribuzione sui PC Windows
 
 ```bat
-msiexec /i PDFz-1.2.1-x64.msi /qn                    :: silenziosa
-msiexec /i PDFz-1.2.1-x64.msi /qn DESKTOPSHORTCUT=0  :: senza icona sul desktop
-msiexec /i PDFz-1.2.1-x64.msi /qn HDSCOPE=user       :: solo per l'utente corrente
-msiexec /i PDFz-1.2.1-x64.msi /qn HDCONTEXTMENU=0    :: senza la voce nel menu del tasto destro
-msiexec /x PDFz-1.2.1-x64.msi /qn                    :: disinstallazione
+msiexec /i PDFz-1.3.0-x64.msi /qn                    :: silenziosa
+msiexec /i PDFz-1.3.0-x64.msi /qn DESKTOPSHORTCUT=0  :: senza icona sul desktop
+msiexec /i PDFz-1.3.0-x64.msi /qn HDSCOPE=user       :: solo per l'utente corrente
+msiexec /i PDFz-1.3.0-x64.msi /qn HDCONTEXTMENU=0    :: senza la voce nel menu del tasto destro
+msiexec /x PDFz-1.3.0-x64.msi /qn                    :: disinstallazione
 ```
 
 * Installazione per tutti gli utenti in `C:\Program Files\PDFz`, collegamento nel menu Start.

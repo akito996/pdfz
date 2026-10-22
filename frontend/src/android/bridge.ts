@@ -22,6 +22,10 @@ export function startLocalEngine(onProgress: (label: string, pct: number) => voi
     if (m.type === "progress") {
       onProgress(m.label, m.pct);
       if (m.pct >= 100) readyResolve();
+    } else if (m.type === "full") {
+      // tutte le librerie caricate: la web app ne approfitta per salvare il resto del motore per l'uso offline (web/pwa.ts)
+      (window as any).__HD_FULL__ = true;
+      window.dispatchEvent(new Event("hdpdf-motore-completo"));
     } else if (m.type === "fatal") {
       readyReject(new Error(m.message));
     } else if (m.type === "response") {
