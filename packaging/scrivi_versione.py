@@ -31,12 +31,12 @@ PLATFORMS = ("windows", "macos", "linux", "android")
 
 
 def main(platform: str, file: str, out_dir: str, installer: str | None = None, link_base: str | None = None,
-         pagina: str | None = None) -> Path:
+         pagina: str | None = None, root: Path = ROOT) -> Path:
     if platform not in PLATFORMS:
         raise SystemExit(f"Piattaforma '{platform}' non valida: usa {', '.join(PLATFORMS)}")
-    init = (ROOT / "backend" / "hdpdf" / "__init__.py").read_text(encoding="utf-8")
+    init = (root / "backend" / "hdpdf" / "__init__.py").read_text(encoding="utf-8")
     version = re.search(r'__version__ = "(.*)"', init).group(1)
-    data = json.loads((ROOT / "frontend" / "src" / "novita.json").read_text(encoding="utf-8-sig"))
+    data = json.loads((root / "frontend" / "src" / "novita.json").read_text(encoding="utf-8-sig"))
     v = next((x for x in data["versioni"] if x.get("versione") == version), None)
     if v is None:
         print(f"Avviso: novita.json non ha la voce della versione {version}: l'avviso mostrerà solo il numero di versione.")

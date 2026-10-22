@@ -10,6 +10,8 @@ La web app per iPhone, se compilata prima in <out>/app (mobile/scripts/build-web
 Gli installer non stanno nella cartella: li serve cloudflare/functions/download dall'archivio R2.
 
     python packaging/sito_aggiornamenti.py --out cloudflare/sito --base https://pdfz.pages.dev/ --tag v1.4.0 --installer assets
+--radice: cartella del progetto alla versione del tag (versione, novità, icone); predefinita questa. Serve quando lo
+script è più nuovo del tag (es. il flusso rilanciato a mano su una versione vecchia).
 """
 from __future__ import annotations
 
@@ -181,11 +183,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--base", required=True, help="indirizzo del sito, https://… con la / finale (UPDATE_BASE_URL)")
     ap.add_argument("--tag", required=True, help="tag della versione, es. v1.4.0")
     ap.add_argument("--installer", required=True, help="cartella con gli installer della versione")
+    ap.add_argument("--radice", default=str(ROOT), help="progetto alla versione del tag (predefinito: questo)")
     a = ap.parse_args(argv)
+    radice = Path(a.radice).resolve()
     base = a.base if a.base.endswith("/") else a.base + "/"
     if not base.startswith("https://"):
         ap.error("--base deve iniziare con https://")
-    versione = re.search(r'__version__ = "(.*)"', (ROOT / "backend/hdpdf/__init__.py").read_text(encoding="utf-8"))[1]
+    versione = re.search(r'__version__ = "(.*)"', (radice / "backend/hdpdf/__init__.py").read_text(encoding="utf-8"))[1]
     if a.tag.lstrip("v") != versione:
         ap.error(f"il tag {a.tag} non corrisponde alla versione nel codice ({versione})")
     out, cartella = Path(a.out), Path(a.installer)
@@ -194,16 +198,17 @@ def main(argv: list[str] | None = None) -> int:
     for pf, _, modello, _ in SISTEMI:
         f = modello.format(v=versione)
         if f in presenti:
-            scrivi_versione.main(pf, f, str(out), installer=str(cartella / f), link_base=f"{base}download/{a.tag}/", pagina=base)
+            scrivi_versione.main(pf, f, str(out), installer=str(cartella / f), link_base=f"{base}download/{a.tag}/",
+                                 pagina=base, root=radice)
         else:
             print(f"Avviso: manca {f}: {pf} non avrà l'avviso di questa versione")
     sorgente = next((n for n in presenti if n == f"PDFz-{versione}-sorgente.zip"), None)
-    novita = json.loads((ROOT / "frontend/src/novita.json").read_text(encoding="utf-8-sig"))
+    novita = json.loads((radice / "frontend/src/novita.json").read_text(encoding="utf-8-sig"))
     (out / "index.html").write_text(pagina(versione, a.tag, base, presenti, sorgente, novita), encoding="utf-8")
     (out / "_headers").write_text(intestazioni(out), encoding="utf-8")
-    shutil.copyfile(ROOT / "branding/icona.svg", out / "icona.svg")
-    shutil.copyfile(ROOT / "branding/favicon.svg", out / "favicon.svg")
-    shutil.copyfile(ROOT / "frontend/public/apple-touch-icon.png", out / "apple-touch-icon.png")
+    shutil.copyfile(radice / "branding/icona.svg", out / "icona.svg")
+    shutil.copyfile(radice / "branding/favicon.svg", out / "favicon.svg")
+    shutil.copyfile(radice / "frontend/public/apple-touch-icon.png", out / "apple-touch-icon.png")
     print(f"Sito degli aggiornamenti in {out} (base {base})")
     return 0
 
