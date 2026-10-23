@@ -186,6 +186,13 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   `pages.yml`), `packaging/sito_aggiornamenti.py`, `cloudflare/functions/download`. Provati in locale pagina, file di
   versione e funzione dei download (R2 simulato); la pubblicazione vera aspetta la configurazione dell'autore.
 
+- **Release v1.3.1 pubblicata** (2026-10-23, "Latest", commit `e06ae2c`, versione ponte): Release #9 riuscita in 7 minuti,
+  poi `cloudflare.yml` partito da solo (workflow_run) e riuscito in 2 minuti. Le 4 app compilate con
+  `UPDATE_BASE_URL` = `https://pdfz.pages.dev/` (nel registro Android si legge `***`: GitHub oscura "pdfz", che è anche il
+  secret dell'alias della chiave). Verificato senza login: sito con la 1.3.1, 4 download da Cloudflare e da GitHub con le
+  stesse dimensioni, sorgente, web app; un'app 1.3.0 vede la 1.3.1 sia da GitHub sia da Cloudflare. Link mandati.
+  **Prossimo passo dell'autore**: installare la 1.3.1 su tutti i dispositivi, poi rendere privato il repository.
+
 ## Punti aperti
 
 1. **Copia di riserva della chiave Android**: `C:\Dev\PDFz-chiave-android` (`pdfz-release.jks` + `password.txt`, creata
