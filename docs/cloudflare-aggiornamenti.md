@@ -81,4 +81,9 @@ Provato il 2026-10-22 sul PC: pagina generata con installer finti (schede per si
 versioni precedenti, link al sorgente) e servita in locale con la web app in `/app/` (manifest giusto); file di versione
 con i link `https://pdfz.pages.dev/download/v1.3.0/…`; funzione dei download con un archivio R2 simulato (file intero,
 richiesta parziale 206, HEAD, percorsi non ammessi rifiutati); YAML dei flussi valido.
-**Non provato**: la pubblicazione vera su Cloudflare (servono account, archivio e token dell'autore).
+Il 2026-10-23 l'autore ha configurato Cloudflare (archivio `pdfz-installer`, token, secrets e variabili) e avviato il
+flusso a mano con `v1.3.0` (ramo `main`: in "Use workflow from" va scelto il **ramo**, non il tag, che non ha il flusso).
+Riuscito in 2 minuti: progetto Pages `pdfz` creato con l'indirizzo **https://pdfz.pages.dev/** (uguale a `UPDATE_BASE_URL`).
+Verificato senza accesso: pagina, 4 `versione-*.json`, HEAD dei 4 installer con le dimensioni giuste, richiesta parziale
+(206), sorgente, web app in `/app/` (manifest e service worker), percorso non ammesso 404; APK scaricato da Cloudflare
+identico byte per byte a quello di GitHub. La **1.3.1** è la versione ponte (compilata con `UPDATE_BASE_URL` = sito).

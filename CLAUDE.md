@@ -57,9 +57,10 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   Pubblica quello che si è compilato: un sistema fallito o Android senza chiave non bloccano gli altri (mai APK di prova in release).
   Niente build per Mac Intel (pikepdf e cryptography non hanno più pacchetti x86_64).
   **Ogni modifica si pubblica come nuova versione** (PATCH per correzioni, MINOR per funzioni nuove) e alla fine si
-  mandano sempre all'utente i link diretti di download per ogni sistema
-  (`https://github.com/akito996/pdfz/releases/download/vX.Y.Z/<file>`), verificati senza login (richiesta del 2026-10-22:
-  "ogni volta che facciamo una modifica").
+  mandano sempre all'utente i link diretti di download per ogni sistema, dal sito Cloudflare
+  (`https://pdfz.pages.dev/download/vX.Y.Z/<file>`, pagina `https://pdfz.pages.dev/`, web app `…/app/`; finché il
+  repository è pubblico valgono anche quelli di GitHub), verificati senza login (richiesta del 2026-10-22:
+  "ogni volta che facciamo una modifica"). Il sito si aggiorna da solo dopo la release (`cloudflare.yml`, qualche minuto).
 - **Aggiornamenti**: l'app legge `UPDATE_BASE_URL` (scritto prima della build da `packaging/imposta-url-aggiornamenti.sh`):
   variabile di repository `UPDATE_BASE_URL` oppure `https://github.com/akito996/pdfz/releases/latest/download/`
   (funziona solo con release pubbliche). Per il repository privato: sito su **Cloudflare** (`docs/cloudflare-aggiornamenti.md`,
@@ -104,7 +105,7 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
 
 ## Stato attuale (2026-10-22)
 
-- Versione nel codice: **1.3.0** di PDFz. Marchio applicato ovunque (2026-10-22, versione 1.3.0): **icona e favicon 24
+- Versione nel codice: **1.3.1** di PDFz (versione ponte verso Cloudflare). Marchio applicato ovunque (2026-10-22, versione 1.3.0): **icona e favicon 24
   "Foglio senza fondo"** — documento bianco con contorno nero, piega d'oro, "PDF" rosso, "z" nera, nessun fondo attorno
   (iPhone e icona adattiva Android su fondo bianco); prima la 19 (2026-10-21) e la 17 "Foglio oro" (inviata), palette predefinita Rubino,
   5 palette selezionabili, avvisi solo con le finestre dell'app (provati nel browser: Oscura, domanda annidata dopo
@@ -179,7 +180,9 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   senza login: 4 link diretti (MSI 131,6 MB, DMG 160,0 MB, AppImage 175,1 MB, APK 64,6 MB), `latest` = 1.3.0, un'app
   1.2.1 vede la 1.3.0 (1 novità sui PC, 2 su Android). Link mandati all'utente.
 
-- **Sito degli aggiornamenti su Cloudflare** (2026-10-22, inviato, non ancora acceso): `cloudflare.yml` (al posto di
+- **Sito degli aggiornamenti su Cloudflare ACCESO** (2026-10-23): **https://pdfz.pages.dev/** (pagina, `versione-*.json`,
+  `/download/vX.Y.Z/<file>` da R2, web app in `/app/`), configurato dall'autore e provato con la 1.3.0 (vedi
+  `docs/cloudflare-aggiornamenti.md`); la **1.3.1** è la versione ponte. Prima (2026-10-22): `cloudflare.yml` (al posto di
   `pages.yml`), `packaging/sito_aggiornamenti.py`, `cloudflare/functions/download`. Provati in locale pagina, file di
   versione e funzione dei download (R2 simulato); la pubblicazione vera aspetta la configurazione dell'autore.
 

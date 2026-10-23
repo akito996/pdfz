@@ -1,5 +1,13 @@
 # Novità
 
+## 1.3.1
+Gli aggiornamenti arrivano dal sito di PDFz: https://pdfz.pages.dev/
+
+- **Aggiornamenti dal sito di PDFz** (modifica, Windows, macOS, Linux, Android): l'avviso di nuova versione e i download
+  arrivano ora dalla pagina degli aggiornamenti https://pdfz.pages.dev/ (Cloudflare), dove ci sono anche i link per ogni
+  sistema, le novità e la web app per iPhone (https://pdfz.pages.dev/app/). Installa questa versione su tutti i
+  dispositivi: le prossime si trovano solo lì.
+
 ## 1.3.0
 Nuova icona, PDFz per iPhone come web app e barra in alto sistemata sui telefoni stretti.
 

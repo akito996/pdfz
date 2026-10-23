@@ -2,6 +2,25 @@
   "_info": "Novità di ogni versione, mostrate nella campanella dell'app e copiate dalla build in versione-<piattaforma>.json. tipo: nuovo | modifica | correzione | installer | ottimizzazione | rimosso. piattaforme: windows, macos, linux, android, ios, web (la web app per iPhone mostra anche le voci ios).",
   "versioni": [
     {
+      "versione": "1.3.1",
+      "data": "2026-10-23",
+      "titolo": "PDFz 1.3.1: aggiornamenti dal sito di PDFz",
+      "voci": [
+        {
+          "tipo": "modifica",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android"
+          ],
+          "dove": "Campanella delle notifiche",
+          "titolo": "Aggiornamenti dal sito di PDFz",
+          "dettaglio": "L'avviso di nuova versione e i download arrivano ora da https://pdfz.pages.dev/, la pagina degli aggiornamenti con i link per ogni sistema e la web app per iPhone."
+        }
+      ]
+    },
+    {
       "versione": "1.3.0",
       "data": "2026-10-22",
       "titolo": "PDFz 1.3.0: nuova icona e PDFz per iPhone",
