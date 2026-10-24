@@ -6,6 +6,7 @@ import pymupdf
 
 from .. import fonts
 from ..store import store
+from .applicati import marca, nuovo_id
 from .base import (MM, PAPER, Ctx, Result, ToolError, boolean, color, num, parse_pages,
                    position_rect, rect_from, tool, visual_rect)
 
@@ -270,6 +271,7 @@ def page_numbers(ctx: Ctx) -> Result:
     font_id = ctx.params.get("font") or "helv"
     font = fonts.font_object(font_id)
     total = len(pages) + start - 1
+    gid = nuovo_id()   # una numerazione = un oggetto: si elimina da tutte le pagine insieme
     for k, i in enumerate(pages):
         pg = doc[i]
         fname = fonts.ensure_on_page(pg, font_id)
@@ -277,7 +279,8 @@ def page_numbers(ctx: Ctx) -> Result:
                    .replace("{N}", str(total)).replace("{page}", str(i + 1))
         tw = font.text_length(label, size)
         box = position_rect(visual_rect(pg), tw, size, position, margin)
-        _insert_text_visual(pg, pymupdf.Point(box.x0, box.y1 - size * 0.2), label, fname, size, col)
+        with marca(pg, "numeri", fmt, box, gid):
+            _insert_text_visual(pg, pymupdf.Point(box.x0, box.y1 - size * 0.2), label, fname, size, col)
     return Result(pdf=ctx.save(doc), message=f"Numerate {len(pages)} pagine.")
 
 

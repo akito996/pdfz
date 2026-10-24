@@ -1,15 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Eraser, MousePointerClick, Trash2, Upload } from "lucide-react";
+import { Eraser, MousePointerClick, ShieldOff, Trash2, Upload } from "lucide-react";
 import { api } from "../api";
 import { useEvent, useStored } from "../hooks";
 import { transparentSignature } from "../imageTools";
 import { useApp, usePending } from "../context";
 import type { ToolDef } from "../tools";
-import type { PageObject } from "../types";
+import type { PageObject, VRect } from "../types";
 import { PanelShell } from "./ToolPanel";
 import { CameraButton } from "../components/PhotoScan";
 import { recentTexts, rememberTexts } from "../textHistory";
-import { Advanced, FileInput, FontSelect, Seg, type AssetValue } from "./fields";
+import { Advanced, FileInput, FontSelect, Seg, useMedia, type AssetValue } from "./fields";
+import { ApplicatoScelto, ElencoApplicati, InVista, boxId, useApplicati, useSchedaKey } from "./applicati";
+
+/** Firma digitale già nel documento (campo firma), da list_signatures del motore. */
+interface FirmaDigitale { field: string; page: number; signed: boolean; signer: string; date: string; rect: VRect | null }
+const FD = "fd:";
 
 type SigKind = "draw" | "image" | "text" | "cert";
 const SCRIPT_HINTS = ["script", "handwriting", "brush", "ink free", "signature", "segoe print", "mistral", "freestyle", "kunstler", "vivaldi", "edwardian", "dancing", "pacifico", "great vibes"];
@@ -63,7 +68,27 @@ export function SignPanel({ def, onClose }: { def: ToolDef; onClose: () => void 
   const fontId = font || scriptFont;
   const isCert = kind === "cert";
   const docId = app.doc?.id;
-  useEffect(() => { setObjects([]); setSelectedId(null); }, [docId]);
+  const verb = useMedia("(pointer: coarse)") ? "Tocca" : "Clicca";
+  // le firme posizionate e non applicate restano finché si resta nella stessa scheda (anche eliminando una firma)
+  const scheda = useSchedaKey();
+  useEffect(() => { setObjects([]); setSelectedId(null); }, [scheda]);
+
+  // firme già applicate: grafiche (disegnate, immagine, testo) e digitali; si toccano sulla pagina e si eliminano
+  const ap = useApplicati(["firma"]);
+  const scelto = ap.scelto(selectedId);
+  const elimina = async (v: { page?: number; id: string }[]) => { if (await ap.elimina(v)) setSelectedId(null); };
+  const [digitali, setDigitali] = useState<FirmaDigitale[]>([]);
+  useEffect(() => {
+    setDigitali([]);
+    if (!docId) return;
+    let vivo = true;
+    api.tool("list_signatures", { doc: docId }).then((r) => { if (vivo) setDigitali(r.data.signatures); }).catch(() => {});
+    return () => { vivo = false; };
+  }, [docId]);
+  const digitale = selectedId?.startsWith(FD) ? digitali.find((f) => FD + f.field === selectedId) : undefined;
+  const eliminaDigitale = async (f: FirmaDigitale) => {
+    if (await app.run("remove_signature", { fields: [f.field] })) setSelectedId(null);
+  };
 
   useEffect(() => {
     api.signatures().then((l) => {
@@ -141,19 +166,27 @@ export function SignPanel({ def, onClose }: { def: ToolDef; onClose: () => void 
     if (x.meta?.type === "text" && p.rect && !p.size) n.size = x.meta.baseSize * p.rect.w / x.meta.natW;
     return n;
   }));
-  const removeObj = (id: string) => { setObjects((l) => l.filter((o) => o.id !== id)); setSelectedId(null); };
+  const removeObj = (id: string) => {
+    const a = ap.scelto(id), f = id.startsWith(FD) ? digitali.find((x) => FD + x.field === id) : undefined;
+    if (a) { elimina([{ page: a.page, id: a.id }]); return; }
+    if (f) { eliminaDigitale(f); return; }
+    setObjects((l) => l.filter((o) => o.id !== id)); setSelectedId(null);
+  };
 
   const patchObjE = useEvent(patchObj);
   const removeObjE = useEvent(removeObj);
   const onPlaceE = useEvent(onPlace);
   const deselectE = useEvent(() => setSelectedId(null));
   useEffect(() => {
+    const giaFirmate: PageObject[] = [...ap.boxes, ...digitali.filter((f) => f.rect).map((f): PageObject => ({
+      id: FD + f.field, page: f.page, kind: "box", locked: true, rect: f.rect!, label: "Firma digitale",
+    }))];
     app.setInteraction({
-      mode: "objects", objects, selectedId, onSelect: setSelectedId, onObjectChange: patchObjE, onObjectDelete: removeObjE,
+      mode: "objects", objects: [...giaFirmate, ...objects], selectedId, onSelect: setSelectedId, onObjectChange: patchObjE, onObjectDelete: removeObjE,
       onPlace: placing ? onPlaceE : deselectE,
       placeHint: placing ? "Clicca dove inserire la firma" : undefined, fontStyle: app.fontStyle,
     });
-  }, [objects, selectedId, placing, app.fontStyle]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [objects, selectedId, placing, app.fontStyle, ap.items, digitali]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => app.setInteraction({ mode: "none" }), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sel = objects.find((o) => o.id === selectedId) || null;
@@ -311,6 +344,17 @@ export function SignPanel({ def, onClose }: { def: ToolDef; onClose: () => void 
           <button className="btn small danger" style={{ alignSelf: "flex-start" }} onClick={() => removeObj(sel.id)}><Trash2 size={13} /> Rimuovi firma</button>
         </>
       )}
+      {scelto && <ApplicatoScelto a={scelto} tutti={ap.items} onElimina={elimina} />}
+      {digitale && (
+        <InVista key={digitale.field}>
+          <div className="section-title">Firma digitale</div>
+          <div className="hint">{digitale.signer || digitale.field} · pagina {digitale.page + 1}{digitale.date ? ` · ${new Date(digitale.date).toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" })}` : ""}</div>
+          <button className="btn small danger" style={{ alignSelf: "flex-start" }} onClick={() => eliminaDigitale(digitale)}><ShieldOff size={13} /> Elimina firma digitale</button>
+        </InVista>
+      )}
+      {!sel && !scelto && !digitale && (ap.items.length > 0 || digitali.some((f) => f.rect)) && (
+        <div className="hint">{verb} una firma già applicata per eliminarla.</div>
+      )}
       <Advanced>
         {kind === "draw" && (
           <div className="hint">Firma con mouse, penna o touch. L'ultima firma disegnata resta salvata su questo PC.</div>
@@ -359,6 +403,26 @@ export function SignPanel({ def, onClose }: { def: ToolDef; onClose: () => void 
         )}
         {!isCert && (
           <label className="check"><input type="checkbox" checked={caption} onChange={(e) => setCaption(e.target.checked)} /> Aggiungi data e ora sotto le firme</label>
+        )}
+        <ElencoApplicati titolo="Firme nel documento" items={ap.items} onElimina={elimina}
+          onVai={(a) => { app.gotoPage(a.page); if (a.rect) setSelectedId(boxId(a)); }} />
+        {digitali.length > 0 && (
+          <div className="field">
+            <label>Firme digitali ({digitali.length})</label>
+            <div className="list">
+              {digitali.map((f) => (
+                <div key={f.field} className="list-item">
+                  <span className="grow" style={{ cursor: "pointer" }} title={f.signer || f.field}
+                    onClick={() => { app.gotoPage(f.page); if (f.rect) setSelectedId(FD + f.field); }}>
+                    {f.signer || f.field} <span style={{ color: "var(--muted)" }}>· {f.rect ? `pagina ${f.page + 1}` : "invisibile"}</span>
+                  </span>
+                  <button className="btn small ghost" title="Elimina firma digitale" aria-label="Elimina firma digitale"
+                    onClick={() => eliminaDigitale(f)}><Trash2 size={14} color="var(--danger)" /></button>
+                </div>
+              ))}
+            </div>
+            {digitali.length > 1 && <div className="hint">Eliminando una firma digitale, le altre non risultano più valide: il file viene riscritto.</div>}
+          </div>
         )}
       </Advanced>
     </PanelShell>

@@ -10,6 +10,7 @@ import pymupdf
 
 from .. import fonts
 from ..store import store
+from .applicati import marca, nuovo_id
 from .base import (MM, Ctx, Result, ToolError, boolean, color, num, parse_pages, point_from,
                    position_rect, rect_from, tool, visual_rect)
 
@@ -313,6 +314,8 @@ def add_text(ctx: Ctx) -> Result:
         raise ToolError("Scrivi il testo da aggiungere.")
     for it in items:
         pages = parse_pages(it.get("pages"), doc.page_count) if it.get("pages") else [int(num(it.get("page"), 0))]
+        gid = nuovo_id()
+        testo = " ".join(str(it.get("text", "")).split())
         for pno in pages:
             pg = doc[pno]
             if it.get("rect"):
@@ -320,9 +323,12 @@ def add_text(ctx: Ctx) -> Result:
             else:
                 x, y = num(it.get("x"), 50), num(it.get("y"), 50)
                 box = pymupdf.Rect(x, y, visual_rect(pg).x1 - 20, visual_rect(pg).y1)
-            write_lines(pg, box, it.get("text", ""), it.get("font") or "helv", num(it.get("size"), 12),
-                        color(it.get("color")), num(it.get("opacity"), 1), it.get("align", "left"),
-                        angle=num(it.get("angle"), 0), wrap=boolean(it.get("wrap"), True))
+            # testo aggiunto: si può eliminare dopo (riquadro alto quanto le righe scritte)
+            with marca(pg, "testo", testo, gid=gid) as m:
+                h = write_lines(pg, box, it.get("text", ""), it.get("font") or "helv", num(it.get("size"), 12),
+                                color(it.get("color")), num(it.get("opacity"), 1), it.get("align", "left"),
+                                angle=num(it.get("angle"), 0), wrap=boolean(it.get("wrap"), True))
+                m.rect = pymupdf.Rect(box.x0, box.y0, box.x1, box.y0 + max(h, 1))
     return Result(pdf=ctx.save(doc), message="Testo aggiunto.")
 
 
@@ -492,6 +498,7 @@ def watermark(ctx: Ctx) -> Result:
     angle = num(ctx.params.get("angle"), 45)
     tiled = ctx.params.get("layout", "center") == "tiled"
     behind = boolean(ctx.params.get("behind"), False)
+    gid = nuovo_id()
     if kind == "text":
         text = ctx.params.get("text") or "RISERVATO"
         font_id = ctx.params.get("font") or "hebo"
@@ -518,13 +525,14 @@ def watermark(ctx: Ctx) -> Result:
                     row += 1
             else:
                 centers.append(pymupdf.Point(vr.width / 2, vr.height / 2))
-            for c in centers:
-                start = pymupdf.Point(c.x - tw / 2, c.y + size * 0.35)
-                p = start * pg.derotation_matrix
-                pc = c * pg.derotation_matrix
-                pg.insert_text(p, text, fontname=fname, fontsize=size, color=col, rotate=pg.rotation,
-                               fill_opacity=opacity, stroke_opacity=opacity,
-                               morph=(pc, pymupdf.Matrix(-angle)), overlay=not behind)
+            with marca(pg, "filigrana", text, gid=gid):
+                for c in centers:
+                    start = pymupdf.Point(c.x - tw / 2, c.y + size * 0.35)
+                    p = start * pg.derotation_matrix
+                    pc = c * pg.derotation_matrix
+                    pg.insert_text(p, text, fontname=fname, fontsize=size, color=col, rotate=pg.rotation,
+                                   fill_opacity=opacity, stroke_opacity=opacity,
+                                   morph=(pc, pymupdf.Matrix(-angle)), overlay=not behind)
     else:
         asset = ctx.asset("image")
         data = _image_bytes(asset, opacity)
@@ -546,9 +554,10 @@ def watermark(ctx: Ctx) -> Result:
                     y += h * 1.5
             else:
                 spots.append(position_rect(vr, w, h, "centro", 0))
-            for r in spots:
-                pg.insert_image(rect_from(r, pg), stream=data, overlay=not behind,
-                                rotate=int(round(angle / 90) * 90) % 360 if angle % 90 == 0 else 0)
+            with marca(pg, "filigrana", "Immagine", gid=gid):
+                for r in spots:
+                    pg.insert_image(rect_from(r, pg), stream=data, overlay=not behind,
+                                    rotate=int(round(angle / 90) * 90) % 360 if angle % 90 == 0 else 0)
     flatten = boolean(ctx.params.get("to_image"), False)
     if flatten:
         from .security import rasterize_doc
@@ -643,6 +652,9 @@ def stamp(ctx: Ctx) -> Result:
         raise ToolError("Tocca la pagina per posizionare il timbro.")
     lines, col = _stamp_lines(ctx.params)
     image = _image_bytes(ctx.asset("image"), opacity) if kind == "image" else None
+    # stesso Id per le copie dello stesso timbro (Ripeti su tutte le pagine): si eliminano anche tutte insieme
+    gids: dict = {}
+    nome = "Immagine" if kind == "image" else " · ".join(lines)
     for pno, rect in places:
         if not 0 <= pno < doc.page_count:
             continue
@@ -652,11 +664,13 @@ def stamp(ctx: Ctx) -> Result:
         else:
             box = position_rect(visual_rect(pg), w, h, ctx.params.get("position", "alto-destra"),
                                 num(ctx.params.get("margin"), 15) * MM)
-        if image is not None:
-            pg.insert_image(rect_from(box, pg), stream=image, keep_proportion=True)
-            continue
-        draw_stamp(pg, box, lines, col, ctx.params.get("font") or "hebo", opacity, angle,
-                   border=boolean(ctx.params.get("border"), True))
+        gid = gids.setdefault(repr(rect), nuovo_id())
+        with marca(pg, "timbro", nome, box, gid):
+            if image is not None:
+                pg.insert_image(rect_from(box, pg), stream=image, keep_proportion=True)
+            else:
+                draw_stamp(pg, box, lines, col, ctx.params.get("font") or "hebo", opacity, angle,
+                           border=boolean(ctx.params.get("border"), True))
     n = len({p for p, _ in places})
     return Result(pdf=ctx.save(doc), message=f"Timbro applicato a {n} {'pagina' if n == 1 else 'pagine'}.")
 
@@ -680,9 +694,17 @@ def stamp_preview(ctx: Ctx) -> Result:
 # ------------------------------------------------------------ firma grafica
 
 
-def _place_signature(pg: pymupdf.Page, it: dict, image_cache: dict) -> None:
+def _place_signature(pg: pymupdf.Page, it: dict, image_cache: dict, gid: str | None = None) -> None:
     box = rect_from(it["rect"])
     kind = it.get("type", "draw")
+    nome = {"draw": "Firma disegnata", "image": "Firma da immagine"}.get(kind) or f"Firma: {it.get('text') or ''}"
+    caption = boolean(it.get("caption"), False)
+    area = box | pymupdf.Rect(box.x0, box.y1, box.x1 + 80, box.y1 + 20) if caption else box
+    with marca(pg, "firma", nome, area, gid):
+        _draw_signature(pg, it, box, kind, image_cache, caption)
+
+
+def _draw_signature(pg: pymupdf.Page, it: dict, box: pymupdf.Rect, kind: str, image_cache: dict, caption: bool) -> None:
     if kind in ("draw", "image"):
         aid = it.get("image")
         if not aid:
@@ -702,7 +724,7 @@ def _place_signature(pg: pymupdf.Page, it: dict, image_cache: dict) -> None:
         y_box = pymupdf.Rect(box.x0, box.y0 + max((box.height - size * 1.2) / 2, 0), box.x1, box.y1)
         write_lines(pg, y_box, text, font_id, size, color(it.get("color"), (0.05, 0.1, 0.45)),
                     align=it.get("align", "center"), wrap=False)
-    if boolean(it.get("caption"), False):
+    if caption:
         cap = it.get("caption_text") or f"Firmato il {dt.datetime.now():%d/%m/%Y %H:%M}"
         write_lines(pg, pymupdf.Rect(box.x0, box.y1 + 2, box.x1 + 80, box.y1 + 20), cap, "helv", 7,
                     (0.3, 0.3, 0.3), wrap=False)
@@ -727,8 +749,9 @@ def sign_visual(ctx: Ctx) -> Result:
             pages = list(range(doc.page_count))
         else:
             pages = [int(num(it.get("page"), 0))]
+        gid = nuovo_id()   # la sigla ripetuta su tutte le pagine è un oggetto solo
         for p in pages:
-            _place_signature(doc[p], it, cache)
+            _place_signature(doc[p], it, cache, gid)
             count += 1
     return Result(pdf=ctx.save(doc), message="Firma inserita." if count == 1 else f"Inserite {count} firme.")
 

@@ -114,7 +114,7 @@ export function ObjectBox({ obj, scale, page, interaction }: {
   const handles = obj.locked ? [] : obj.keepRatio ? CORNERS : obj.kind === "text" ? ["e", "w", "s", "se", "sw", "ne", "nw", "n"] as Handle[] : HANDLES;
 
   return (
-    <div className={`obj obj-${obj.kind} ${selected ? "sel" : ""} ${obj.cover ? "cover" : ""} ${obj.tone === "danger" ? "danger" : ""}`}
+    <div className={`obj obj-${obj.kind} ${selected ? "sel" : ""} ${obj.cover ? "cover" : ""} ${obj.tone === "danger" ? "danger" : ""} ${obj.locked ? "locked" : ""} ${obj.big ? "big" : ""}`}
       style={box} onPointerDown={(e) => startDrag(e, null)}>
       {obj.kind === "shape" && (
         <ShapeSvg kind={obj.meta.shape} w={r.w * scale} h={r.h * scale} stroke={obj.meta.stroke} fill={obj.meta.fill}

@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, PanelRightClose, PanelRightOpen, X } from "lucide-react";
+import { ChevronDown, Maximize2, Minimize2, PanelRightClose, PanelRightOpen, X } from "lucide-react";
 import { useApp, usePending } from "../context";
-import { useEvent } from "../hooks";
+import { useEvent, useStored } from "../hooks";
 import type { Field, ToolDef } from "../tools";
 import type { Overlay } from "../types";
 import { Advanced, FieldView, Seg, useIsMobile } from "./fields";
@@ -31,6 +31,12 @@ const PasswordInfoPanel = lazyPanel(() => import("./PasswordInfoPanel"), "Passwo
 const StampPanel = lazyPanel(() => import("./StampPanel"), "StampPanel");
 import { isLocalEngine } from "../api";
 import { ErrorBoundary } from "../components/ErrorBoundary";
+import { ApplicatiNelDocumento } from "./applicati";
+
+/** Strumenti con il solo modulo che scrivono sulle pagine: sotto le opzioni, quelli già applicati da eliminare. */
+const APPLICATI: Record<string, [tipo: string, titolo: string]> = {
+  watermark: ["filigrana", "Filigrane nel documento"], page_numbers: ["numeri", "Numerazioni nel documento"],
+};
 
 export function PanelShell({ def, onClose, children, footer }: { def: ToolDef; onClose: () => void; children: React.ReactNode; footer?: React.ReactNode }) {
   const Icon = def.icon;
@@ -45,6 +51,35 @@ export function PanelShell({ def, onClose, children, footer }: { def: ToolDef; o
     ro.observe(el);
     return () => { ro.disconnect(); root.style.setProperty("--sheet-h", "0px"); };
   }, [mobile]);
+  // telefono: il pannello si ingrandisce trascinando l'intestazione verso l'alto (o con il pulsante); l'altezza scelta
+  // resta anche per gli altri strumenti. Frazione dello schermo, null = automatica (30%, di più con "Opzioni avanzate")
+  const [altezza, setAltezza] = useStored<number | null>("hdpdf.altezzaPannello", null);
+  const grande = (altezza ?? 0) >= 0.5;
+  const startSheetDrag = (e: React.PointerEvent) => {
+    const el = box.current;
+    if (!mobile || !el || (e.target as HTMLElement).closest("button, a, input, select, textarea")) return;
+    const head = e.currentTarget as HTMLElement;
+    head.setPointerCapture(e.pointerId);
+    const y0 = e.clientY, h0 = el.getBoundingClientRect().height;
+    const frazione = (y: number) => Math.min(0.82, Math.max(0.18, (h0 + y0 - y) / window.innerHeight));
+    let mosso = false;
+    const move = (ev: PointerEvent) => {
+      if (!mosso && Math.abs(ev.clientY - y0) < 6) return;
+      mosso = true;
+      el.classList.add("sheet-drag");
+      el.style.height = `${frazione(ev.clientY) * 100}vh`;
+    };
+    const up = (ev: PointerEvent) => {
+      head.removeEventListener("pointermove", move);
+      head.removeEventListener("pointerup", up);
+      head.removeEventListener("pointercancel", up);
+      el.classList.remove("sheet-drag");
+      if (mosso) setAltezza(Math.round(frazione(ev.clientY) * 100) / 100);
+    };
+    head.addEventListener("pointermove", move);
+    head.addEventListener("pointerup", up);
+    head.addEventListener("pointercancel", up);
+  };
   const startResize = (e: React.PointerEvent) => {
     e.preventDefault();
     const el = e.currentTarget as HTMLElement;
@@ -60,7 +95,8 @@ export function PanelShell({ def, onClose, children, footer }: { def: ToolDef; o
     el.addEventListener("pointerup", up);
   };
   return (
-    <aside ref={box} className={`panel ${L.collapsed && !mobile ? "collapsed" : ""} ${mobile && L.sheetDown ? "sheet-down" : ""}`} aria-label={def.label}>
+    <aside ref={box} className={`panel ${L.collapsed && !mobile ? "collapsed" : ""} ${mobile && L.sheetDown ? "sheet-down" : ""}`} aria-label={def.label}
+      style={mobile && altezza ? { height: `${altezza * 100}vh` } : undefined}>
       {!L.collapsed && !mobile && (
         <div className="panel-resize" role="separator" aria-orientation="vertical" aria-label="Ridimensiona il pannello"
           title="Trascina per allargare o restringere · doppio clic per la larghezza normale"
@@ -76,12 +112,19 @@ export function PanelShell({ def, onClose, children, footer }: { def: ToolDef; o
       ) : null}
       {/* il contenuto resta montato anche da compresso, così le scelte non si perdono */}
       <div className="panel-main" hidden={L.collapsed && !mobile}>
-        <div className="panel-head">
+        <div className="panel-head" onPointerDown={startSheetDrag}
+          title={mobile ? "Trascina in su o in giù per ingrandire o ridurre il pannello" : undefined}>
           <h2><Icon size={18} color="var(--brand)" /> {def.label}
             <span style={{ flex: 1 }} />
             {mobile ? (
-              // telefono: freccia in giù = abbassa il pannello (lo strumento resta attivo); si riapre con la freccia su
-              <button className="btn icon ghost sheet-btn" onClick={() => L.setSheetDown(true)} title="Abbassa il pannello" aria-label="Abbassa il pannello"><ChevronDown size={22} /></button>
+              // telefono: ingrandisci/riduci il pannello; freccia in giù = abbassa il pannello (lo strumento resta attivo),
+              // si riapre con la freccia su
+              <>
+                <button className="btn icon ghost sheet-btn" onClick={() => setAltezza(grande ? null : 0.8)}
+                  title={grande ? "Riduci il pannello" : "Ingrandisci il pannello"} aria-label={grande ? "Riduci il pannello" : "Ingrandisci il pannello"}>
+                  {grande ? <Minimize2 size={19} /> : <Maximize2 size={19} />}</button>
+                <button className="btn icon ghost sheet-btn" onClick={() => L.setSheetDown(true)} title="Abbassa il pannello" aria-label="Abbassa il pannello"><ChevronDown size={22} /></button>
+              </>
             ) : (
               <>
                 <button className="btn icon ghost small" onClick={() => L.setCollapsed(!L.collapsed)} title={L.collapsed ? "Espandi il pannello" : "Comprimi il pannello"}
@@ -309,6 +352,7 @@ export function FormPanel({ def, onClose }: { def: ToolDef; onClose: () => void 
       )}
       {fields.filter((f) => essential(def, f)).map(renderField)}
       <Advanced>{fields.filter((f) => !essential(def, f)).map(renderField)}</Advanced>
+      {APPLICATI[def.id] && <ApplicatiNelDocumento tipo={APPLICATI[def.id][0]} titolo={APPLICATI[def.id][1]} />}
       {!fields.length && <div className="note">Nessuna opzione: premi il pulsante per procedere.</div>}
       {missing.length > 0 && <div className="hint">Completa: {missing.map((m) => m.label).join(", ")}</div>}
       {result && <div className="note ok">{result} Usa <b>Annulla</b> (Ctrl+Z) per tornare indietro.</div>}

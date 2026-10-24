@@ -8,6 +8,7 @@ import type { PageObject, Span } from "../types";
 import { PanelShell } from "./ToolPanel";
 import { Advanced, FontSelect } from "./fields";
 import { rememberTexts } from "../textHistory";
+import { ApplicatoScelto, ElencoApplicati, boxId, useApplicati, useSchedaKey } from "./applicati";
 
 let seq = 0;
 
@@ -219,12 +220,21 @@ export function AddTextPanel({ def, onClose }: { def: ToolDef; onClose: () => vo
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [style, setStyle] = useState<TextStyle>(DEFAULT_STYLE);
   const sel = objects.find((o) => o.id === selectedId) || null;
-  const docId = app.doc?.id;
-  useEffect(() => { setObjects([]); setSelectedId(null); }, [docId]);
+  // si riparte da zero cambiando scheda (non quando il documento cambia versione, per esempio eliminando un testo)
+  const scheda = useSchedaKey();
+  useEffect(() => { setObjects([]); setSelectedId(null); }, [scheda]);
+  // testi aggiunti in precedenza: si toccano sulla pagina e si eliminano
+  const ap = useApplicati(["testo"]);
+  const scelto = ap.scelto(selectedId);
+  const elimina = async (v: { page?: number; id: string }[]) => { if (await ap.elimina(v)) setSelectedId(null); };
 
   const update = (o: PageObject) => setObjects((l) => l.map((x) => (x.id === o.id ? o : x)));
   const patchObj = (id: string, p: Partial<PageObject>) => setObjects((l) => l.map((x) => (x.id === id ? { ...x, ...p } : x)));
-  const remove = (id: string) => { setObjects((l) => l.filter((o) => o.id !== id)); setSelectedId(null); };
+  const remove = (id: string) => {
+    const a = ap.scelto(id);
+    if (a) { elimina([{ page: a.page, id: a.id }]); return; }
+    setObjects((l) => l.filter((o) => o.id !== id)); setSelectedId(null);
+  };
 
   const place = (page: number, pt: { x: number; y: number }) => {
     // primo clic fuori da una casella: la deseleziona (ed elimina se vuota)
@@ -234,7 +244,7 @@ export function AddTextPanel({ def, onClose }: { def: ToolDef; onClose: () => vo
       return;
     }
     const o: PageObject = {
-      id: `t${seq++}`, page, kind: "text", autoHeight: true, autoWidth: true,
+      id: `t${seq++}`, page, kind: "text", autoHeight: true, autoWidth: true, big: true,
       rect: { x: pt.x, y: pt.y - style.size * 0.6, w: 40, h: style.size * 1.3 },
       text: "", ...style, meta: { minW: 40 },
     };
@@ -247,10 +257,10 @@ export function AddTextPanel({ def, onClose }: { def: ToolDef; onClose: () => vo
   const placeE = useEvent(place);
   useEffect(() => {
     app.setInteraction({
-      mode: "objects", objects, selectedId, onSelect: setSelectedId, onObjectChange: patchObjE, onObjectDelete: removeE,
+      mode: "objects", objects: [...ap.boxes, ...objects], selectedId, onSelect: setSelectedId, onObjectChange: patchObjE, onObjectDelete: removeE,
       onPlace: placeE, placeHint: "Clicca per inserire una casella di testo", fontStyle: app.fontStyle,
     });
-  }, [objects, selectedId, app.fontStyle]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [objects, selectedId, app.fontStyle, ap.items]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => app.setInteraction({ mode: "none" }), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const patch = (p: Partial<TextStyle>) => {
@@ -283,9 +293,12 @@ export function AddTextPanel({ def, onClose }: { def: ToolDef; onClose: () => vo
       <div className="label">{sel ? "Casella selezionata" : "Stile delle nuove caselle"}</div>
       <TextStyleControls style={cur} onChange={patch} part="basic" />
       {sel && <button className="btn small danger" style={{ alignSelf: "flex-start" }} onClick={() => remove(sel.id)}><Trash2 size={13} /> Elimina casella</button>}
+      {scelto && <ApplicatoScelto a={scelto} tutti={ap.items} onElimina={elimina} />}
       <Advanced>
         <TextStyleControls style={cur} onChange={patch} part="more" />
         {objects.length > 0 && <div className="hint">{filled.length} caselle pronte da inserire.</div>}
+        <ElencoApplicati titolo="Testi aggiunti nel documento" items={ap.items} onElimina={elimina}
+          onVai={(a) => { app.gotoPage(a.page); if (a.rect) setSelectedId(boxId(a)); }} />
       </Advanced>
     </PanelShell>
   );

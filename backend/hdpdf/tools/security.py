@@ -278,27 +278,72 @@ def sign_cert(ctx: Ctx) -> Result:
     return Result(pdf=out, message=f"Documento firmato digitalmente da {signer_name}.")
 
 
+def _valore_firma(doc: pymupdf.Document, xref: int) -> int:
+    """xref del dizionario della firma (/V) del campo, cercato anche nel campo padre; 0 se il campo non è firmato."""
+    for _ in range(3):
+        t, v = doc.xref_get_key(xref, "V")
+        if t == "xref":
+            return int(v.split()[0])
+        t, v = doc.xref_get_key(xref, "Parent")
+        if t != "xref":
+            return 0
+        xref = int(v.split()[0])
+    return 0
+
+
+def _stringa(doc: pymupdf.Document, xref: int, key: str) -> str:
+    t, v = doc.xref_get_key(xref, key)
+    return v if t == "string" else ""
+
+
+@tool("list_signatures")
+def list_signatures(ctx: Ctx) -> Result:
+    """Firme digitali (campi firma) del documento, senza verificarle: nome del campo, firmatario, data, pagina, riquadro."""
+    from .annots import _pdf_date, _to_visual
+    doc = ctx.open()
+    out = []
+    for pg in doc:
+        for w in pg.widgets() or []:
+            if w.field_type != pymupdf.PDF_WIDGET_TYPE_SIGNATURE:
+                continue
+            v = _valore_firma(doc, w.xref)
+            r = pymupdf.Rect(w.rect)
+            out.append({"field": w.field_name, "page": pg.number, "signed": bool(v),
+                        "signer": _stringa(doc, v, "Name") if v else "", "date": _pdf_date(_stringa(doc, v, "M")) if v else "",
+                        "rect": _to_visual(pg, r) if r.width > 1 and r.height > 1 else None})
+    doc.close()
+    return Result(data={"signatures": out})
+
+
 @tool("remove_signature")
 def remove_signature(ctx: Ctx) -> Result:
+    """Toglie le firme digitali: tutte, oppure solo i campi in params.fields (nomi dei campi firma)."""
+    solo = set(ctx.params.get("fields") or [])
     doc = ctx.open()
     removed = 0
+    tolte: set[int] = set()   # dizionari delle firme tolte
     for pg in doc:
         for w in list(pg.widgets() or []):
-            if w.field_type == pymupdf.PDF_WIDGET_TYPE_SIGNATURE:
+            if w.field_type == pymupdf.PDF_WIDGET_TYPE_SIGNATURE and (not solo or w.field_name in solo):
+                tolte.add(_valore_firma(doc, w.xref))
                 pg.delete_widget(w)
                 removed += 1
-    # campi firma senza widget e flag
-    cat = doc.pdf_catalog()
-    acro = doc.xref_get_key(cat, "AcroForm")
-    if acro[0] == "xref":
-        axref = int(acro[1].split()[0])
-        doc.xref_set_key(axref, "SigFlags", "null")
-    elif acro[0] == "dict":
-        pass
-    doc.xref_set_key(cat, "Perms", "null")
     if not removed:
-        raise ToolError("Il documento non contiene firme digitali.")
-    return Result(pdf=ctx.save(doc, garbage=4), message=f"Rimosse {removed} firme digitali.")
+        doc.close()
+        raise ToolError("Il documento non contiene firme digitali." if not solo else
+                        "Firma digitale non trovata (forse è già stata eliminata).")
+    restano = any(w.field_type == pymupdf.PDF_WIDGET_TYPE_SIGNATURE for pg in doc for w in pg.widgets() or [])
+    cat = doc.pdf_catalog()
+    # flag delle firme nel modulo: solo se non ne resta nessuna
+    acro = doc.xref_get_key(cat, "AcroForm")
+    if acro[0] == "xref" and not restano:
+        doc.xref_set_key(int(acro[1].split()[0]), "SigFlags", "null")
+    # documento certificato: il blocco delle modifiche va via con la firma che lo ha messo
+    t, mdp = doc.xref_get_key(cat, "Perms/DocMDP")
+    if not restano or (t == "xref" and int(mdp.split()[0]) in tolte):
+        doc.xref_set_key(cat, "Perms", "null")
+    msg = f"Rimosse {removed} firme digitali." if removed > 1 else "Firma digitale eliminata."
+    return Result(pdf=ctx.save(doc, garbage=4), message=msg)
 
 
 # ------------------------------------------------------------ sanitizza

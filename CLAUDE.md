@@ -83,6 +83,11 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   solo la sua, l'app termina con l'ultima. La scheda passa con un biglietto monouso (`/api/schede`), mai nell'indirizzo.
   Fra finestre già aperte (scheda trascinata su un'altra finestra, "Riunisci qui le altre finestre") le finestre si
   parlano con BroadcastChannel (`frontend/src/finestre.ts`); una finestra che ha ceduto tutte le schede si chiude.
+- **Oggetti applicati** (`tools/applicati.py`, `docs/oggetti-applicati.md`): ogni strumento che scrive nel contenuto della
+  pagina (firma grafica, timbro, testo aggiunto, filigrana, numeri di pagina e i prossimi) racchiude quello che aggiunge
+  in `with marca(pagina, tipo, nome, riquadro, id):`, così si ritrova (`list_applied`) e si elimina (`remove_applied`)
+  anche dopo "Applica". Nell'interfaccia: `panels/applicati.tsx` (riquadri bloccati sulla pagina, "Elimina", elenco).
+  Le firme digitali si eliminano per campo (`list_signatures`, `remove_signature` con `fields`).
 - **Modifica testo**: la riga originale si cancella con una fascia sottile all'altezza delle minuscole (`_area_da_cancellare`
   in `tools/content.py`), mai con il riquadro della riga: dipende dalle metriche del carattere e cancellava le righe vicine.
 - **Colori**: solo variabili CSS (`--brand`, `--on-brand`, `rgba(var(--brand-rgb), …)`), mai codici del vecchio marchio o
@@ -103,9 +108,9 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   esplicito: `git push https://akito996@github.com/akito996/pdfz.git pdfz:main` (con l'altro account: errore 403).
   Il token di `gh` (akito996) legge i registri della pipeline ma non può annullarla.
 
-## Stato attuale (2026-10-22)
+## Stato attuale (2026-10-24)
 
-- Versione nel codice: **1.3.1** di PDFz (versione ponte verso Cloudflare). Marchio applicato ovunque (2026-10-22, versione 1.3.0): **icona e favicon 24
+- Versione nel codice: **1.4.0** di PDFz (oggetti applicati eliminabili; pannello e caselle di testo sul telefono). Marchio applicato ovunque (2026-10-22, versione 1.3.0): **icona e favicon 24
   "Foglio senza fondo"** — documento bianco con contorno nero, piega d'oro, "PDF" rosso, "z" nera, nessun fondo attorno
   (iPhone e icona adattiva Android su fondo bianco); prima la 19 (2026-10-21) e la 17 "Foglio oro" (inviata), palette predefinita Rubino,
   5 palette selezionabili, avvisi solo con le finestre dell'app (provati nel browser: Oscura, domanda annidata dopo
@@ -193,6 +198,16 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   stesse dimensioni, sorgente, web app; un'app 1.3.0 vede la 1.3.1 sia da GitHub sia da Cloudflare. Link mandati.
   **Prossimo passo dell'autore**: installare la 1.3.1 su tutti i dispositivi, poi rendere privato il repository.
 
+- **Versione 1.4.0** (2026-10-24): **firme, timbri, testi aggiunti, filigrane e numeri di pagina si eliminano anche dopo
+  "Applica"** (Firma, Timbro, Aggiungi testo: si tocca l'oggetto sulla pagina → Elimina o ×; Filigrana e Numeri di
+  pagina: elenco nel pannello), **firme digitali eliminabili una per volta**; sul telefono **pannello ingrandibile**
+  (trascinando l'intestazione o con ⤢) e **caselle di Aggiungi testo grandi** (almeno 150×44 px, maniglie 16 px).
+  Provato: 6 test nuovi del motore (anche pagine identiche al pixel dopo applica + elimina, risorse condivise, flussi
+  condivisi fra pagine, pagina ruotata, dopo Oscura) con PyMuPDF 1.28.2 e 2.0 (81 passati, 2 saltati); nel browser
+  con il motore desktop (anche in vista telefono con il tocco simulato) e con la web app per iPhone a 375 px (motore
+  Pyodide): timbro, firma di testo, testo aggiunto, firma digitale e filigrana eliminati, pannello ingrandito e ridotto.
+  Non provato su un telefono vero.
+
 ## Punti aperti
 
 1. **Copia di riserva della chiave Android**: `C:\Dev\PDFz-chiave-android` (`pdfz-release.jks` + `password.txt`, creata
@@ -220,3 +235,7 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
    "applicare?"; nei Commenti non è coperto il testo di una nota ancora in scrittura sulla pagina.
 10. Un hook del team (`hd-dev`) blocca i nuovi confronti con la modalità di build di Vite (`MODE`) nel codice, anche
    nei testi: usare variabili `VITE_*` nei file `frontend/.env.<modalità>` (come `VITE_WEB_APP`).
+11. **Oggetti applicati prima della 1.4.0**: non hanno il segno e non si eliminano con "Elimina" (firme e timbri come
+   immagine: strumento Immagini; firme e timbri di testo: Oscura). Dopo "Ridimensiona pagine" (la pagina diventa un
+   oggetto dentro una pagina nuova) gli oggetti applicati prima non si ritrovano più. Pannello ingrandibile e caselle
+   di testo grandi provati solo in vista telefono nel browser.

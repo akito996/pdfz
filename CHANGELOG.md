@@ -1,5 +1,21 @@
 # Novità
 
+## 1.4.0
+Firme e timbri già applicati si possono eliminare; sul telefono pannello più grande e caselle di testo più comode.
+
+- **Elimina firme, timbri e testi già applicati** (novità, tutti i sistemi): nella Firma, nel Timbro e in Aggiungi testo
+  basta toccare (o cliccare) l'oggetto già applicato sulla pagina e premere **Elimina** (o la ×): sparisce dalla pagina e
+  dal file. Vale per le firme disegnate, da immagine e di testo, per i timbri di testo e immagine e per i testi
+  aggiunti; le firme e i timbri ripetuti su tutte le pagine si tolgono da una pagina o da tutte. In Filigrana e Numeri
+  di pagina c'è l'elenco di quelli applicati, con il pulsante per eliminarli. Funziona con quelli applicati da questa
+  versione in poi (le firme e i timbri come immagine delle versioni precedenti si tolgono con lo strumento Immagini).
+- **Elimina una firma digitale** (novità, tutti i sistemi): nella Firma le firme con certificato del documento si
+  vedono sulla pagina e nell'elenco, e si eliminano una per volta (prima solo tutte insieme con "Rimuovi firma digitale").
+- **Pannello degli strumenti più grande** (modifica, Android e iPhone): trascina in su l'intestazione del pannello, o
+  tocca il pulsante ⤢, per ingrandirlo; l'altezza scelta resta anche per gli altri strumenti.
+- **Caselle di testo più grandi** (modifica, Android e iPhone): in "Aggiungi testo" le caselle nuove sono grandi almeno
+  quanto un dito e le maniglie per ridimensionarle sono più grandi; il testo resta della dimensione scelta.
+
 ## 1.3.1
 Gli aggiornamenti arrivano dal sito di PDFz: https://pdfz.pages.dev/
 

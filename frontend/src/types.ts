@@ -57,6 +57,7 @@ export interface PageObject {
   autoHeight?: boolean;   // l'altezza segue il testo
   autoWidth?: boolean;    // la larghezza segue il testo (fino al bordo pagina), poi va a capo
   locked?: boolean;       // non spostabile/ridimensionabile (es. immagini già nel PDF)
+  big?: boolean;          // schermi touch: casella grande almeno quanto un dito (Aggiungi testo)
   label?: string;
   tone?: "danger";
   meta?: any;

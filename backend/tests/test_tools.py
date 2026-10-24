@@ -269,6 +269,24 @@ def test_sign_cert_validate_remove(doc):
     assert run("validate", res["doc"]["id"])["data"]["signatures"][0]["intact"]
 
 
+def test_firme_digitali_si_eliminano_una_per_volta(doc):
+    cert = asset(_make_pfx(), "cert.pfx")
+    s1 = run("sign_cert", doc, certificate=cert, cert_password="test", page=0, certify=True,
+             rect={"x": 350, "y": 650, "w": 200, "h": 70})["doc"]["id"]
+    s2 = run("sign_cert", s1, certificate=cert, cert_password="test", page=1,
+             rect={"x": 60, "y": 650, "w": 200, "h": 70})["doc"]["id"]
+    firme = run("list_signatures", s2)["data"]["signatures"]
+    assert [(f["field"], f["page"], f["signed"]) for f in firme] == [("Firma", 0, True), ("Firma2", 1, True)]
+    assert "Mario Rossi" in firme[0]["signer"] and firme[0]["date"].startswith(str(dt.date.today().year))
+    assert abs(firme[1]["rect"]["x"] - 60) < 1 and abs(firme[1]["rect"]["w"] - 200) < 1
+    res = run("remove_signature", s2, fields=["Firma"])
+    assert res["message"] == "Firma digitale eliminata."
+    d = load(res["doc"]["id"])
+    assert [w.field_name for pg in d for w in pg.widgets() or []] == ["Firma2"]
+    assert d.xref_get_key(d.pdf_catalog(), "Perms")[0] == "null"   # la certificazione era della firma tolta
+    run("remove_signature", res["doc"]["id"], fields=["Firma"], expect=400)
+
+
 def test_sanitize(doc):
     d0 = pymupdf.open("pdf", make_pdf())
     d0.embfile_add("x.txt", b"x")
@@ -646,6 +664,111 @@ def test_signature_slots_and_multi_sign(doc, tmp_path, monkeypatch):
         {"type": "text", "text": "M. Rossi", "font": "tiit", "size": 20, "page": 1, "rect": {"x": 300, "y": 600, "w": 150, "h": 30}, "all_pages": True},
     ])["doc"]["id"])
     assert len(d[0].get_image_info()) == 2 and "M. Rossi" in d[2].get_text()
+
+
+# ------------------------------------------------------------------ oggetti applicati (eliminabili dopo)
+
+def _immagini_nel_file(d: pymupdf.Document) -> list[tuple[int, int]]:
+    """Dimensioni di tutte le immagini rimaste nel file (anche quelle non più disegnate)."""
+    out = []
+    for x in range(1, d.xref_length()):
+        if d.xref_get_key(x, "Subtype")[1] == "/Image":
+            out.append((int(d.xref_get_key(x, "Width")[1]), int(d.xref_get_key(x, "Height")[1])))
+    return out
+
+
+def test_oggetti_applicati_si_eliminano(doc):
+    firma = asset(png_bytes(120, 60, (200, 30, 30)), "firma.png")
+    d1 = run("sign_visual", doc, items=[
+        {"type": "draw", "image": firma, "page": 0, "rect": {"x": 350, "y": 700, "w": 150, "h": 50}},
+        {"type": "text", "text": "M. Rossi", "font": "tiit", "size": 20, "page": 0,
+         "rect": {"x": 60, "y": 740, "w": 150, "h": 30}, "all_pages": True, "caption": True},
+    ])["doc"]["id"]
+    d2 = run("stamp", d1, preset="approvato", items=[{"page": 1, "rect": {"x": 300, "y": 300, "w": 200, "h": 70}}])["doc"]["id"]
+    d3 = run("add_text", d2, items=[{"page": 0, "rect": {"x": 72, "y": 400, "w": 200, "h": 20}, "text": "Nota aggiunta", "size": 12}])["doc"]["id"]
+    d4 = run("watermark", d3, text="BOZZA", layout="tiled")["doc"]["id"]
+    d5 = run("page_numbers", d4, format="Pagina {n}")["doc"]["id"]
+    voci = run("list_applied", d5)["data"]["items"]
+    per_tipo = {}
+    for v in voci:
+        per_tipo.setdefault(v["tipo"], []).append(v)
+    assert len(per_tipo["firma"]) == 4          # disegnata a pagina 1 + testo su 3 pagine
+    assert len({v["id"] for v in per_tipo["firma"]}) == 2
+    assert len(per_tipo["timbro"]) == 1 and "APPROVATO" in per_tipo["timbro"][0]["nome"]
+    assert per_tipo["testo"][0]["nome"] == "Nota aggiunta"
+    assert len(per_tipo["filigrana"]) == 3 and len(per_tipo["numeri"]) == 3
+    disegnata = next(v for v in per_tipo["firma"] if v["nome"] == "Firma disegnata")
+    r = disegnata["rect"]
+    assert abs(r["x"] - 350) < 0.5 and abs(r["y"] - 700) < 0.5 and abs(r["w"] - 150) < 0.5 and abs(r["h"] - 50) < 0.5
+    assert run("list_applied", d5, tipi=["timbro"])["data"]["items"][0]["tipo"] == "timbro"
+
+    # firma disegnata: sparisce dalla pagina e anche dal file
+    assert (120, 60) in _immagini_nel_file(load(d5))
+    res = run("remove_applied", d5, items=[{"page": 0, "id": disegnata["id"]}])
+    assert res["message"] == "Firma eliminata."
+    d = load(res["doc"]["id"])
+    assert (120, 60) not in _immagini_nel_file(d) and (200, 100) in _immagini_nel_file(d)
+    t0 = d[0].get_text()
+    assert "Titolo pagina 1" in t0 and "M. Rossi" in t0 and "Nota aggiunta" in t0 and "BOZZA" in t0
+
+    # firma di testo ripetuta: da una pagina sola (nel file le pagine 2 e 3 condividono lo stesso contenuto)...
+    testo_id = next(v["id"] for v in per_tipo["firma"] if v["nome"] == "Firma: M. Rossi")
+    res = run("remove_applied", res["doc"]["id"], items=[{"page": 1, "id": testo_id}])
+    d = load(res["doc"]["id"])
+    assert ["M. Rossi" in pg.get_text() for pg in d] == [True, False, True]
+    # ...o da tutte le pagine insieme; il resto resta
+    res = run("remove_applied", res["doc"]["id"], items=[{"id": testo_id}])
+    assert res["message"] == "Firma eliminata da 2 pagine."
+    d = load(res["doc"]["id"])
+    assert not any("M. Rossi" in pg.get_text() or "Firmato il" in pg.get_text() for pg in d)
+    assert "Pagina 2" in d[1].get_text() and "APPROVATO" in d[1].get_text()
+
+    # timbro, filigrana, numeri, testo
+    ids = [{"id": per_tipo[k][0]["id"]} for k in ("timbro", "filigrana", "numeri", "testo")]
+    res = run("remove_applied", res["doc"]["id"], items=ids)
+    assert res["message"] == "Eliminati 4 oggetti da 3 pagine."
+    d = load(res["doc"]["id"])
+    tutto = "".join(pg.get_text() for pg in d)
+    for via in ("APPROVATO", "BOZZA", "Pagina 1", "Nota aggiunta"):
+        assert via not in tutto
+    assert "Titolo pagina 3" in tutto and "mario.rossi@example.com" in tutto
+    assert not run("list_applied", res["doc"]["id"])["data"]["items"]
+    run("remove_applied", res["doc"]["id"], items=[{"id": testo_id}], expect=400)
+
+
+def test_oggetti_applicati_eliminati_pagina_come_prima():
+    """Applicare e poi eliminare lascia le pagine come erano, anche con le risorse condivise fra le pagine."""
+    d0 = pymupdf.open()
+    for i in range(2):
+        d0.new_page().insert_text((72, 100), f"Pagina {i + 1} con testo", fontsize=14)
+    d0[1].set_contents(d0[0].get_contents()[0])
+    res0 = d0.xref_get_key(d0[0].xref, "Resources")
+    d0.xref_set_key(d0[1].xref, "Resources", res0[1] if res0[0] == "xref" else res0[1])
+    src = open_doc(d0.tobytes(garbage=3))["id"]
+    prima = [pg.get_pixmap(dpi=50).samples for pg in load(src)]
+    firma = asset(png_bytes(), "firma.png")
+    d1 = run("sign_visual", src, items=[{"type": "image", "image": firma, "page": 0, "rect": {"x": 300, "y": 600, "w": 150, "h": 50}},
+                                        {"type": "text", "text": "Mario", "page": 0, "rect": {"x": 60, "y": 300, "w": 150, "h": 30}}])["doc"]["id"]
+    d2 = run("stamp", d1, preset="visto", items=[{"page": 1, "rect": {"x": 300, "y": 300, "w": 200, "h": 70}}])["doc"]["id"]
+    ids = [{"page": v["page"], "id": v["id"]} for v in run("list_applied", d2)["data"]["items"]]
+    assert len(ids) == 3
+    d = load(run("remove_applied", d2, items=ids)["doc"]["id"])
+    assert [pg.get_pixmap(dpi=50).samples for pg in d] == prima
+
+
+def test_oggetti_applicati_dopo_oscura_e_pagina_ruotata():
+    d0 = pymupdf.open("pdf", make_pdf(pages=1))
+    d0[0].set_rotation(90)
+    src = open_doc(d0.tobytes())["id"]
+    firma = asset(png_bytes(), "firma.png")
+    box = {"x": 500, "y": 300, "w": 150, "h": 50}   # coordinate visive della pagina ruotata (842 x 595)
+    d1 = run("sign_visual", src, items=[{"type": "image", "image": firma, "page": 0, "rect": box}])["doc"]["id"]
+    # Oscura riscrive il contenuto della pagina: la firma resta riconoscibile
+    d2 = run("redact", d1, presets=["email"])["doc"]["id"]
+    voce = run("list_applied", d2)["data"]["items"][0]
+    assert all(abs(voce["rect"][k] - box[k]) < 0.5 for k in box)
+    d = load(run("remove_applied", d2, items=[voce])["doc"]["id"])
+    assert (120, 60) not in _immagini_nel_file(d) and "Titolo pagina 1" in d[0].get_text()
 
 
 # ------------------------------------------------------------------ forme e commenti
