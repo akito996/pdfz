@@ -206,7 +206,10 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   condivisi fra pagine, pagina ruotata, dopo Oscura) con PyMuPDF 1.28.2 e 2.0 (81 passati, 2 saltati); nel browser
   con il motore desktop (anche in vista telefono con il tocco simulato) e con la web app per iPhone a 375 px (motore
   Pyodide): timbro, firma di testo, testo aggiunto, firma digitale e filigrana eliminati, pannello ingrandito e ridotto.
-  Non provato su un telefono vero.
+  Non provato su un telefono vero. **Release v1.4.0 pubblicata** (commit `9797d6e`): Release #10 riuscita in 7 minuti,
+  sito Cloudflare aggiornato da solo 2 minuti dopo. Verificato senza login: 4 download da Cloudflare e da GitHub con
+  le stesse dimensioni (MSI 131,6 MB, DMG 158,5 MB, AppImage 175,1 MB, APK 64,6 MB), sorgente, web app 1.4.0 in `/app/`,
+  `versione-*.json` = 1.4.0 con le 4 novità. Link mandati.
 
 ## Punti aperti
 
