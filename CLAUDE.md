@@ -226,6 +226,10 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   due pagine, libro con copertina, frecce, presentazione e uscita) e nella web app per iPhone a 375 px (menu Vista
   verso l'alto, libro, presentazione, firma spostata con il motore Pyodide); Ctrl+L nell'app desktop vera (finestra
   da 1440×900 a 1920×1080 e ritorno). Non provato su un telefono vero né lo scorrimento col dito vero nel libro.
+  **Release v1.5.0 pubblicata** (commit `89d93ea`): Release riuscita in 7 minuti, sito Cloudflare aggiornato da solo
+  subito dopo. Verificato senza login: 4 download da Cloudflare e da GitHub con le stesse dimensioni (MSI 131,8 MB,
+  DMG 159,7 MB, AppImage 175,2 MB, APK 64,6 MB), sorgente, web app 1.5.0 in `/app/`. Link mandati, con l'analisi
+  della facilità d'uso (pagina Artifact e capitolo 10 del Word: 5 proposte, consigliate la 5 e la 3, poi la 1).
 
 ## Punti aperti
 
