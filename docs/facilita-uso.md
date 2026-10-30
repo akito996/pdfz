@@ -36,6 +36,9 @@ voce Vista); chiave `hdpdf.modalita` (`semplice` | `completa`).
 - **Vista completa**: il menu a sinistra di sempre (preferiti, etichette, sezioni) con «Passa alla vista semplice».
   Sul telefono il menu ☰ ha lo stesso pulsante («Passa alla vista completa» se si è nella semplice).
 
+Avvisi, campanella e novità (1.7.2): il pulsante per chiuderli è `.chiudi-grande` (`styles.css`), rotondo e con
+il bordo, 36 px con il mouse e 46 px sugli schermi touch (richiesta dell'autore: "pulsante chiudi più grande").
+
 ## C. Guide 1-2-3
 
 `guide.ts` (contenuti) e `components/Guida.tsx` (riquadro con il passo e l'elemento evidenziato, classe `guida-qui`).

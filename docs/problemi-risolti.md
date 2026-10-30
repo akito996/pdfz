@@ -6,6 +6,18 @@ Il più recente in cima.
 > Le voci con numeri `AAAAMM.NNN` (es. 202610.014) sono della fase di sviluppo prima di PDFz 1.0.0, quando le versioni
 > avevano quel formato. Restano perché spiegano cosa non rifare.
 
+## 1.7.2 — Release 1.7.1 senza il Mac: hdiutil "Resource busy"
+
+- **Sintomo:** la pipeline della 1.7.1 fallisce solo su macOS al passo "DMG" (`hdiutil: create failed - Resource busy`)
+  dopo un minuto e mezzo; la release esce con Windows, Linux e Android, il sito pdfz.agjin.com resta alla 1.7.0
+  (`cloudflare.yml` parte solo se la release è riuscita).
+- **Causa:** `hdiutil create -srcfolder … -format ULMO` crea un disco temporaneo, lo monta, copia e lo comprime; sui Mac
+  di GitHub a volte il disco è ancora occupato (indicizzazione, controlli di sicurezza) quando lo si stacca. Con UDZO
+  non era mai successo in 10 release, con ULMO (compressione più lunga) alla prima.
+- **Soluzione:** `packaging/build-macos.sh` fa il DMG in due passi (immagine `UDRW`, poi `hdiutil convert` in ULMO),
+  riprova fino a 3 volte e, se ULMO non riesce, comprime in UDZO come prima: l'installer per Mac c'è sempre.
+- **Da non rifare:** un comando di sistema "capriccioso" senza tentativi e senza una strada di riserva.
+
 ## 1.7.1 — Android: barra in alto sotto l'ora e la batteria, menu del tema fuori dallo schermo
 
 - **Sintomo (segnalato dall'autore su Android):** "contorni non centrati", la scelta del tema un po' fuori dallo

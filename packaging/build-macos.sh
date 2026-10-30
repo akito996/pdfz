@@ -80,8 +80,19 @@ rm -rf "$STAGE" "$DMG"
 mkdir -p "$STAGE"
 cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applicazioni"
-# ULMO = compressione LZMA (macOS 10.15 e successivi; PDFz chiede gia' macOS 11): DMG di 30-40 MB piu' piccolo di UDZO
-hdiutil create -volname "PDFz" -srcfolder "$STAGE" -ov -format ULMO "$DMG" >/dev/null
+# In due passi: immagine non compressa, poi compressione ULMO (LZMA, macOS 10.15 e successivi; PDFz chiede gia'
+# macOS 11: DMG di 30-40 MB piu' piccolo di UDZO). Sui Mac di GitHub hdiutil a volte risponde "Resource busy"
+# (il disco temporaneo e' ancora occupato: release 1.7.1 senza Mac): si riprova, e se ULMO non riesce si fa UDZO
+# come prima, cosi' l'installer per Mac c'e' sempre.
+RAW="build/PDFz-raw.dmg"
+riprova() { local n; for n in 1 2 3; do "$@" && return 0; echo "  hdiutil non riuscito (tentativo $n), riprovo tra 10 s"; sleep 10; done; return 1; }
+rm -f "$RAW"
+riprova hdiutil create -volname "PDFz" -srcfolder "$STAGE" -ov -format UDRW "$RAW" >/dev/null
+if ! riprova hdiutil convert "$RAW" -format ULMO -ov -o "$DMG" >/dev/null; then
+  echo "  ULMO non riuscito: DMG compresso come prima (UDZO)"
+  riprova hdiutil convert "$RAW" -format UDZO -ov -o "$DMG" >/dev/null
+fi
+rm -f "$RAW"
 if [ -n "${MAC_SIGN_IDENTITY:-}" ]; then
   codesign --sign "$MAC_SIGN_IDENTITY" --timestamp "$DMG"
   if [ -n "${NOTARY_PROFILE:-}" ]; then

@@ -2,6 +2,35 @@
   "_info": "Novità di ogni versione, mostrate nella campanella dell'app e copiate dalla build in versione-<piattaforma>.json. tipo: nuovo | modifica | correzione | installer | ottimizzazione | rimosso. piattaforme: windows, macos, linux, android, ios, web (la web app per iPhone mostra anche le voci ios).",
   "versioni": [
     {
+      "versione": "1.7.2",
+      "data": "2026-10-30",
+      "titolo": "PDFz 1.7.2: notifiche più facili da chiudere",
+      "voci": [
+        {
+          "tipo": "modifica",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android",
+            "ios"
+          ],
+          "dove": "Avvisi e campanella",
+          "titolo": "Pulsante «chiudi» grande",
+          "dettaglio": "La × di avvisi, notifiche e novità è un pulsante rotondo ben visibile; sul telefono e sul tablet è grande come un dito."
+        },
+        {
+          "tipo": "installer",
+          "piattaforme": [
+            "macos"
+          ],
+          "dove": "Installer per Mac",
+          "titolo": "DMG più leggero",
+          "dettaglio": "L'installer per Mac è compresso meglio (decine di MB in meno) e contiene tutte le novità della 1.7.1."
+        }
+      ]
+    },
+    {
       "versione": "1.7.1",
       "data": "2026-10-30",
       "titolo": "PDFz 1.7.1: correzioni e più velocità",

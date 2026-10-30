@@ -139,11 +139,11 @@ Dettagli, opzioni e prerequisiti:
 ## Distribuzione sui PC Windows
 
 ```bat
-msiexec /i PDFz-1.7.1-x64.msi /qn                    :: silenziosa
-msiexec /i PDFz-1.7.1-x64.msi /qn DESKTOPSHORTCUT=0  :: senza icona sul desktop
-msiexec /i PDFz-1.7.1-x64.msi /qn HDSCOPE=user       :: solo per l'utente corrente
-msiexec /i PDFz-1.7.1-x64.msi /qn HDCONTEXTMENU=0    :: senza la voce nel menu del tasto destro
-msiexec /x PDFz-1.7.1-x64.msi /qn                    :: disinstallazione
+msiexec /i PDFz-1.7.2-x64.msi /qn                    :: silenziosa
+msiexec /i PDFz-1.7.2-x64.msi /qn DESKTOPSHORTCUT=0  :: senza icona sul desktop
+msiexec /i PDFz-1.7.2-x64.msi /qn HDSCOPE=user       :: solo per l'utente corrente
+msiexec /i PDFz-1.7.2-x64.msi /qn HDCONTEXTMENU=0    :: senza la voce nel menu del tasto destro
+msiexec /x PDFz-1.7.2-x64.msi /qn                    :: disinstallazione
 ```
 
 * Installazione per tutti gli utenti in `C:\Program Files\PDFz`, collegamento nel menu Start.

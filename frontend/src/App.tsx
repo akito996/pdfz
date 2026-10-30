@@ -1076,7 +1076,8 @@ export default function App() {
           {toasts.map((t) => (
             <div key={t.id} className={`toast ${t.kind}`}>
               <div className="grow">{t.msg}</div>
-              <button className="btn icon ghost small" onClick={() => setToasts((x) => x.filter((y) => y.id !== t.id))}><X size={14} /></button>
+              <button type="button" className="chiudi-grande" title="Chiudi" aria-label="Chiudi l'avviso"
+                onClick={() => setToasts((x) => x.filter((y) => y.id !== t.id))}><X size={20} /></button>
             </div>
           ))}
         </div>

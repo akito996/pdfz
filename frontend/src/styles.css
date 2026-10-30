@@ -379,7 +379,22 @@ textarea.input { resize: vertical; min-height: 64px; }
 .toast { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--brand); box-shadow: var(--shadow); border-radius: 8px; padding: 10px 12px; min-width: 280px; max-width: 420px; display: flex; gap: 10px; align-items: flex-start; }
 .toast.err { border-left-color: var(--danger); }
 .toast.ok { border-left-color: var(--ok); }
-.toast .grow { flex: 1; line-height: 1.4; }
+.toast .grow { flex: 1; line-height: 1.4; align-self: center; }
+/* pulsante "chiudi" di avvisi, notifiche e novità (1.7.2): grande, rotondo e ben visibile; sul telefono e sul tablet
+   46 px, facile da prendere con il dito (prima 26 px con una × da 14 px) */
+.chiudi-grande {
+  flex: none; width: 36px; height: 36px; padding: 0; display: grid; place-items: center; cursor: pointer;
+  border-radius: 50%; border: 1px solid var(--line-strong); background: var(--panel-2); color: var(--text);
+}
+.chiudi-grande svg { width: 20px; height: 20px; }
+.chiudi-grande:active { background: var(--line); }
+.chiudi-grande:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+@media (hover: hover) { .chiudi-grande:hover { background: var(--line); } }
+@media (pointer: coarse) {
+  .chiudi-grande { width: 46px; height: 46px; }
+  .chiudi-grande svg { width: 24px; height: 24px; }
+  .toast { padding: 8px 8px 8px 12px; }
+}
 .app.con-barra .toasts { left: 16px; }   /* vista semplice sul computer: niente menu a sinistra */
 /* telefono: gli avvisi partivano da 248 px (la larghezza del menu del computer), uscivano dallo schermo e finivano
    sotto la barra in basso e il pannello; ora larghi quanto lo schermo, sopra le barre */

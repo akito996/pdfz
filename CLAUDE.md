@@ -136,7 +136,7 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
 
 ## Stato attuale (2026-10-30)
 
-- Versione nel codice: **1.7.1** di PDFz (correzioni Android e del giro da utente, ottimizzazioni di velocità e spazio). Marchio applicato ovunque (2026-10-22, versione 1.3.0): **icona e favicon 24
+- Versione nel codice: **1.7.2** di PDFz (pulsante «chiudi» grande in avvisi e notifiche). Marchio applicato ovunque (2026-10-22, versione 1.3.0): **icona e favicon 24
   "Foglio senza fondo"** — documento bianco con contorno nero, piega d'oro, "PDF" rosso, "z" nera, nessun fondo attorno
   (iPhone e icona adattiva Android su fondo bianco); prima la 19 (2026-10-21) e la 17 "Foglio oro" (inviata), palette predefinita Rubino,
   5 palette selezionabili, avvisi solo con le finestre dell'app (provati nel browser: Oscura, domanda annidata dopo
@@ -292,7 +292,15 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   scrittura, memoria di pdf.js mai liberata…: `docs/problemi-risolti.md`); ottimizzazioni misurate (`docs/decisioni.md`).
   Provato: 89 test del motore, browser a 1280, 1000 e 800 px, vista telefono 320, 360 e 375 px con le barre di Android
   simulate (24 e 48 px), web app con il motore Pyodide (firma col dito, Organizza, tasto indietro, "Trasforma in Word"
-  con il caricamento su richiesta). Non provato su un telefono vero né l'MSI con LZX / il DMG ULMO fuori dalla pipeline.
+  con il caricamento su richiesta). Non provato su un telefono vero.
+  **Release v1.7.1 uscita senza Mac** (commit `1384e25`): macOS fallito al passo DMG (`hdiutil` "Resource busy", vedi
+  `docs/problemi-risolti.md`), Windows, Linux e Android pubblicati su GitHub (MSI 102,5 MB: −29 MB con LZX; AppImage
+  175,2 MB; APK 64,6 MB); sito pdfz.agjin.com rimasto alla 1.7.0. Corretto nella 1.7.2.
+
+- **Versione 1.7.2** (2026-10-30): richiesta dell'autore "le notifiche devono avere un pulsante chiudi più grande per
+  tutte le versioni (soprattutto cellulare / tablet)": `.chiudi-grande` in avvisi (`App.tsx`), campanella e novità
+  (`Notifiche.tsx`), 36 px con il mouse e 46 px sugli schermi touch. Provato nel browser a 800 px e nella web app a 375 px.
+  Contiene anche la correzione del DMG per Mac (due passi, tentativi, UDZO di riserva).
 
 ## Punti aperti
 

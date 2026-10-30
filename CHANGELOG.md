@@ -1,5 +1,14 @@
 # Novità
 
+## 1.7.2
+Notifiche più facili da chiudere.
+
+- **Pulsante "chiudi" grande** (modifica, tutti i sistemi): negli avvisi, nella campanella delle notifiche e nella
+  finestra delle novità la × è un pulsante rotondo ben visibile; sul telefono e sul tablet è grande come un dito
+  (46 px, prima 26 px con una × piccola).
+- **Installer per Mac** (correzione): la 1.7.1 era uscita senza il DMG (il passo che lo crea si era fermato); ora c'è
+  di nuovo, più leggero, con tutte le novità della 1.7.1.
+
 ## 1.7.1
 Correzioni per Android e per tutti i sistemi dopo un giro completo da utente; app più veloce e installer più piccoli.
 

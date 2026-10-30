@@ -199,7 +199,7 @@ export function Notifiche({ version, updateUrl }: { version?: string; updateUrl?
         {open && (
           <Popover anchor={btn} onClose={chiudi} width={380} className="notif-pop" label="Notifiche">
             <div className="notif-head"><b>Notifiche</b>
-              <button className="btn icon ghost small" onClick={chiudi} aria-label="Chiudi"><X size={15} /></button></div>
+              <button type="button" className="chiudi-grande" onClick={chiudi} title="Chiudi" aria-label="Chiudi le notifiche"><X size={20} /></button></div>
             {aggiornamento && (
               <Anteprima tag="Nuova versione disponibile" nuovo={evidenzia.upd} tutte
                 v={{ versione: aggiornamento.latest, data: aggiornamento.date, titolo: aggiornamento.title, voci: aggiornamento.novita.filter(perMe) }}
@@ -314,7 +314,7 @@ function NovitaView({ versioni, update, current, onClose, onDownload }: {
             <h2>{update ? `È disponibile la versione ${update.latest}` : versioni.length === 1 ? `Novità della versione ${versioni[0].versione}` : "Novità delle versioni"}</h2>
             <div className="hint">{current ? `Versione installata: ${current} · ` : ""}{`App ${NOMI[PIATTAFORMA] || PIATTAFORMA}`}</div>
           </div>
-          <button className="btn icon ghost" onClick={onClose} aria-label="Chiudi"><X size={18} /></button>
+          <button type="button" className="chiudi-grande" onClick={onClose} title="Chiudi" aria-label="Chiudi le novità"><X size={20} /></button>
         </div>
         {update?.download && <div className="novita-dl"><LinkDiretto upd={update} onDownload={onDownload} /></div>}
         <div className="novita-filtri">
