@@ -247,6 +247,10 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   semplici, indicazione sopra la pagina, novità come avviso breve. Motore: testo aggiunto con testo e stile nel segno
   (`/X`), `add_text` con `remove`, immagini inserite come oggetti applicati (89 passati, 2 saltati con PyMuPDF 1.28.2
   e 2.0). Provato nel browser a 1280×800 e nella web app a 375 px (Pyodide). Non provato su un telefono vero.
+  **Release v1.6.0 pubblicata** (commit `da51c94`): Release riuscita in 7 minuti, sito Cloudflare aggiornato da solo
+  subito dopo. Verificato senza login: 4 download da Cloudflare e da GitHub con le stesse dimensioni (MSI 131,8 MB,
+  DMG 159,8 MB, AppImage 175,2 MB, APK 64,1 MB), sorgente, web app 1.6.0 in `/app/`. Link mandati; pagina
+  dell'analisi aggiornata con le scelte realizzate.
 
 ## Punti aperti
 
