@@ -9,7 +9,7 @@ Scrive in --out:
 La web app per iPhone, se compilata prima in <out>/app (mobile/scripts/build-web.mjs --out <out>/app), resta lì.
 Gli installer non stanno nella cartella: li serve cloudflare/functions/download dall'archivio R2.
 
-    python packaging/sito_aggiornamenti.py --out cloudflare/sito --base https://pdfz.pages.dev/ --tag v1.4.0 --installer assets
+    python packaging/sito_aggiornamenti.py --out cloudflare/sito --base https://pdfz.agjin.com/ --tag v1.6.1 --installer assets
 --radice: cartella del progetto alla versione del tag (versione, novità, icone); predefinita questa. Serve quando lo
 script è più nuovo del tag (es. il flusso rilanciato a mano su una versione vecchia).
 """
@@ -66,7 +66,9 @@ def voci_html(voci: list[dict]) -> str:
     return "<ul class=\"voci\">" + "".join(righe) + "</ul>" if righe else ""
 
 
-def pagina(versione: str, tag: str, base: str, presenti: dict[str, int], sorgente: str | None, novita: dict) -> str:
+def pagina(versione: str, tag: str, presenti: dict[str, int], sorgente: str | None, novita: dict) -> str:
+    """Pagina index.html. I link (download, web app, sorgente) sono relativi alla pagina: il sito risponde a più
+    indirizzi (dominio dell'autore e <progetto>.pages.dev) e da ognuno si resta sullo stesso indirizzo."""
     vers = novita.get("versioni", [])
     cur = next((x for x in vers if x.get("versione") == versione), {"versione": versione, "voci": []})
     schede = []
@@ -75,14 +77,14 @@ def pagina(versione: str, tag: str, base: str, presenti: dict[str, int], sorgent
         if f not in presenti:
             schede.append(f'<div class="sist" data-pf="{pf}"><h3>{nome}</h3><p class="manca">Non disponibile in questa versione.</p></div>')
             continue
-        url = f"{base}download/{tag}/{f}"
+        url = f"download/{tag}/{f}"
         schede.append(
             f'<div class="sist" data-pf="{pf}"><h3>{nome}</h3>'
             f'<a class="scarica" href="{html.escape(url)}" download>Scarica <span>{html.escape(f)} · {mb(presenti[f])}</span></a>'
             f'<p class="come">{html.escape(come)}</p></div>')
     schede.append(
         '<div class="sist" data-pf="ios"><h3>iPhone e iPad</h3>'
-        f'<a class="scarica" href="{base}app/">Apri la web app <span>da Safari</span></a>'
+        '<a class="scarica" href="app/">Apri la web app <span>da Safari</span></a>'
         '<p class="come">In Safari tocca Condividi › "Aggiungi alla schermata Home": PDFz si apre a tutto schermo e, '
         'dopo il primo avvio, funziona anche senza internet.</p></div>')
     vecchie = "".join(
@@ -90,7 +92,7 @@ def pagina(versione: str, tag: str, base: str, presenti: dict[str, int], sorgent
         f'{" · " + html.escape(x["titolo"]) if x.get("titolo") else ""}</summary>{voci_html(x.get("voci", []))}</details>'
         for x in vers if x.get("versione") != versione)
     src = (f'<p class="sorgente">Codice sorgente di questa versione (licenza GNU AGPL-3.0): '
-           f'<a href="{html.escape(f"{base}download/{tag}/{sorgente}")}">{html.escape(sorgente)}</a></p>') if sorgente else ""
+           f'<a href="{html.escape(f"download/{tag}/{sorgente}")}">{html.escape(sorgente)}</a></p>') if sorgente else ""
     return f"""<!doctype html>
 <html lang="it">
 <head>
@@ -204,7 +206,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Avviso: manca {f}: {pf} non avrà l'avviso di questa versione")
     sorgente = next((n for n in presenti if n == f"PDFz-{versione}-sorgente.zip"), None)
     novita = json.loads((radice / "frontend/src/novita.json").read_text(encoding="utf-8-sig"))
-    (out / "index.html").write_text(pagina(versione, a.tag, base, presenti, sorgente, novita), encoding="utf-8")
+    (out / "index.html").write_text(pagina(versione, a.tag, presenti, sorgente, novita), encoding="utf-8")
     (out / "_headers").write_text(intestazioni(out), encoding="utf-8")
     shutil.copyfile(radice / "branding/icona.svg", out / "icona.svg")
     shutil.copyfile(radice / "branding/favicon.svg", out / "favicon.svg")

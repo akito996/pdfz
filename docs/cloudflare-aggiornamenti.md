@@ -22,7 +22,7 @@ tag vX.Y.Z ─► release.yml (GitHub Actions): compila MSI, DMG, AppImage, APK 
 - Gli installer (fino a 175 MB) non stanno nelle Pages, che accettano file fino a 25 MB: stanno nell'archivio **R2** e
   li serve una piccola funzione, così l'indirizzo resta quello del sito (niente indirizzi `r2.dev`).
 - Le app cercano gli aggiornamenti in `UPDATE_BASE_URL` (variabile del repository, scritta nell'app a ogni build):
-  dal passaggio sarà `https://pdfz.pages.dev/` (o l'indirizzo che Cloudflare assegna al progetto).
+  dal passaggio è stato `https://pdfz.pages.dev/`, dalla 1.6.1 il dominio dell'autore `https://pdfz.agjin.com/` (vedi sotto).
 - **Licenza AGPL**: chi distribuisce l'app deve rendere disponibile il codice sorgente. Con il repository privato lo fa
   il sito: per ogni versione c'è `PDFz-X.Y.Z-sorgente.zip` (`git archive` del tag), con il link nella pagina.
 - Spazio: circa 530 MB per versione; R2 gratuito arriva a 10 GB, il flusso tiene le **ultime 5 versioni**.
@@ -87,3 +87,17 @@ Riuscito in 2 minuti: progetto Pages `pdfz` creato con l'indirizzo **https://pdf
 Verificato senza accesso: pagina, 4 `versione-*.json`, HEAD dei 4 installer con le dimensioni giuste, richiesta parziale
 (206), sorgente, web app in `/app/` (manifest e service worker), percorso non ammesso 404; APK scaricato da Cloudflare
 identico byte per byte a quello di GitHub. La **1.3.1** è la versione ponte (compilata con `UPDATE_BASE_URL` = sito).
+
+## Dominio dell'autore: https://pdfz.agjin.com/ (dal 2026-10-30)
+
+L'autore ha aggiunto il dominio personalizzato `pdfz.agjin.com` al progetto Pages `pdfz` (Workers & Pages → pdfz →
+Custom domains) e ha messo la variabile `UPDATE_BASE_URL` = `https://pdfz.agjin.com/`. Dalla **1.6.1** le app cercano gli
+aggiornamenti lì e i `versione-*.json` hanno i link dei download sul nuovo dominio.
+
+- `https://pdfz.pages.dev/` **resta attivo** (stesso progetto, stessi file): le app dalla 1.3.1 alla 1.6.0 cercano gli
+  aggiornamenti lì. Non va spento né reindirizzato.
+- La pagina `index.html` usa **link relativi** (`download/…`, `app/`): da qualsiasi indirizzo la si apra, i pulsanti
+  restano su quell'indirizzo (prima la web app si apriva sempre su `<UPDATE_BASE_URL>app/`).
+- Web app per iPhone: i dati (firme salvate, impostazioni, file recenti) sono legati all'indirizzo. Chi l'ha aggiunta
+  alla Home da `pdfz.pages.dev/app/` può continuare a usarla (si aggiorna come prima); passando a
+  `pdfz.agjin.com/app/` va riaggiunta alla Home e le firme salvate vanno rifatte.

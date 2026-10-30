@@ -58,10 +58,10 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   Niente build per Mac Intel (pikepdf e cryptography non hanno più pacchetti x86_64).
   **Ogni modifica si pubblica come nuova versione** (PATCH per correzioni, MINOR per funzioni nuove) e alla fine si
   mandano sempre all'utente i link diretti di download per ogni sistema, dal sito Cloudflare
-  (`https://pdfz.pages.dev/download/vX.Y.Z/<file>`, pagina `https://pdfz.pages.dev/`, web app `…/app/`; finché il
+  (`https://pdfz.agjin.com/download/vX.Y.Z/<file>`, pagina `https://pdfz.agjin.com/`, web app `…/app/`; finché il
   repository è pubblico valgono anche quelli di GitHub), verificati senza login (richiesta del 2026-10-22:
   "ogni volta che facciamo una modifica"). Il sito si aggiorna da solo dopo la release (`cloudflare.yml`, qualche minuto).
-  **In ogni messaggio finale c'è sempre il link del sito https://pdfz.pages.dev/**, ben visibile, anche quando non esce
+  **In ogni messaggio finale c'è sempre il link del sito https://pdfz.agjin.com/**, ben visibile, anche quando non esce
   una versione nuova (richiesta del 2026-10-30: "Inviami sempre il link per il sito cloudflare").
 - **Aggiornamenti**: l'app legge `UPDATE_BASE_URL` (scritto prima della build da `packaging/imposta-url-aggiornamenti.sh`):
   variabile di repository `UPDATE_BASE_URL` oppure `https://github.com/akito996/pdfz/releases/latest/download/`
@@ -128,7 +128,7 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
 
 ## Stato attuale (2026-10-30)
 
-- Versione nel codice: **1.6.0** di PDFz (più semplice: schermata iniziale, modalità Semplice, guide, niente «Applica»). Marchio applicato ovunque (2026-10-22, versione 1.3.0): **icona e favicon 24
+- Versione nel codice: **1.6.1** di PDFz (sito degli aggiornamenti su https://pdfz.agjin.com/). Marchio applicato ovunque (2026-10-22, versione 1.3.0): **icona e favicon 24
   "Foglio senza fondo"** — documento bianco con contorno nero, piega d'oro, "PDF" rosso, "z" nera, nessun fondo attorno
   (iPhone e icona adattiva Android su fondo bianco); prima la 19 (2026-10-21) e la 17 "Foglio oro" (inviata), palette predefinita Rubino,
   5 palette selezionabili, avvisi solo con le finestre dell'app (provati nel browser: Oscura, domanda annidata dopo
@@ -253,6 +253,12 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   subito dopo. Verificato senza login: 4 download da Cloudflare e da GitHub con le stesse dimensioni (MSI 131,8 MB,
   DMG 159,8 MB, AppImage 175,2 MB, APK 64,1 MB), sorgente, web app 1.6.0 in `/app/`. Link mandati; pagina
   dell'analisi aggiornata con le scelte realizzate.
+
+- **Dominio dell'autore** (2026-10-30): il sito degli aggiornamenti è su **https://pdfz.agjin.com/** (dominio
+  personalizzato del progetto Pages, `UPDATE_BASE_URL` cambiata dall'autore); `https://pdfz.pages.dev/` resta attivo per le
+  app dalla 1.3.1 alla 1.6.0 e **non va spento né reindirizzato**. La pagina ha link relativi (`sito_aggiornamenti.py`),
+  così da iPhone e iPad la web app si apre sull'indirizzo da cui si è entrati. **Versione 1.6.1** compilata con il nuovo
+  indirizzo (`docs/cloudflare-aggiornamenti.md`).
 
 ## Punti aperti
 

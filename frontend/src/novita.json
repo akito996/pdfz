@@ -2,6 +2,26 @@
   "_info": "Novità di ogni versione, mostrate nella campanella dell'app e copiate dalla build in versione-<piattaforma>.json. tipo: nuovo | modifica | correzione | installer | ottimizzazione | rimosso. piattaforme: windows, macos, linux, android, ios, web (la web app per iPhone mostra anche le voci ios).",
   "versioni": [
     {
+      "versione": "1.6.1",
+      "data": "2026-10-30",
+      "titolo": "PDFz 1.6.1: nuovo indirizzo pdfz.agjin.com",
+      "voci": [
+        {
+          "tipo": "modifica",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android",
+            "ios"
+          ],
+          "dove": "Campanella delle notifiche",
+          "titolo": "Aggiornamenti da pdfz.agjin.com",
+          "dettaglio": "L'avviso di nuova versione e i download arrivano dal nuovo indirizzo https://pdfz.agjin.com/; la web app per iPhone e iPad è su https://pdfz.agjin.com/app/."
+        }
+      ]
+    },
+    {
       "versione": "1.6.0",
       "data": "2026-10-30",
       "titolo": "PDFz 1.6.0: più semplice, senza «Applica»",
