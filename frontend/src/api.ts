@@ -249,6 +249,10 @@ export const desktop = {
   async reveal(path: string): Promise<boolean> {
     return window.pywebview!.api.reveal(path);
   },
+  /** Presentazione: la finestra dell'app a tutto schermo (true) e ritorno (false). */
+  async fullScreen(on: boolean): Promise<boolean> {
+    try { return await window.pywebview!.api.schermo_intero(on); } catch { return false; }
+  },
   /** Apre un'altra finestra di PDFz; query = parametri dell'indirizzo (es. "scheda=<biglietto>"). */
   async newWindow(query: string): Promise<boolean> {
     return desktopCall("Nuova finestra non aperta", false, () => window.pywebview!.api.nuova_finestra(query));

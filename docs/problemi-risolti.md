@@ -6,6 +6,21 @@ Il più recente in cima.
 > Le voci con numeri `AAAAMM.NNN` (es. 202610.014) sono della fase di sviluppo prima di PDFz 1.0.0, quando le versioni
 > avevano quel formato. Restano perché spiegano cosa non rifare.
 
+## 1.5.0 — Firme e immagini di traverso sulle pagine ruotate, sfocato della zona sbagliata
+
+- **Sintomo:** su una pagina con rotazione 90° o 270° (molte scansioni) la firma disegnata o da immagine, il timbro
+  immagine, le immagini e le filigrane immagine comparivano girate di lato (e più piccole del riquadro scelto); lo
+  sfocato di Oscura mostrava un pezzo di pagina diverso, girato.
+- **Causa:** `insert_image` scrive nelle coordinate della pagina non ruotata: senza `rotate` l'immagine resta girata
+  come il contenuto della pagina, non come la si vede. Per lo sfocato, `get_pixmap(clip=…)` vuole il riquadro **visivo**
+  (la pagina come si vede) e riceveva quello non ruotato; poi l'immagine veniva girata nel verso opposto.
+- **Soluzione:** `tools/content.py` — `rotate=page.rotation` in tutti gli `insert_image` (firma, timbro, Immagini,
+  Aggiungi immagine, filigrana, sfocato) e sfocato preso da `rect * page.rotation_matrix`. Test
+  `test_firma_immagine_diritta_su_pagina_ruotata[90,180,270]` (angolo blu in alto a sinistra) e
+  `test_redact_blur_rotated_page_resta_diritto[90,270]` (blu a sinistra, rosso a destra).
+- **Da non rifare:** controllare le immagini sulle pagine ruotate solo con riquadri o colori uniformi: servono immagini
+  con un verso riconoscibile (a 180° anche un errore di segno passa inosservato).
+
 ## 1.3.0 — Telefono stretto: il nome del documento finisce sotto la campanella
 
 - **Sintomo:** su un telefono largo 375 px (iPhone, molti Android) il nome del documento aperto, nella barra in alto,

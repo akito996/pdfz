@@ -73,6 +73,7 @@ class Api:
         self._unsaved = False
         self._quit_ok = False
         self._apri_finestra = None   # funzione di run(): apre un'altra finestra di PDFz
+        self._intero = False         # finestra a tutto schermo (presentazione, Ctrl+L)
 
     def set_unsaved(self, value: bool) -> bool:
         """La UI comunica se ci sono modifiche non salvate o non applicate (usato alla chiusura)."""
@@ -85,6 +86,15 @@ class Api:
         if not self._apri_finestra or not re.fullmatch(r"[A-Za-z0-9_=&-]{1,200}", query or ""):
             return False
         self._apri_finestra(query)
+        return True
+
+    def schermo_intero(self, acceso: bool) -> bool:
+        """Presentazione (Ctrl+L): la finestra va a tutto schermo e poi torna com'era. pywebview sa solo invertire lo
+        stato, quindi si ricorda quello attuale."""
+        acceso = bool(acceso)
+        if self._window is not None and acceso != self._intero:
+            self._window.toggle_fullscreen()
+            self._intero = acceso
         return True
 
     def quit(self) -> bool:

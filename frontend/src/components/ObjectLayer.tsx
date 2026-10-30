@@ -72,7 +72,11 @@ export function ObjectBox({ obj, scale, page, interaction }: {
     const x0 = e.clientX, y0 = e.clientY;
     const start: VRect = { ...r };
     const ratio = start.w / Math.max(start.h, 1);
+    let mosso = false;
     const move = (ev: PointerEvent) => {
+      // un clic (o un tocco) che trema di 1-2 px non sposta niente
+      if (!mosso && Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) < 3) return;
+      mosso = true;
       const dx = (ev.clientX - x0) / scale;
       const dy = (ev.clientY - y0) / scale;
       let { x, y, w, h } = start;
@@ -100,6 +104,7 @@ export function ObjectBox({ obj, scale, page, interaction }: {
     const up = () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
+      if (mosso) interaction.onObjectDrop?.(obj.id);
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);

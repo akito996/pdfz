@@ -160,7 +160,7 @@ export function SignPanel({ def, onClose }: { def: ToolDef; onClose: () => void 
   };
 
   // le firme di testo si ridimensionano come un'immagine: il corpo segue la larghezza
-  const patchObj = (id: string, p: Partial<PageObject>) => setObjects((l) => l.map((x) => {
+  const patchObj = (id: string, p: Partial<PageObject>) => ap.cambia(id, p) || setObjects((l) => l.map((x) => {
     if (x.id !== id) return x;
     const n = { ...x, ...p };
     if (x.meta?.type === "text" && p.rect && !p.size) n.size = x.meta.baseSize * p.rect.w / x.meta.natW;
@@ -175,6 +175,7 @@ export function SignPanel({ def, onClose }: { def: ToolDef; onClose: () => void 
 
   const patchObjE = useEvent(patchObj);
   const removeObjE = useEvent(removeObj);
+  const dropE = useEvent((id: string) => { ap.lascia(id); });
   const onPlaceE = useEvent(onPlace);
   const deselectE = useEvent(() => setSelectedId(null));
   useEffect(() => {
@@ -183,10 +184,10 @@ export function SignPanel({ def, onClose }: { def: ToolDef; onClose: () => void 
     }))];
     app.setInteraction({
       mode: "objects", objects: [...giaFirmate, ...objects], selectedId, onSelect: setSelectedId, onObjectChange: patchObjE, onObjectDelete: removeObjE,
-      onPlace: placing ? onPlaceE : deselectE,
+      onObjectDrop: dropE, onPlace: placing ? onPlaceE : deselectE,
       placeHint: placing ? "Clicca dove inserire la firma" : undefined, fontStyle: app.fontStyle,
     });
-  }, [objects, selectedId, placing, app.fontStyle, ap.items, digitali]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [objects, selectedId, placing, app.fontStyle, ap.boxes, digitali]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => app.setInteraction({ mode: "none" }), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sel = objects.find((o) => o.id === selectedId) || null;
@@ -353,7 +354,7 @@ export function SignPanel({ def, onClose }: { def: ToolDef; onClose: () => void 
         </InVista>
       )}
       {!sel && !scelto && !digitale && (ap.items.length > 0 || digitali.some((f) => f.rect)) && (
-        <div className="hint">{verb} una firma già applicata per eliminarla.</div>
+        <div className="hint">{verb} una firma già applicata per spostarla o eliminarla.</div>
       )}
       <Advanced>
         {kind === "draw" && (

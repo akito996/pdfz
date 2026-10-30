@@ -229,7 +229,7 @@ export function AddTextPanel({ def, onClose }: { def: ToolDef; onClose: () => vo
   const elimina = async (v: { page?: number; id: string }[]) => { if (await ap.elimina(v)) setSelectedId(null); };
 
   const update = (o: PageObject) => setObjects((l) => l.map((x) => (x.id === o.id ? o : x)));
-  const patchObj = (id: string, p: Partial<PageObject>) => setObjects((l) => l.map((x) => (x.id === id ? { ...x, ...p } : x)));
+  const patchObj = (id: string, p: Partial<PageObject>) => ap.cambia(id, p) || setObjects((l) => l.map((x) => (x.id === id ? { ...x, ...p } : x)));
   const remove = (id: string) => {
     const a = ap.scelto(id);
     if (a) { elimina([{ page: a.page, id: a.id }]); return; }
@@ -255,12 +255,13 @@ export function AddTextPanel({ def, onClose }: { def: ToolDef; onClose: () => vo
   const patchObjE = useEvent(patchObj);
   const removeE = useEvent(remove);
   const placeE = useEvent(place);
+  const dropE = useEvent((id: string) => { ap.lascia(id); });
   useEffect(() => {
     app.setInteraction({
       mode: "objects", objects: [...ap.boxes, ...objects], selectedId, onSelect: setSelectedId, onObjectChange: patchObjE, onObjectDelete: removeE,
-      onPlace: placeE, placeHint: "Clicca per inserire una casella di testo", fontStyle: app.fontStyle,
+      onObjectDrop: dropE, onPlace: placeE, placeHint: "Clicca per inserire una casella di testo", fontStyle: app.fontStyle,
     });
-  }, [objects, selectedId, app.fontStyle, ap.items]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [objects, selectedId, app.fontStyle, ap.boxes]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => app.setInteraction({ mode: "none" }), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const patch = (p: Partial<TextStyle>) => {

@@ -268,6 +268,42 @@ textarea.input { resize: vertical; min-height: 64px; }
 .thumb canvas { width: 100%; border: 2px solid transparent; border-radius: 3px; background: #fff; box-shadow: var(--shadow); }
 .thumb.active canvas { border-color: var(--brand); }
 .pages { overflow: auto; padding: 20px; display: flex; flex-direction: column; align-items: safe center; gap: 16px; position: relative; }
+/* gruppo = le pagine che si vedono insieme (una, o due affiancate) */
+.pages .gruppo { display: flex; gap: 8px; align-items: flex-start; justify-content: center; flex: none; }
+/* libro: i gruppi uno accanto all'altro, ognuno largo quanto lo schermo; si sfoglia in orizzontale e si ferma su ogni pagina */
+.pages.libro { flex-direction: row; align-items: flex-start; gap: 0; padding: 20px 0; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; }
+.pages.libro .gruppo { min-width: 100%; padding: 0 24px; box-sizing: border-box; scroll-snap-align: start; scroll-snap-stop: always; }
+.viewer-body { position: relative; }
+.sfoglia {
+  position: absolute; z-index: 4; top: 50%; transform: translateY(-50%); width: 40px; height: 64px; display: grid; place-items: center;
+  border: 1px solid var(--line); border-radius: 10px; background: rgba(var(--brand-rgb), .08); color: var(--text); cursor: pointer;
+  backdrop-filter: blur(2px); opacity: .75; transition: opacity .15s;
+}
+.sfoglia:hover:not(:disabled) { opacity: 1; background: var(--brand-soft); }
+.sfoglia:disabled { opacity: .2; cursor: default; }
+.sfoglia.prima { left: 6px; }
+.sfoglia.dopo { right: 14px; }
+.vista-pop small { display: block; font-size: 11px; color: var(--muted); }
+.vista-pop kbd { margin-left: auto; }
+/* presentazione a schermo intero (Ctrl+L) */
+.presenta { position: fixed; inset: 0; z-index: 500; background: #000; color: #fff; display: grid; place-items: center; cursor: default; touch-action: none; user-select: none; }
+.presenta.nascosti { cursor: none; }
+.presenta-pagine { display: flex; align-items: center; justify-content: center; animation: presenta-entra .22s ease; }
+.presenta-pagine canvas { background: #fff; display: block; opacity: 0; transition: opacity .12s; }
+.presenta-pagine canvas.pronta { opacity: 1; }
+@keyframes presenta-entra { from { opacity: .4; transform: scale(.985); } to { opacity: 1; transform: none; } }
+.presenta-barra, .presenta-chiudi { position: fixed; transition: opacity .3s; color: #fff; }
+.presenta.nascosti .presenta-barra, .presenta.nascosti .presenta-chiudi { opacity: 0; pointer-events: none; }
+.presenta-barra {
+  bottom: 18px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 6px 10px;
+  border-radius: 24px; background: rgba(30, 30, 30, .8); font: 14px system-ui, sans-serif;
+}
+.presenta-barra span { min-width: 64px; text-align: center; }
+.presenta button { border: none; background: transparent; color: inherit; cursor: pointer; display: grid; place-items: center; }
+.presenta-barra button { width: 40px; height: 40px; border-radius: 50%; }
+.presenta-barra button:hover:not(:disabled) { background: rgba(255, 255, 255, .15); }
+.presenta-barra button:disabled { opacity: .3; cursor: default; }
+.presenta-chiudi { top: 14px; right: 14px; width: 44px; height: 44px; border-radius: 50%; background: rgba(30, 30, 30, .8) !important; }
 .page { position: relative; background: #fff; box-shadow: var(--shadow); flex: none; }
 .page canvas { display: block; }
 .page .textLayer { position: absolute; inset: 0; }
@@ -382,6 +418,8 @@ kbd { font-family: inherit; font-size: 11px; padding: 1px 5px; border: 1px solid
 /* oggetti già nel documento (immagini, firme, timbri e testi applicati): non si spostano, si toccano per eliminarli;
    l'etichetta compare sopra il riquadro quando è selezionato */
 .obj.locked { cursor: pointer; }
+/* posto di partenza di un oggetto applicato che si sta spostando */
+.obj.cover.locked { pointer-events: none; outline-style: dotted; opacity: .85; }
 .in-vista { display: flex; flex-direction: column; gap: 8px; scroll-margin: 10px; }
 .in-vista .btn-row, .in-vista .btn { align-self: flex-start; }
 .obj > .ov-label {

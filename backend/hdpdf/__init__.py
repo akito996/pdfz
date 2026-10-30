@@ -10,7 +10,7 @@ APP_BUNDLE_ID = "com.agjin.pdfz"    # Android (applicationId), macOS e iPhone (b
 # PATCH per le correzioni, MINOR per le funzioni nuove, MAJOR per i cambiamenti grandi. Il tag git della release è uguale
 # (es. 1.0.0 o v1.0.0): la pipeline di GitHub controlla che coincidano.
 # È l'unica fonte del numero: installer Windows, APK Android, macOS e Linux lo leggono da qui (vedi versione.py).
-__version__ = "1.4.0"
+__version__ = "1.5.0"
 
 
 def _safe_localzone() -> None:

@@ -1,4 +1,4 @@
-# Oggetti applicati eliminabili (dalla 1.4.0)
+# Oggetti applicati eliminabili (dalla 1.4.0) e spostabili (dalla 1.5.0)
 
 Firme grafiche, timbri, testo aggiunto, filigrane e numeri di pagina vengono scritti **nel contenuto della pagina**
 (non come annotazioni). Dalla 1.4.0 si possono eliminare anche dopo "Applica".
@@ -40,6 +40,19 @@ dizionari, array, immagini in linea `BI … ID … EI`) che trova le sequenze `/
 **Flussi condivisi**: salvando con `garbage=3/4`, i flussi uguali di pagine diverse diventano un oggetto solo (la stessa
 sigla su ogni pagina). Prima di cambiarne uno condiviso, `togli()` ne fa una copia per la pagina (`_copia_flusso`),
 altrimenti eliminando la firma da una pagina sparirebbe anche dalle altre.
+
+## Spostare e ridimensionare (1.5.0)
+
+`move_applied` (`params: page, id, rect` visivo nuovo) chiama `sposta()`: per ogni sequenza dell'oggetto su quella
+pagina inserisce subito dopo `BDC` una trasformazione `q a 0 0 d e f cm` che porta il riquadro vecchio (`R`) su quello
+nuovo (scala `a`, `d` e spostamento `e`, `f` nello spazio PDF) e prima di `EMC` la chiusura `Q`; nelle proprietà `R`
+diventa il riquadro nuovo. Gli spostamenti successivi aggiungono un'altra trasformazione dentro la sequenza. Le copie
+dello stesso oggetto sulle altre pagine restano dove sono (i flussi condivisi si copiano prima, come per l'eliminazione).
+
+Nell'interfaccia i riquadri degli oggetti applicati non sono più bloccati: `useApplicati().cambia()` tiene il riquadro
+nuovo durante il trascinamento (con un'istantanea dell'oggetto presa dal canvas della pagina e un velo bianco al posto di
+partenza) e `lascia()`, chiamato da `onObjectDrop` alla fine del trascinamento, fa lo spostamento nel motore. Le firme
+digitali restano bloccate: spostarle le invaliderebbe.
 
 ## Firme digitali
 

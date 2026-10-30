@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, MessageSquareText, PanelLeft, Search, X, ZoomIn, ZoomOut } from "lucide-react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { BookOpen, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, MessageSquareText, PanelLeft, Presentation, Search, X, ZoomIn, ZoomOut } from "lucide-react";
 import { isLocalEngine } from "../api";
 import { pdfjs, type PDFDoc, type PageSize, renderThumb } from "../pdf";
 import type { Interaction, NoteInfo, Overlay, Span, VRect } from "../types";
@@ -8,6 +8,24 @@ import { ObjectBox } from "./ObjectLayer";
 import { useIsMobile, useMedia } from "../panels/fields";
 import { useApp } from "../context";
 import { TouchSelLayer, useTouchTextSel, type TouchSelApi } from "./TouchTextSel";
+import { Popover } from "./Popover";
+import { Presentazione } from "./Presentazione";
+import { useStored } from "../hooks";
+
+/** Come si leggono le pagine: una o due affiancate (con la copertina da sola, come un libro), una sotto l'altra
+ *  (verticale) o una dopo l'altra in orizzontale, da sfogliare come un libro. */
+interface Vista { doppia: boolean; copertina: boolean; libro: boolean }
+const GAP_DOPPIA = 8;   // px fra le due pagine affiancate
+
+/** Pagine raggruppate come si vedono: [[0],[1],...] oppure [[0,1],[2,3]] oppure, con la copertina, [[0],[1,2],...]. */
+export function gruppiPagine(n: number, doppia: boolean, copertina: boolean): number[][] {
+  if (!doppia) return Array.from({ length: n }, (_, i) => [i]);
+  const out: number[][] = [];
+  let i = 0;
+  if (copertina && n) { out.push([0]); i = 1; }
+  for (; i < n; i += 2) out.push(i + 1 < n ? [i, i + 1] : [i]);
+  return out;
+}
 
 interface Props {
   pdf: PDFDoc;
@@ -48,6 +66,12 @@ export function Viewer({ pdf, sizes, overlays, interaction, currentPage, onPageC
   const [searchOpen, setSearchOpen] = useState(false);   // telefono e tablet: la ricerca è un'icona che si apre
   const [hits, setHits] = useState<{ page: number; rect: [number, number, number, number] }[]>([]);
   const [hitIdx, setHitIdx] = useState(0);
+  // modo di lettura (resta per i documenti successivi) e presentazione a schermo intero
+  const [vista, setVista] = useStored<Vista>("hdpdf.vista", { doppia: false, copertina: false, libro: false });
+  const gruppi = useMemo(() => gruppiPagine(sizes.length, vista.doppia, vista.copertina), [sizes.length, vista.doppia, vista.copertina]);
+  const [menuVista, setMenuVista] = useState(false);
+  const btnVista = useRef<HTMLButtonElement>(null);
+  const [presenta, setPresenta] = useState(false);
 
   useLayoutEffect(() => {
     const el = pagesRef.current;
@@ -59,10 +83,12 @@ export function Viewer({ pdf, sizes, overlays, interaction, currentPage, onPageC
     return () => ro.disconnect();
   }, []);
 
-  const maxW = Math.max(...sizes.map((s) => s.w), 1);
+  // "Adatta" e "Pagina intera" considerano il gruppo più largo (due pagine affiancate = la loro larghezza insieme)
+  const maxW = Math.max(...gruppi.map((g) => g.reduce((s, i) => s + sizes[i].w, 0)), 1);
   const maxH = Math.max(...sizes.map((x) => x.h), 1);
-  const scale = zoom === "width" ? Math.max(0.1, (containerW - 48) / maxW)
-    : zoom === "page" ? Math.max(0.1, Math.min((containerW - 48) / maxW, (containerH - 32) / maxH))
+  const gapW = vista.doppia && gruppi.some((g) => g.length > 1) ? GAP_DOPPIA : 0;
+  const scale = zoom === "width" ? Math.max(0.1, (containerW - 48 - gapW) / maxW)
+    : zoom === "page" ? Math.max(0.1, Math.min((containerW - 48 - gapW) / maxW, (containerH - 32) / maxH))
     : (zoom / 100) * PX_PER_PT;
   const pct = Math.round((scale / PX_PER_PT) * 100);
   const setPct = (v: number) => setZoom(Math.round(Math.min(800, Math.max(10, v))));
@@ -166,24 +192,77 @@ export function Viewer({ pdf, sizes, overlays, interaction, currentPage, onPageC
   // nuova versione del documento: i risultati di ricerca non sono più validi
   useEffect(() => { setHits([]); }, [pdf]);
 
+  const libro = vista.libro;
   const scrollTo = useCallback((p: number) => {
     const el = pagesRef.current?.querySelector(`[data-page="${p}"]`) as HTMLElement | null;
-    if (el && pagesRef.current) pagesRef.current.scrollTo({ top: el.offsetTop - 16, behavior: "smooth" });
-  }, []);
+    if (!el || !pagesRef.current) return;
+    if (libro) pagesRef.current.scrollTo({ left: (el.parentElement as HTMLElement).offsetLeft, behavior: "smooth" });
+    else pagesRef.current.scrollTo({ top: el.offsetTop - 16, behavior: "smooth" });
+  }, [libro]);
+  // libro: pagina (o coppia di pagine) precedente/successiva
+  const sfoglia = useCallback((d: number) => {
+    const g = gruppi.findIndex((x) => x.includes(currentPage));
+    const n = gruppi[Math.min(Math.max(g + d, 0), gruppi.length - 1)];
+    if (n) scrollTo(n[0]);
+  }, [gruppi, currentPage, scrollTo]);
+  // cambiando modo di lettura si resta sulla stessa pagina
+  const cambiaVista = (v: Partial<Vista>) => {
+    const p = currentPage;
+    if (v.libro !== undefined && v.libro !== vista.libro) setZoom(v.libro ? "page" : "width");   // libro: una "doppia pagina" per schermata
+    setVista({ ...vista, ...v });
+    window.setTimeout(() => {
+      const el = pagesRef.current?.querySelector(`[data-page="${p}"]`) as HTMLElement | null;
+      if (!el || !pagesRef.current) return;
+      if (v.libro ?? vista.libro) pagesRef.current.scrollLeft = (el.parentElement as HTMLElement).offsetLeft;
+      else pagesRef.current.scrollTop = el.offsetTop - 16;
+    }, 30);
+  };
+  // Ctrl+L = presentazione a schermo intero (come Acrobat); nel libro le frecce e la rotellina sfogliano
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (presenta) return;
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "l") {
+        e.preventDefault();
+        setPresenta(true);
+        return;
+      }
+      if (!libro || e.ctrlKey || e.metaKey || e.altKey) return;
+      if ((e.target as HTMLElement).closest("input,textarea,select,[contenteditable]") || interaction.selectedId) return;
+      const d = { ArrowRight: 1, PageDown: 1, ArrowLeft: -1, PageUp: -1 }[e.key];
+      if (d) { e.preventDefault(); sfoglia(d); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [presenta, libro, sfoglia, interaction.selectedId]);
+  useEffect(() => {
+    const el = pagesRef.current;
+    if (!el || !libro) return;
+    let ultimo = 0;
+    const onWheel = (e: WheelEvent) => {
+      // rotellina in su/giù nel libro: pagina prima/dopo (se la pagina non va fatta scorrere in verticale)
+      if (e.ctrlKey || Math.abs(e.deltaX) > Math.abs(e.deltaY) || el.scrollHeight > el.clientHeight + 4) return;
+      e.preventDefault();
+      if (Date.now() - ultimo < 350) return;
+      ultimo = Date.now();
+      sfoglia(e.deltaY > 0 ? 1 : -1);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [libro, sfoglia]);
 
   useEffect(() => {
     if (goto) scrollTo(goto.page);
   }, [goto, scrollTo]);
 
-  // pagina corrente = quella più visibile
+  // pagina corrente = la prima del gruppo più visibile (nel libro: quello al centro dello schermo)
   const onScroll = () => {
     const el = pagesRef.current;
     if (!el) return;
-    const mid = el.scrollTop + el.clientHeight / 3;
-    const nodes = el.querySelectorAll<HTMLElement>("[data-page]");
+    const mid = libro ? el.scrollLeft + el.clientWidth / 2 : el.scrollTop + el.clientHeight / 3;
+    const nodes = el.querySelectorAll<HTMLElement>("[data-gruppo]");
     let best = 0;
     nodes.forEach((n) => {
-      if (n.offsetTop <= mid) best = Number(n.dataset.page);
+      if ((libro ? n.offsetLeft : n.offsetTop) <= mid) best = Number(n.dataset.gruppo);
     });
     if (best !== currentPage) onPageChange(best);
   };
@@ -259,6 +338,30 @@ export function Viewer({ pdf, sizes, overlays, interaction, currentPage, onPageC
             <button className={`btn small ghost ${zoom === 100 ? "on" : ""}`} onClick={() => setZoom(100)} title="Dimensione reale">100%</button>
           </>
         )}
+        <button ref={btnVista} className={`btn icon ghost ${menuVista ? "on" : ""}`} title="Vista: pagine singole o doppie, verticale o a libro, presentazione"
+          aria-label="Vista" aria-haspopup="menu" aria-expanded={menuVista} onClick={() => setMenuVista((v) => !v)}><BookOpen size={17} /></button>
+        {menuVista && (
+          <Popover anchor={btnVista} onClose={() => setMenuVista(false)} width={270} className="menu theme-pop vista-pop" role="menu" label="Vista">
+            <div className="menu-title">Pagine</div>
+            <button type="button" role="menuitemradio" aria-checked={!vista.doppia} onClick={() => cambiaVista({ doppia: false })}>
+              <span className="grow">Una pagina alla volta</span>{!vista.doppia && <Check size={15} />}</button>
+            <button type="button" role="menuitemradio" aria-checked={vista.doppia} onClick={() => cambiaVista({ doppia: true })}>
+              <span className="grow">Due pagine affiancate</span>{vista.doppia && <Check size={15} />}</button>
+            {vista.doppia && (
+              <button type="button" role="menuitemcheckbox" aria-checked={vista.copertina} onClick={() => cambiaVista({ copertina: !vista.copertina })}>
+                <span className="grow">Copertina da sola<small>come un libro: 1, poi 2-3, 4-5…</small></span>{vista.copertina && <Check size={15} />}</button>
+            )}
+            <div className="menu-sep" />
+            <div className="menu-title">Scorrimento</div>
+            <button type="button" role="menuitemradio" aria-checked={!vista.libro} onClick={() => cambiaVista({ libro: false })}>
+              <span className="grow">Verticale<small>le pagine una sotto l'altra</small></span>{!vista.libro && <Check size={15} />}</button>
+            <button type="button" role="menuitemradio" aria-checked={vista.libro} onClick={() => cambiaVista({ libro: true })}>
+              <span className="grow">Orizzontale, come un libro<small>si sfoglia con le frecce, la rotellina o il dito</small></span>{vista.libro && <Check size={15} />}</button>
+            <div className="menu-sep" />
+            <button type="button" role="menuitem" onClick={() => { setMenuVista(false); setPresenta(true); }}>
+              <Presentation size={16} /><span className="grow">Presentazione a schermo intero</span><kbd className="kbd-hint">Ctrl+L</kbd></button>
+          </Popover>
+        )}
         <div style={{ flex: 1 }} />
         {onSearch && compactSearch && !searchOpen && (
           <button className="btn icon ghost" title="Cerca nel documento" aria-label="Cerca nel documento" onClick={() => setSearchOpen(true)}><Search size={18} /></button>
@@ -280,14 +383,28 @@ export function Viewer({ pdf, sizes, overlays, interaction, currentPage, onPageC
       </div>
       <div className="viewer-body" style={{ gridTemplateColumns: showThumbs ? "150px 1fr" : "1fr" }}>
         {showThumbs && <Thumbs pdf={pdf} count={sizes.length} current={currentPage} onPick={scrollTo} />}
-        <div className="pages" ref={pagesRef} onScroll={onScroll}>
-          {sizes.map((s, i) => (
-            <PageView key={i} pdf={pdf} index={i} size={s} scale={scale} tsel={tsel}
-              overlays={allOverlays.filter((o) => o.page === i)} interaction={interaction}
-              notes={notes.filter((n) => n.page === i)} openNote={openNote} setOpenNote={setOpenNote} />
+        <div className={`pages ${libro ? "libro" : ""} ${vista.doppia ? "doppia" : ""}`} ref={pagesRef} onScroll={onScroll}>
+          {gruppi.map((g) => (
+            <div key={g.join("-")} className="gruppo" data-gruppo={g[0]}>
+              {g.map((i) => (
+                <PageView key={i} pdf={pdf} index={i} size={sizes[i]} scale={scale} tsel={tsel}
+                  overlays={allOverlays.filter((o) => o.page === i)} interaction={interaction}
+                  notes={notes.filter((n) => n.page === i)} openNote={openNote} setOpenNote={setOpenNote} />
+              ))}
+            </div>
           ))}
         </div>
+        {libro && gruppi.length > 1 && (
+          <>
+            <button type="button" className="sfoglia prima" onClick={() => sfoglia(-1)} disabled={gruppi[0].includes(currentPage)}
+              aria-label="Pagina precedente" title="Pagina precedente (←)"><ChevronLeft size={26} /></button>
+            <button type="button" className="sfoglia dopo" onClick={() => sfoglia(1)} disabled={gruppi[gruppi.length - 1].includes(currentPage)}
+              aria-label="Pagina successiva" title="Pagina successiva (→)"><ChevronRight size={26} /></button>
+          </>
+        )}
       </div>
+      {presenta && <Presentazione pdf={pdf} sizes={sizes} gruppi={gruppi} inizio={currentPage}
+        onClose={(p) => { setPresenta(false); window.setTimeout(() => scrollTo(p), 30); }} />}
     </div>
   );
 }

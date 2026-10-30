@@ -34,7 +34,7 @@ e il pulsante Scarica. Le novità di ogni versione sono in `CHANGELOG.md`.
 
 | Area | Strumenti |
 |---|---|
-| **Modifica** | Forme (rettangolo, ovale, segmento, freccia), Spunta e X per i moduli, Modifica testo e Aggiungi testo stile Acrobat (clic sulla pagina, si scrive direttamente nella casella, spostabile e ridimensionabile; carattere, dimensione, colore e allineamento dal pannello), Immagini (inserimento a dimensione originale, ridimensionamento sul foglio o in px/cm/%, opacità, ripetizione su tutte le pagine, dietro al contenuto, rimozione di quelle già presenti), Allega file, Filigrana, Timbro, Oscura (copri, sfoca leggera o sfoca forte; aree, parole, email, IBAN, codici fiscali, P.IVA, telefoni, regex). Firme, timbri, testi aggiunti, filigrane e numeri di pagina si eliminano anche dopo averli applicati |
+| **Modifica** | Forme (rettangolo, ovale, segmento, freccia), Spunta e X per i moduli, Modifica testo e Aggiungi testo stile Acrobat (clic sulla pagina, si scrive direttamente nella casella, spostabile e ridimensionabile; carattere, dimensione, colore e allineamento dal pannello), Immagini (inserimento a dimensione originale, ridimensionamento sul foglio o in px/cm/%, opacità, ripetizione su tutte le pagine, dietro al contenuto, rimozione di quelle già presenti), Allega file, Filigrana, Timbro, Oscura (copri, sfoca leggera o sfoca forte; aree, parole, email, IBAN, codici fiscali, P.IVA, telefoni, regex). Firme, timbri, testi aggiunti, filigrane e numeri di pagina si eliminano anche dopo averli applicati; firme, timbri e testi si spostano e si ridimensionano |
 | **Pagine** | Unisci, Organizza (griglia con selezione multipla, trascina, ruota, duplica, elimina, estrai, pagina bianca, inserisci pagine da altri PDF col riquadro **+**), Estrai, Rimuovi, Ruota, Ritaglia, Ridimensiona (con vista a miniature e selezione tutte/nessuna/pari/dispari/intervalli), Numeri di pagina, Crea indice |
 | **Firma e sicurezza** | File firmati .p7m/.p7s (verifica stile ArubaSign con elenco CA AgID, revoca OCSP/CRL, marca temporale, estrazione del documento, rapporto PDF), Firma disegnata, da immagine (3 firme salvate sul dispositivo) o da testo, inserita con un clic alla sua dimensione e ridimensionabile; firma digitale con certificato .pfx/.p12 (PAdES); le firme già applicate, anche digitali, si eliminano una per una; Aggiungi/Rimuovi password, Rimuovi firma digitale, Sanitizza, Sblocca moduli, Appiattisci |
 | **Ottimizza e analizza** | Comprimi, Confronta, OCR, Info complete, Convalida |
@@ -139,11 +139,11 @@ Dettagli, opzioni e prerequisiti:
 ## Distribuzione sui PC Windows
 
 ```bat
-msiexec /i PDFz-1.4.0-x64.msi /qn                    :: silenziosa
-msiexec /i PDFz-1.4.0-x64.msi /qn DESKTOPSHORTCUT=0  :: senza icona sul desktop
-msiexec /i PDFz-1.4.0-x64.msi /qn HDSCOPE=user       :: solo per l'utente corrente
-msiexec /i PDFz-1.4.0-x64.msi /qn HDCONTEXTMENU=0    :: senza la voce nel menu del tasto destro
-msiexec /x PDFz-1.4.0-x64.msi /qn                    :: disinstallazione
+msiexec /i PDFz-1.5.0-x64.msi /qn                    :: silenziosa
+msiexec /i PDFz-1.5.0-x64.msi /qn DESKTOPSHORTCUT=0  :: senza icona sul desktop
+msiexec /i PDFz-1.5.0-x64.msi /qn HDSCOPE=user       :: solo per l'utente corrente
+msiexec /i PDFz-1.5.0-x64.msi /qn HDCONTEXTMENU=0    :: senza la voce nel menu del tasto destro
+msiexec /x PDFz-1.5.0-x64.msi /qn                    :: disinstallazione
 ```
 
 * Installazione per tutti gli utenti in `C:\Program Files\PDFz`, collegamento nel menu Start.

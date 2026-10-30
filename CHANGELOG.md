@@ -1,5 +1,21 @@
 # Novità
 
+## 1.5.0
+Firme già applicate da spostare, nuovi modi di lettura e presentazione a schermo intero.
+
+- **Sposta firme, timbri e testi già applicati** (novità, tutti i sistemi): nella Firma, nel Timbro e in Aggiungi testo
+  si trascina l'oggetto già applicato dove si vuole, e dagli angoli lo si ingrandisce o rimpicciolisce. Mentre lo si
+  sposta si vede l'oggetto stesso; Annulla torna indietro. Le firme digitali (certificato) non si spostano: le
+  invaliderebbe.
+- **Modi di lettura** (novità, tutti i sistemi): nuovo pulsante **Vista** nella barra della pagina: una pagina alla
+  volta o **due pagine affiancate** (anche con la copertina da sola, come un libro), scorrimento **verticale** oppure
+  **orizzontale come un libro**, da sfogliare con le frecce ‹ ›, i tasti freccia, la rotellina o il dito. La scelta resta.
+- **Presentazione a schermo intero** (novità, tutti i sistemi): **Ctrl+L** (o Vista → Presentazione) mostra una pagina
+  (o due) alla volta su tutto lo schermo; avanti con →, spazio, clic o scorrendo il dito, indietro con ←, uscita con Esc.
+- **Pagine ruotate** (correzione, tutti i sistemi): sulle pagine ruotate, per esempio molte scansioni, firme, timbri,
+  immagini e filigrane come immagine finivano di traverso; ora restano diritte come nell'anteprima. Anche lo sfocato di
+  Oscura sulle pagine ruotate prendeva la zona sbagliata.
+
 ## 1.4.0
 Firme e timbri già applicati si possono eliminare; sul telefono pannello più grande e caselle di testo più comode.
 

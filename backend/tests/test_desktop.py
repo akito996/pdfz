@@ -51,6 +51,18 @@ def test_open_external_blocks_executables(d):
         desktop.Api().open_external(it.id)
 
 
+def test_schermo_intero_inverte_solo_se_cambia(d):
+    """Presentazione: pywebview sa solo invertire lo schermo intero; chiederlo due volte non lo deve spegnere."""
+    desktop, _ = d
+    api = desktop.Api()
+    assert api.schermo_intero(True) is True   # senza finestra non succede niente
+    chiamate = []
+    api._window = type("Finestra", (), {"toggle_fullscreen": lambda self: chiamate.append(1)})()
+    for v in (True, True, False, False, True):
+        api.schermo_intero(v)
+    assert len(chiamate) == 3 and api._intero is True
+
+
 def test_nuova_finestra_solo_parametri_sicuri(d):
     """Scheda trascinata fuori: la pagina chiede un'altra finestra passando solo il biglietto nell'indirizzo."""
     desktop, _ = d

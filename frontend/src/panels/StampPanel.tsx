@@ -93,7 +93,7 @@ export function StampPanel({ def, onClose }: { def: ToolDef; onClose: () => void
     setObjects((os) => [...os, o]);
     setSelectedId(o.id);
   };
-  const patch = (id: string, p: Partial<PageObject>) => setObjects((os) => os.map((o) => (o.id === id ? { ...o, ...p } : o)));
+  const patch = (id: string, p: Partial<PageObject>) => ap.cambia(id, p) || setObjects((os) => os.map((o) => (o.id === id ? { ...o, ...p } : o)));
   const remove = (id: string) => {
     const a = ap.scelto(id);
     if (a) { elimina([{ page: a.page, id: a.id }]); return; }
@@ -103,12 +103,13 @@ export function StampPanel({ def, onClose }: { def: ToolDef; onClose: () => void
   const placeE = useEvent(place);
   const patchE = useEvent(patch);
   const removeE = useEvent(remove);
+  const dropE = useEvent((id: string) => { ap.lascia(id); });
   useEffect(() => {
     app.setInteraction({
       mode: "objects", objects: [...ap.boxes, ...objects], selectedId, onSelect: setSelectedId, onObjectChange: patchE, onObjectDelete: removeE,
-      onPlace: placeE, placeHint: selectedId ? undefined : `${verb} la pagina dove mettere il timbro`,
+      onObjectDrop: dropE, onPlace: placeE, placeHint: selectedId ? undefined : `${verb} la pagina dove mettere il timbro`,
     });
-  }, [objects, selectedId, verb, ap.items]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [objects, selectedId, verb, ap.boxes]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => app.setInteraction({ mode: "none" }), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const apply = async () => {
@@ -153,7 +154,7 @@ export function StampPanel({ def, onClose }: { def: ToolDef; onClose: () => void
       <div className="hint">{verb} la pagina dove mettere il timbro, poi trascinalo o allargalo dagli angoli. Puoi metterne più di uno, anche su pagine diverse.</div>
       {sel && <button className="btn small danger" style={{ alignSelf: "flex-start" }} onClick={() => remove(sel.id)}><Trash2 size={13} /> Togli questo timbro</button>}
       {scelto ? <ApplicatoScelto a={scelto} tutti={ap.items} onElimina={elimina} />
-        : ap.items.length > 0 && <div className="hint">{verb} un timbro già applicato per eliminarlo.</div>}
+        : ap.items.length > 0 && <div className="hint">{verb} un timbro già applicato per spostarlo o eliminarlo.</div>}
       <Advanced>
         {kind === "text" && (
           <>

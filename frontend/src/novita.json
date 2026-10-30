@@ -2,6 +2,65 @@
   "_info": "Novità di ogni versione, mostrate nella campanella dell'app e copiate dalla build in versione-<piattaforma>.json. tipo: nuovo | modifica | correzione | installer | ottimizzazione | rimosso. piattaforme: windows, macos, linux, android, ios, web (la web app per iPhone mostra anche le voci ios).",
   "versioni": [
     {
+      "versione": "1.5.0",
+      "data": "2026-10-30",
+      "titolo": "PDFz 1.5.0: firme da spostare, lettura a libro e presentazione",
+      "voci": [
+        {
+          "tipo": "nuovo",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android",
+            "ios"
+          ],
+          "dove": "Firma, Timbro, Aggiungi testo",
+          "titolo": "Sposta le firme già applicate",
+          "dettaglio": "Trascina la firma, il timbro o il testo già applicato dove vuoi; dagli angoli lo ingrandisci o lo rimpicciolisci."
+        },
+        {
+          "tipo": "nuovo",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android",
+            "ios"
+          ],
+          "dove": "Barra della pagina › Vista",
+          "titolo": "Due pagine e lettura a libro",
+          "dettaglio": "Una pagina o due affiancate (anche con la copertina da sola); scorrimento verticale o orizzontale, da sfogliare come un libro."
+        },
+        {
+          "tipo": "nuovo",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android",
+            "ios"
+          ],
+          "dove": "Ctrl+L oppure Vista › Presentazione",
+          "titolo": "Presentazione a schermo intero",
+          "dettaglio": "Una pagina alla volta su tutto lo schermo: avanti con →, spazio o clic, indietro con ←, uscita con Esc."
+        },
+        {
+          "tipo": "correzione",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android",
+            "ios"
+          ],
+          "dove": "Firma, Timbro, Immagini, Filigrana, Oscura",
+          "titolo": "Pagine ruotate",
+          "dettaglio": "Sulle pagine ruotate (scansioni) firme, timbri e immagini restano diritte, e lo sfocato copre la zona giusta."
+        }
+      ]
+    },
+    {
       "versione": "1.4.0",
       "data": "2026-10-24",
       "titolo": "PDFz 1.4.0: firme e timbri si eliminano anche dopo",

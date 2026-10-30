@@ -367,8 +367,9 @@ def add_image(ctx: Ctx) -> Result:
             h = w * pix.height / pix.width
             r = rect_from(position_rect(visual_rect(pg), w, h, ctx.params.get("position", "centro"),
                                         num(ctx.params.get("margin"), 15) * MM), pg)
+        # sulle pagine ruotate (scansioni) l'immagine va girata come la pagina, per apparire diritta
         pg.insert_image(r, stream=data, keep_proportion=keep, overlay=not behind,
-                        rotate=int(num(ctx.params.get("rotate"), 0)) % 360)
+                        rotate=(int(num(ctx.params.get("rotate"), 0)) + pg.rotation) % 360)
     return Result(pdf=ctx.save(doc), message="Immagine aggiunta.")
 
 
@@ -446,7 +447,7 @@ def images(ctx: Ctx) -> Result:
             pg = doc[pno]
             pg.insert_image(rect_from(it["rect"], pg), stream=data,
                             keep_proportion=boolean(it.get("keep_proportion"), True),
-                            overlay=not boolean(it.get("behind"), False), rotate=0)
+                            overlay=not boolean(it.get("behind"), False), rotate=pg.rotation)
             added += 1
     if not removed and not added:
         raise ToolError("Nessuna modifica: inserisci o rimuovi almeno un'immagine.")
@@ -557,7 +558,7 @@ def watermark(ctx: Ctx) -> Result:
             with marca(pg, "filigrana", "Immagine", gid=gid):
                 for r in spots:
                     pg.insert_image(rect_from(r, pg), stream=data, overlay=not behind,
-                                    rotate=int(round(angle / 90) * 90) % 360 if angle % 90 == 0 else 0)
+                                    rotate=((int(round(angle / 90) * 90) if angle % 90 == 0 else 0) + pg.rotation) % 360)
     flatten = boolean(ctx.params.get("to_image"), False)
     if flatten:
         from .security import rasterize_doc
@@ -667,7 +668,7 @@ def stamp(ctx: Ctx) -> Result:
         gid = gids.setdefault(repr(rect), nuovo_id())
         with marca(pg, "timbro", nome, box, gid):
             if image is not None:
-                pg.insert_image(rect_from(box, pg), stream=image, keep_proportion=True)
+                pg.insert_image(rect_from(box, pg), stream=image, keep_proportion=True, rotate=pg.rotation)
             else:
                 draw_stamp(pg, box, lines, col, ctx.params.get("font") or "hebo", opacity, angle,
                            border=boolean(ctx.params.get("border"), True))
@@ -711,7 +712,8 @@ def _draw_signature(pg: pymupdf.Page, it: dict, box: pymupdf.Rect, kind: str, im
             raise ToolError("Manca l'immagine della firma.")
         if aid not in image_cache:
             image_cache[aid] = _image_bytes(store.get(aid), 1.0)
-        pg.insert_image(rect_from(box, pg), stream=image_cache[aid], keep_proportion=True)
+        # pagina ruotata (scansione): la firma resta diritta come nell'anteprima
+        pg.insert_image(rect_from(box, pg), stream=image_cache[aid], keep_proportion=True, rotate=pg.rotation)
     else:
         text = it.get("text") or ""
         if not text.strip():
@@ -836,7 +838,7 @@ def _blur_area(page: pymupdf.Page, rect: pymupdf.Rect, heavy: bool) -> bytes:
     from PIL import Image, ImageFilter
 
     dpi = 110
-    pix = page.get_pixmap(clip=rect, dpi=dpi, annots=False)
+    pix = page.get_pixmap(clip=rect, dpi=dpi, annots=False)   # rect visivo: get_pixmap ritaglia la pagina come si vede
     im = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
     factor = 14 if heavy else 5
     small = im.resize((max(1, im.width // factor), max(1, im.height // factor)), Image.BILINEAR)
@@ -876,7 +878,7 @@ def redact(ctx: Ctx) -> Result:
         r = rect_from(a["rect"], pg)
         if effect.startswith("blur"):
             # l'immagine sfocata viene presa PRIMA di eliminare il contenuto
-            blurred.append((pno, r, _blur_area(pg, r, heavy=effect == "blur_heavy")))
+            blurred.append((pno, r, _blur_area(pg, r * pg.rotation_matrix, heavy=effect == "blur_heavy")))
             pg.add_redact_annot(r, fill=False)
         else:
             pg.add_redact_annot(r, text=label, fill=fill,
@@ -887,7 +889,7 @@ def redact(ctx: Ctx) -> Result:
                                   graphics=pymupdf.PDF_REDACT_LINE_ART_REMOVE_IF_COVERED)
     for pno, r, data in blurred:
         pg = doc[pno]
-        pg.insert_image(r, stream=data, keep_proportion=False, rotate=(-pg.rotation) % 360)
+        pg.insert_image(r, stream=data, keep_proportion=False, rotate=pg.rotation)   # presa diritta: si gira come la pagina
     if boolean(ctx.params.get("remove_metadata"), True):
         doc.set_metadata({})
         doc.del_xml_metadata()

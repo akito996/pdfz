@@ -638,6 +638,21 @@ def test_redact_blur_rotated_page():
     assert any(abs(v.x0 - r["x"]) < 2 and abs(v.width - r["w"]) < 2 for v in vis), vis
 
 
+@pytest.mark.parametrize("rot", [90, 270])
+def test_redact_blur_rotated_page_resta_diritto(rot):
+    """Lo sfocato su una pagina ruotata non viene capovolto: a sinistra resta il blu, a destra il rosso."""
+    d0 = pymupdf.open()
+    pg = d0.new_page()
+    pg.set_rotation(rot)
+    for r, col in (((100, 100, 200, 200), (0, 0, 1)), ((200, 100, 300, 200), (1, 0, 0))):
+        pg.draw_rect(pymupdf.Rect(r) * pg.derotation_matrix, color=col, fill=col)
+    src = open_doc(d0.tobytes())["id"]
+    d = load(run("redact", src, areas=[{"page": 0, "rect": {"x": 100, "y": 100, "w": 200, "h": 100}}], effect="blur_light")["doc"]["id"])
+    shot = d[0].get_pixmap(dpi=72)
+    sx, dx = shot.pixel(115, 150), shot.pixel(285, 150)
+    assert sx[2] > sx[0] and dx[0] > dx[2], (sx, dx)
+
+
 def test_organize_insert_from_other_pdf(doc):
     other = open_doc(make_pdf(2, "Allegato"))["id"]
     res = run("organize", doc, order=[{"page": 0}, {"src": other, "page": 1}, {"page": 2}, {"page": None}])
@@ -756,6 +771,57 @@ def test_oggetti_applicati_eliminati_pagina_come_prima():
     assert [pg.get_pixmap(dpi=50).samples for pg in d] == prima
 
 
+def test_oggetti_applicati_si_spostano():
+    """Firma e timbro già applicati si spostano e si ridimensionano; le copie sulle altre pagine restano dove sono."""
+    firma = asset(png_bytes(120, 60), "firma.png")
+    src = open_doc(make_pdf(pages=2))["id"]
+    d1 = run("sign_visual", src, items=[{"type": "image", "image": firma, "page": 0, "rect": {"x": 300, "y": 600, "w": 150, "h": 75},
+                                         "all_pages": True}])["doc"]["id"]
+    d2 = run("stamp", d1, preset="approvato", items=[{"page": 1, "rect": {"x": 60, "y": 300, "w": 200, "h": 70}}])["doc"]["id"]
+    voci = run("list_applied", d2)["data"]["items"]
+    f0 = next(v for v in voci if v["tipo"] == "firma" and v["page"] == 0)
+    nuovo = {"x": 100, "y": 100, "w": 300, "h": 150}
+    res = run("move_applied", d2, page=0, id=f0["id"], rect=nuovo)
+    assert res["message"] == "Firma spostata."
+    d3 = res["doc"]["id"]
+    d = load(d3)
+    sig = [i for i in d[0].get_image_info() if i["width"] == 120]
+    assert len(sig) == 1 and all(abs(a - b) < 0.6 for a, b in zip(sig[0]["bbox"], (100, 100, 400, 250)))
+    altra = [i for i in d[1].get_image_info() if i["width"] == 120]
+    assert all(abs(a - b) < 0.6 for a, b in zip(altra[0]["bbox"], (300, 600, 450, 675)))
+    voci = run("list_applied", d3)["data"]["items"]
+    assert next(v for v in voci if v["page"] == 0)["rect"] == nuovo
+    # timbro: due spostamenti di seguito, poi si elimina come prima
+    t = next(v for v in voci if v["tipo"] == "timbro")
+    d4 = run("move_applied", d3, page=1, id=t["id"], rect={"x": 300, "y": 50, "w": 200, "h": 70})["doc"]["id"]
+    d5 = run("move_applied", d4, page=1, id=t["id"], rect={"x": 300, "y": 400, "w": 100, "h": 35})["doc"]["id"]
+    parole = [w for w in load(d5)[1].get_text("words") if w[4] == "APPROVATO"]
+    assert parole and 300 <= parole[0][0] and parole[0][2] <= 400 and 400 <= parole[0][1] and parole[0][3] <= 435
+    d6 = run("remove_applied", d5, items=[{"page": 1, "id": t["id"]}])["doc"]["id"]
+    assert "APPROVATO" not in load(d6)[1].get_text()
+    run("move_applied", d6, page=1, id=t["id"], rect=nuovo, expect=400)
+
+
+@pytest.mark.parametrize("rot", [90, 180, 270])
+def test_firma_immagine_diritta_su_pagina_ruotata(rot):
+    """Sulle pagine ruotate (scansioni) firme e immagini restano diritte come nell'anteprima: prima finivano di traverso."""
+    pix = pymupdf.Pixmap(pymupdf.csRGB, pymupdf.IRect(0, 0, 120, 60), 0)
+    pix.set_rect(pix.irect, (200, 30, 30))
+    pix.set_rect(pymupdf.IRect(0, 0, 30, 15), (30, 30, 200))   # angolo in alto a sinistra blu
+    firma = asset(pix.tobytes("png"), "firma.png")
+    d0 = pymupdf.open("pdf", make_pdf(pages=1))
+    d0[0].set_rotation(rot)
+    src = open_doc(d0.tobytes())["id"]
+    w, h = (842, 595) if rot in (90, 270) else (595, 842)
+    box = {"x": w / 2 - 60, "y": h / 2 - 30, "w": 120, "h": 60}
+    for tool, params in (("sign_visual", {"items": [{"type": "image", "image": firma, "page": 0, "rect": box}]}),
+                         ("images", {"items": [{"image": firma, "page": 0, "rect": box}]})):
+        pg = load(run(tool, src, **params)["doc"]["id"])[0]
+        shot = pg.get_pixmap(dpi=72)
+        assert shot.pixel(int(box["x"]) + 5, int(box["y"]) + 4) == (30, 30, 200), (tool, rot)
+        assert shot.pixel(int(box["x"]) + 115, int(box["y"]) + 55) == (200, 30, 30), (tool, rot)
+
+
 def test_oggetti_applicati_dopo_oscura_e_pagina_ruotata():
     d0 = pymupdf.open("pdf", make_pdf(pages=1))
     d0[0].set_rotation(90)
@@ -767,6 +833,15 @@ def test_oggetti_applicati_dopo_oscura_e_pagina_ruotata():
     d2 = run("redact", d1, presets=["email"])["doc"]["id"]
     voce = run("list_applied", d2)["data"]["items"][0]
     assert all(abs(voce["rect"][k] - box[k]) < 0.5 for k in box)
+    # spostata sulla pagina ruotata: il riquadro visivo è quello scelto
+    altro = {"x": 100, "y": 50, "w": 150, "h": 50}
+    d2 = run("move_applied", d2, page=0, id=voce["id"], rect=altro)["doc"]["id"]
+    voce = run("list_applied", d2)["data"]["items"][0]
+    assert all(abs(voce["rect"][k] - altro[k]) < 0.5 for k in altro)
+    pg = load(d2)[0]
+    atteso = pymupdf.Rect(100, 50, 250, 100) * pg.derotation_matrix   # la firma (2:1) sta al centro del riquadro (3:1)
+    img = pymupdf.Rect(next(i for i in pg.get_image_info() if i["width"] == 120)["bbox"])
+    assert img in atteso + (-0.6, -0.6, 0.6, 0.6) and abs(img.x0 - atteso.x0) < 0.6 and abs(img.x1 - atteso.x1) < 0.6
     d = load(run("remove_applied", d2, items=[voce])["doc"]["id"])
     assert (120, 60) not in _immagini_nel_file(d) and "Titolo pagina 1" in d[0].get_text()
 

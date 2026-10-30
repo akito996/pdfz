@@ -83,6 +83,7 @@ export interface Interaction {
   onSelect?: (id: string | null) => void;
   onObjectChange?: (id: string, patch: Partial<PageObject>) => void;
   onObjectDelete?: (id: string) => void;
+  onObjectDrop?: (id: string) => void;   // fine di uno spostamento o ridimensionamento (oggetti già applicati)
   onPlace?: (page: number, pt: { x: number; y: number }) => void;
   onDraw?: (page: number, rect: VRect, start: { x: number; y: number }, end: { x: number; y: number }) => void;
   hideAnnotations?: boolean;   // non disegnare le annotazioni del PDF (sono mostrate come oggetti)

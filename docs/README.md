@@ -15,7 +15,7 @@ Serve a ritrovare in fretta le informazioni senza rileggere vecchie chat.
 | [macos-linux-iphone.md](macos-linux-iphone.md) | Build per Mac (DMG), Linux (AppImage, anche da Windows con WSL) e iPhone (Xcode), prerequisiti e limiti | Prima di compilare o installare su Mac, Linux o iPhone |
 | [cloudflare-aggiornamenti.md](cloudflare-aggiornamenti.md) | Sito degli aggiornamenti su Cloudflare (Pages + R2) per il repository privato: come è fatto, cosa configurare, ordine del passaggio | Prima di rendere privato il repository o se il sito non si aggiorna |
 | [web-app-iphone.md](web-app-iphone.md) | Web app per iPhone ("Aggiungi alla schermata Home"): installazione, limiti, build `build-web.mjs`, service worker, 3 strade per pubblicarla | Prima di pubblicare o provare la versione web, o se l'iPhone non aggiorna/salva |
-| [oggetti-applicati.md](oggetti-applicati.md) | Firme, timbri, testi, filigrane e numeri di pagina eliminabili dopo "Applica": segno nel PDF, come si ritrovano e si tolgono, firme digitali, limiti | Prima di aggiungere uno strumento che scrive sulle pagine o se un oggetto non si elimina |
+| [oggetti-applicati.md](oggetti-applicati.md) | Firme, timbri, testi, filigrane e numeri di pagina eliminabili (e spostabili) dopo "Applica": segno nel PDF, come si ritrovano e si tolgono, firme digitali, limiti | Prima di aggiungere uno strumento che scrive sulle pagine o se un oggetto non si elimina |
 | [conversioni.md](conversioni.md) | Motori di conversione (Word, LibreOffice, pdf2docx…) e gestione dei file bloccati | Quando si tocca "Converti" o compare `PermissionError` |
 | [branding.md](branding.md) | Marchio PDFz: icone, favicon, temi colore e come cambiarli | Prima di cambiare colori, logo, icone o aggiungere un tema |
 | [decisioni.md](decisioni.md) | Registro delle decisioni (data, versione, opzioni valutate, scelta, motivo) | Prima di cambiare qualcosa "che sembra strano" |
@@ -24,7 +24,7 @@ Serve a ritrovare in fretta le informazioni senza rileggere vecchie chat.
 Altri file utili nella radice del progetto: `README.md` (panoramica e comandi), `CHANGELOG.md` (novità per versione,
 usate anche come note della GitHub Release), `frontend/src/novita.json` (novità mostrate nella campanella dell'app).
 
-Ultimo aggiornamento: **1.4.0** — 2026-10-24 (firme, timbri e testi applicati eliminabili; pannello e caselle di testo sul telefono).
+Ultimo aggiornamento: **1.5.0** — 2026-10-30 (oggetti applicati spostabili, Vista: due pagine e libro, presentazione Ctrl+L, pagine ruotate).
 
 **Flusso:** si modifica nel repository `C:\Dev\10_PDFz` (GitHub `akito996/pdfz`, ramo `main`); si compila con
 `packaging\copia-e-build.ps1` (o `.sh`) nelle copie `C:\Build\PDFz-Windows`, `C:\Build\PDFz-Android`, `~/Build/PDFz-Linux`

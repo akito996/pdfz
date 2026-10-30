@@ -199,11 +199,11 @@ class _Lettore:
 
 
 def _sequenze(data: bytes):
-    """Sequenze /PDFz più esterne del flusso: (proprietà, inizio, fine) in byte."""
+    """Sequenze /PDFz più esterne del flusso: (proprietà, inizio, fine, dopo BDC, inizio di EMC) in byte."""
     lt = _Lettore(data)
     operandi: list = []
     inizio = None
-    aperte: list = []   # pila di (proprietà o None, inizio)
+    aperte: list = []   # pila di (proprietà o None, inizio, fine di BDC)
     while True:
         k, v, pos = lt.prossimo()
         if k == "fine":
@@ -217,11 +217,11 @@ def _sequenze(data: bytes):
             props = None
             if v == b"BDC" and len(operandi) >= 2 and operandi[-2] == ("name", _ETICHETTA.decode()) and operandi[-1][0] == "dict":
                 props = operandi[-1][1]
-            aperte.append((props, inizio if inizio is not None else pos))
+            aperte.append((props, inizio if inizio is not None else pos, lt.i))
         elif v == b"EMC" and aperte:
-            props, da = aperte.pop()
-            if props is not None and not any(p is not None for p, _ in aperte):
-                yield props, da, lt.i
+            props, da, dopo = aperte.pop()
+            if props is not None and not any(p is not None for p, _a, _b in aperte):
+                yield props, da, lt.i, dopo, pos
         operandi, inizio = [], None
 
 
@@ -250,7 +250,7 @@ def elenca(doc: pymupdf.Document, tipi=None) -> list[dict]:
     for page in doc:
         visti: dict[str, dict] = {}
         for _x, data in _flussi(doc, page):
-            for props, _a, _b in _sequenze(data):
+            for props, *_ in _sequenze(data):
                 tipo, gid = _nome(props.get("Tipo")), _testo(props.get("Id"))
                 if not gid or tipo not in TIPI or (tipi and tipo not in tipi):
                     continue
@@ -307,7 +307,7 @@ def togli(doc: pymupdf.Document, voci: list[dict]) -> list[tuple[int, str]]:
         trovati: set[str] = set()
         for x, data in list(_flussi(doc, page)):
             tagli = []
-            for props, a, b in _sequenze(data):
+            for props, a, b, *_ in _sequenze(data):
                 gid = _testo(props.get("Id"))
                 if gid in ids:
                     tagli.append((a, b))
@@ -342,7 +342,76 @@ def messaggio(tipi: set[str], tolti: list[tuple[int, str]]) -> str:
     return testo + (f" da {pagine} pagine." if pagine > 1 else ".")
 
 
+def _oggetto_pdf(v) -> bytes:
+    """Valore letto da _Lettore di nuovo in sintassi PDF (per riscrivere le proprietà della sequenza)."""
+    if isinstance(v, str):
+        return b"/" + v.encode("latin-1")
+    if isinstance(v, (bytes, bytearray)):
+        return b"<" + bytes(v).hex().upper().encode() + b">"
+    if isinstance(v, float):
+        return f"{v:.2f}".rstrip("0").rstrip(".").encode() or b"0"
+    if isinstance(v, list):
+        return b"[" + b" ".join(_oggetto_pdf(x) for x in v) + b"]"
+    if isinstance(v, dict):
+        return b"<<" + b" ".join(b"/" + k.encode("latin-1") + b" " + _oggetto_pdf(x) for k, x in v.items()) + b">>"
+    return v if isinstance(v, bytes) else b"null"
+
+
+def sposta(doc: pymupdf.Document, pagina: int, gid: str, rect) -> bool:
+    """Sposta (e ridimensiona) l'oggetto gid della pagina nel riquadro visivo rect: il suo contenuto viene racchiuso
+    in "q a 0 0 d e f cm … Q", che porta il riquadro vecchio (R) su quello nuovo, e R viene aggiornato.
+    Le copie sulle altre pagine restano dove sono. Restituisce False se l'oggetto non c'è o non ha il riquadro."""
+    page = doc[pagina]
+    nuovo = rect_from(rect, page) * ~page.transformation_matrix
+    nuovo.normalize()
+    usi: dict[int, int] = {}
+    for pg in doc:
+        for x in pg.get_contents():
+            usi[x] = usi.get(x, 0) + 1
+    fatto = False
+    for x, data in list(_flussi(doc, page)):
+        pezzi = [s for s in _sequenze(data) if _testo(s[0].get("Id")) == gid]
+        if not pezzi:
+            continue
+        out, pos = bytearray(), 0
+        for props, da, _fine, dopo, emc in pezzi:
+            r = props.get("R")
+            if not (isinstance(r, list) and len(r) == 4 and all(isinstance(n, float) for n in r)):
+                return False
+            vecchio = pymupdf.Rect(*r)
+            if vecchio.width <= 0 or vecchio.height <= 0:
+                return False
+            a, d = nuovo.width / vecchio.width, nuovo.height / vecchio.height
+            e, f = nuovo.x0 - a * vecchio.x0, nuovo.y0 - d * vecchio.y0
+            props = {**props, "R": [nuovo.x0, nuovo.y0, nuovo.x1, nuovo.y1]}
+            out += data[pos:da] + b"/PDFz " + _oggetto_pdf(props) + b" BDC\n"
+            out += f"q {a:.6f} 0 0 {d:.6f} {e:.3f} {f:.3f} cm\n".encode() + data[dopo:emc] + b"\nQ\nEMC"
+            pos = emc + 3
+        out += data[pos:]
+        if usi.get(x, 1) > 1:
+            usi[x] -= 1
+            x = _copia_flusso(doc, page, x)
+        doc.update_stream(x, bytes(out))
+        fatto = True
+    return fatto
+
+
 # ------------------------------------------------------------------ strumenti
+
+
+@tool("move_applied")
+def move_applied(ctx: Ctx) -> Result:
+    """params: page, id, rect (riquadro visivo nuovo). Sposta o ridimensiona un oggetto applicato su quella pagina."""
+    p = ctx.params
+    if p.get("id") is None or p.get("page") is None or not p.get("rect"):
+        raise ToolError("Indica che cosa spostare e dove.")
+    doc = ctx.open()
+    tipo = next((v["tipo"] for v in elenca(doc) if v["id"] == str(p["id"]) and v["page"] == int(p["page"])), None)
+    if not tipo or not sposta(doc, int(p["page"]), str(p["id"]), p["rect"]):
+        doc.close()
+        raise ToolError("Non l'ho trovato nel documento: forse è già stato eliminato.")
+    nome, _plurale, f = TIPI[tipo]
+    return Result(pdf=ctx.save(doc), message=f"{nome[0].upper()}{nome[1:]} spostat{'a' if f else 'o'}.")
 
 
 @tool("list_applied")

@@ -86,8 +86,15 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
 - **Oggetti applicati** (`tools/applicati.py`, `docs/oggetti-applicati.md`): ogni strumento che scrive nel contenuto della
   pagina (firma grafica, timbro, testo aggiunto, filigrana, numeri di pagina e i prossimi) racchiude quello che aggiunge
   in `with marca(pagina, tipo, nome, riquadro, id):`, così si ritrova (`list_applied`) e si elimina (`remove_applied`)
-  anche dopo "Applica". Nell'interfaccia: `panels/applicati.tsx` (riquadri bloccati sulla pagina, "Elimina", elenco).
+  anche dopo "Applica", e si sposta o ridimensiona (`move_applied`, dalla 1.5.0). Nell'interfaccia: `panels/applicati.tsx`
+  (riquadri sulla pagina da trascinare, "Elimina", elenco; `onObjectDrop` alla fine del trascinamento).
   Le firme digitali si eliminano per campo (`list_signatures`, `remove_signature` con `fields`).
+- **Lettura e presentazione** (`components/Viewer.tsx`, `components/Presentazione.tsx`): pulsante Vista (una o due pagine,
+  copertina da sola, verticale o "a libro"; `hdpdf.vista`), Ctrl+L = presentazione a schermo intero (app desktop:
+  `Api.schermo_intero`, pywebview sa solo invertire lo stato). Le finestrelle dei pulsanti in basso (telefono) si aprono
+  verso l'alto (`Popover`).
+- **Immagini sulle pagine ruotate**: ogni `insert_image` vuole `rotate=page.rotation` (resta diritta come la si vede);
+  `get_pixmap(clip=…)` vuole il riquadro visivo.
 - **Modifica testo**: la riga originale si cancella con una fascia sottile all'altezza delle minuscole (`_area_da_cancellare`
   in `tools/content.py`), mai con il riquadro della riga: dipende dalle metriche del carattere e cancellava le righe vicine.
 - **Colori**: solo variabili CSS (`--brand`, `--on-brand`, `rgba(var(--brand-rgb), …)`), mai codici del vecchio marchio o
@@ -108,9 +115,9 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   esplicito: `git push https://akito996@github.com/akito996/pdfz.git pdfz:main` (con l'altro account: errore 403).
   Il token di `gh` (akito996) legge i registri della pipeline ma non può annullarla.
 
-## Stato attuale (2026-10-24)
+## Stato attuale (2026-10-30)
 
-- Versione nel codice: **1.4.0** di PDFz (oggetti applicati eliminabili; pannello e caselle di testo sul telefono). Marchio applicato ovunque (2026-10-22, versione 1.3.0): **icona e favicon 24
+- Versione nel codice: **1.5.0** di PDFz (oggetti applicati spostabili, Vista e presentazione Ctrl+L, pagine ruotate). Marchio applicato ovunque (2026-10-22, versione 1.3.0): **icona e favicon 24
   "Foglio senza fondo"** — documento bianco con contorno nero, piega d'oro, "PDF" rosso, "z" nera, nessun fondo attorno
   (iPhone e icona adattiva Android su fondo bianco); prima la 19 (2026-10-21) e la 17 "Foglio oro" (inviata), palette predefinita Rubino,
   5 palette selezionabili, avvisi solo con le finestre dell'app (provati nel browser: Oscura, domanda annidata dopo
@@ -211,6 +218,15 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   le stesse dimensioni (MSI 131,6 MB, DMG 158,5 MB, AppImage 175,1 MB, APK 64,6 MB), sorgente, web app 1.4.0 in `/app/`,
   `versione-*.json` = 1.4.0 con le 4 novità. Link mandati.
 
+- **Versione 1.5.0** (2026-10-30): **firme, timbri e testi già applicati si spostano e si ridimensionano** (trascinando
+  sulla pagina; `move_applied`), **Vista** (una o due pagine, copertina da sola, verticale o orizzontale a libro) e
+  **presentazione a schermo intero con Ctrl+L**; correzione delle immagini sulle pagine ruotate (firme, timbri,
+  Immagini, filigrane di traverso; sfocato di Oscura della zona sbagliata). Provato: 11 test nuovi (88
+  passati, 2 saltati con PyMuPDF 1.28.2 e 2.0); nel browser a 1280×800 (spostamento e ridimensionamento della firma,
+  due pagine, libro con copertina, frecce, presentazione e uscita) e nella web app per iPhone a 375 px (menu Vista
+  verso l'alto, libro, presentazione, firma spostata con il motore Pyodide); Ctrl+L nell'app desktop vera (finestra
+  da 1440×900 a 1920×1080 e ritorno). Non provato su un telefono vero né lo scorrimento col dito vero nel libro.
+
 ## Punti aperti
 
 1. **Copia di riserva della chiave Android**: `C:\Dev\PDFz-chiave-android` (`pdfz-release.jks` + `password.txt`, creata
@@ -242,3 +258,6 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
    immagine: strumento Immagini; firme e timbri di testo: Oscura). Dopo "Ridimensiona pagine" (la pagina diventa un
    oggetto dentro una pagina nuova) gli oggetti applicati prima non si ritrovano più. Pannello ingrandibile e caselle
    di testo grandi provati solo in vista telefono nel browser.
+12. **Presentazione sull'iPhone**: Safari non ha lo schermo intero per le pagine (solo per i video): la presentazione
+   copre la pagina dell'app ma restano le barre di Safari, salvo nella web app aggiunta alla Home. Il libro su
+   Android/iPhone (scorrimento col dito con aggancio) è provato solo con il mouse in vista telefono.

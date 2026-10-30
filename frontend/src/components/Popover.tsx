@@ -23,7 +23,7 @@ export function Popover({ anchor, onClose, width, className = "", role = "dialog
   const box = useRef<HTMLDivElement>(null);
   const close = useRef(onClose);
   close.current = onClose;
-  const [pos, setPos] = useState<{ top: number; left: number; width: number; maxHeight: number } | null>(null);
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; width: number; maxHeight: number } | null>(null);
 
   useLayoutEffect(() => {
     const place = () => {
@@ -33,7 +33,10 @@ export function Popover({ anchor, onClose, width, className = "", role = "dialog
       const w = Math.min(width, vw - 16);
       const left = Math.min(Math.max(8, a.right - w), vw - w - 8);   // allineata a destra del pulsante, dentro lo schermo
       const top = Math.round(a.bottom + 6);
-      setPos({ top, left: Math.round(left), width: Math.round(w), maxHeight: Math.max(160, vh - top - 12) });
+      const sotto = vh - top - 12, sopra = a.top - 18;
+      // pulsante in basso (barra pagina/zoom del telefono): la finestrella si apre verso l'alto
+      if (sotto < 240 && sopra > sotto) setPos({ bottom: Math.round(vh - a.top + 6), left: Math.round(left), width: Math.round(w), maxHeight: sopra });
+      else setPos({ top, left: Math.round(left), width: Math.round(w), maxHeight: Math.max(160, sotto) });
     };
     place();
     window.addEventListener("resize", place);
@@ -56,7 +59,7 @@ export function Popover({ anchor, onClose, width, className = "", role = "dialog
 
   return createPortal(
     <div ref={box} className={`pop ${className}`} role={role} aria-label={label}
-      style={pos ? { top: pos.top, left: pos.left, width: pos.width, maxHeight: pos.maxHeight } : { visibility: "hidden" }}>
+      style={pos ? { top: pos.top, bottom: pos.bottom, left: pos.left, width: pos.width, maxHeight: pos.maxHeight } : { visibility: "hidden" }}>
       {children}
     </div>,
     document.body,
