@@ -128,7 +128,7 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
 
 ## Stato attuale (2026-10-30)
 
-- Versione nel codice: **1.6.2** di PDFz (sito degli aggiornamenti su https://pdfz.agjin.com/; la 1.6.1 non è uscita). Marchio applicato ovunque (2026-10-22, versione 1.3.0): **icona e favicon 24
+- Versione nel codice: **1.7.0** di PDFz (vista semplice con la barra in alto e il menu «Tutti gli strumenti»). Marchio applicato ovunque (2026-10-22, versione 1.3.0): **icona e favicon 24
   "Foglio senza fondo"** — documento bianco con contorno nero, piega d'oro, "PDF" rosso, "z" nera, nessun fondo attorno
   (iPhone e icona adattiva Android su fondo bianco); prima la 19 (2026-10-21) e la 17 "Foglio oro" (inviata), palette predefinita Rubino,
   5 palette selezionabili, avvisi solo con le finestre dell'app (provati nel browser: Oscura, domanda annidata dopo
@@ -259,7 +259,18 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   app dalla 1.3.1 alla 1.6.0 e **non va spento né reindirizzato**. La pagina ha link relativi (`sito_aggiornamenti.py`),
   così da iPhone e iPad la web app si apre sull'indirizzo da cui si è entrati. La 1.6.1 si è fermata perché la variabile
   era `pdfz.agjin.com` senza `https://` (ora si completa da sola; tag `v1.6.1` senza release). **Versione 1.6.2** compilata con il nuovo
-  indirizzo (`docs/cloudflare-aggiornamenti.md`).
+  indirizzo (`docs/cloudflare-aggiornamenti.md`). **Release v1.6.2 pubblicata** (commit `1287a01`): Release in 6 minuti,
+  sito aggiornato dopo 9. Verificato senza login: 4 download da pdfz.agjin.com e da GitHub con le stesse dimensioni (MSI
+  131,8 MB, DMG 159,8 MB, AppImage 175,2 MB, APK 64,6 MB), sorgente, `/app/`; su pdfz.agjin.com e su pdfz.pages.dev il
+  pulsante della web app porta a `app/` (relativo). Link mandati.
+
+- **Versione 1.7.0** (2026-10-30): vista semplice come nelle foto dell'autore (`docs/facilita-uso.md`, B): sul computer
+  barra in alto con Firma, Scrivi, Modifica testo, Timbro, Evidenzia e note, Pagine, «Tutti gli strumenti» (menu con
+  ricerca, sezioni e descrizione breve) e «Vista completa»; nomi corti sotto i 1000 px; sul telefono stessi pulsanti in
+  basso con «Altro» che apre lo stesso menu. Vista completa con «Passa alla vista semplice». Schermata iniziale come
+  nelle foto (riquadri orizzontali, «Trasforma in Word», «Apri un PDF» e «Tutti gli strumenti»), guide per Evidenzia e
+  note e Trasforma in Word. Colori della palette di PDFz. Provato nel browser (1400, 1000, 800 px e telefono 375 px) e
+  nella web app a 375 px. Non provato su un telefono vero.
 
 ## Punti aperti
 

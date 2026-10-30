@@ -11,10 +11,11 @@ import { createPortal } from "react-dom";
  * Resta aperta finché l'utente non la chiude: tocco fuori (che arriva comunque a ciò che si tocca), Esc, oppure il
  * pulsante che l'ha aperta. Larghezza e altezza si adattano allo schermo (sul telefono il contenuto scorre).
  */
-export function Popover({ anchor, onClose, width, className = "", role = "dialog", label, children }: {
+export function Popover({ anchor, onClose, width, allinea = "destra", className = "", role = "dialog", label, children }: {
   anchor: RefObject<HTMLElement | null>;
   onClose: () => void;
   width: number;
+  allinea?: "destra" | "sinistra";   // lato del pulsante a cui si allinea (poi resta comunque dentro lo schermo)
   className?: string;
   role?: "dialog" | "menu";
   label?: string;
@@ -31,7 +32,7 @@ export function Popover({ anchor, onClose, width, className = "", role = "dialog
       if (!a) return;
       const vw = window.innerWidth, vh = window.innerHeight;
       const w = Math.min(width, vw - 16);
-      const left = Math.min(Math.max(8, a.right - w), vw - w - 8);   // allineata a destra del pulsante, dentro lo schermo
+      const left = Math.min(Math.max(8, allinea === "destra" ? a.right - w : a.left), vw - w - 8);   // dentro lo schermo
       const top = Math.round(a.bottom + 6);
       const sotto = vh - top - 12, sopra = a.top - 18;
       // pulsante in basso (barra pagina/zoom del telefono): la finestrella si apre verso l'alto
@@ -41,7 +42,7 @@ export function Popover({ anchor, onClose, width, className = "", role = "dialog
     place();
     window.addEventListener("resize", place);
     return () => window.removeEventListener("resize", place);
-  }, [anchor, width]);
+  }, [anchor, width, allinea]);
 
   useEffect(() => {
     // tocco o clic fuori: chiude, ma il tocco arriva lo stesso a ciò che si è toccato (niente "doppio tocco");

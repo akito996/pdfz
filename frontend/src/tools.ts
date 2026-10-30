@@ -43,6 +43,7 @@ export interface ToolDef {
   category: string;
   icon: LucideIcon;
   description: string;
+  breve?: string;            // descrizione in poche parole (menu "Tutti gli strumenti" della vista semplice)
   endpoint?: string;
   panel: PanelKind;
   fields?: Field[];
@@ -463,6 +464,27 @@ const ANCHE: Record<string, string> = {
   sign: "firmare sigla", add_text: "scrivi compila modulo campo", marks: "compila modulo casella", organize: "ruota elimina pagine ordine",
 };
 for (const t of TOOLS) if (ANCHE[t.id]) t.keywords = `${t.keywords || ""} ${ANCHE[t.id]}`.trim();
+
+// cosa fa ogni strumento in poche parole: sotto il nome nel menu "Tutti gli strumenti" (vista semplice, 1.7.0)
+const BREVE: Record<string, string> = {
+  edit_text: "cambia le parole già scritte", add_text: "scrivi dove vuoi o compila un modulo", images: "inserisci o togli immagini",
+  shapes: "rettangoli, cerchi, frecce, linee", marks: "segni di spunta nelle caselle dei moduli", attach: "unisci un file al PDF",
+  watermark: "scritta di sfondo, es. BOZZA", stamp: "Approvato, Ricevuto, Pagato…", redact: "nascondi per sempre dati sensibili",
+  merge: "più PDF in uno solo", organize: "sposta, gira o togli pagine", extract_pages: "salva alcune pagine in un file a parte",
+  remove_pages: "togli le pagine che non servono", rotate: "raddrizza le pagine storte", crop: "togli i bordi bianchi",
+  resize: "cambia formato (A4, A3…)", page_numbers: "numera le pagine", create_index: "pagina con l'elenco dei capitoli",
+  sign: "firma a mano o con il certificato", p7m: "apri e verifica i file .p7m", add_password: "proteggi il file con una password",
+  remove_password: "togli la protezione", password_info: "che protezione ha il file", remove_signature: "togli una firma con certificato",
+  sanitize: "togli dati nascosti e informazioni personali", unlock_forms: "rendi compilabile un modulo bloccato",
+  flatten: "rendi fissi campi e note", compress: "file più leggero, da mandare per email", compare: "trova le differenze fra due PDF",
+  ocr: "rendi cercabile il testo delle scansioni", info: "pagine, caratteri, immagini, sicurezza", validate: "cerca errori nel file e nelle firme",
+  comments: "evidenzia, sottolinea, aggiungi note", properties: "titolo, autore, parole chiave", toc: "capitoli nel menu laterale del PDF",
+  convert_from_pdf: "Word, Excel, PowerPoint, immagini…", create_pdf: "da foto, Word, Excel e altri file",
+};
+for (const t of TOOLS) if (BREVE[t.id]) t.breve = BREVE[t.id];
+
+/** testo in cui la ricerca degli strumenti cerca (menu a sinistra e "Tutti gli strumenti") */
+export const testoRicerca = (t: ToolDef) => `${t.label} ${t.description} ${t.breve || ""} ${t.keywords || ""}`.toLowerCase();
 
 export const TOOL_BY_ID = Object.fromEntries(TOOLS.map((t) => [t.id, t]));
 

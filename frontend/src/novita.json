@@ -2,6 +2,52 @@
   "_info": "Novità di ogni versione, mostrate nella campanella dell'app e copiate dalla build in versione-<piattaforma>.json. tipo: nuovo | modifica | correzione | installer | ottimizzazione | rimosso. piattaforme: windows, macos, linux, android, ios, web (la web app per iPhone mostra anche le voci ios).",
   "versioni": [
     {
+      "versione": "1.7.0",
+      "data": "2026-10-30",
+      "titolo": "PDFz 1.7.0: vista semplice con i pulsanti in alto",
+      "voci": [
+        {
+          "tipo": "modifica",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android",
+            "ios"
+          ],
+          "dove": "Barra degli strumenti",
+          "titolo": "Vista semplice con i pulsanti in alto",
+          "dettaglio": "Firma, Scrivi, Modifica testo, Timbro, Evidenzia e note e Pagine in una barra in alto (sul telefono in basso); «Tutti gli strumenti» apre un menu con la ricerca e due parole su cosa fa ogni strumento."
+        },
+        {
+          "tipo": "modifica",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android",
+            "ios"
+          ],
+          "dove": "Menu a sinistra",
+          "titolo": "Passare da una vista all'altra",
+          "dettaglio": "«Vista completa» a destra della barra e «Passa alla vista semplice» sotto la ricerca del menu a sinistra."
+        },
+        {
+          "tipo": "modifica",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android",
+            "ios"
+          ],
+          "dove": "Schermata iniziale",
+          "titolo": "Cosa vuoi fare? più ordinata",
+          "dettaglio": "Riquadri con l'icona a sinistra, «Apri un PDF» e «Tutti gli strumenti», file recenti su una riga."
+        }
+      ]
+    },
+    {
       "versione": "1.6.2",
       "data": "2026-10-30",
       "titolo": "PDFz 1.6.2: nuovo indirizzo pdfz.agjin.com",

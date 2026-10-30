@@ -1,5 +1,19 @@
 # Novità
 
+## 1.7.0
+Vista semplice con i pulsanti in alto e il menu «Tutti gli strumenti»; schermata iniziale più ordinata.
+
+- **Vista semplice** (modifica, tutti i sistemi): sul computer i pulsanti più usati sono in una barra in alto, con
+  icona e nome (Firma, Scrivi, Modifica testo, Timbro, Evidenzia e note, Pagine); «Tutti gli strumenti» apre un menu
+  grande con la ricerca, gli strumenti divisi per sezione e due parole su cosa fa ognuno; «Vista completa» a destra.
+  Sul telefono la barra in basso ha gli stessi pulsanti con nomi corti e «Altro» apre lo stesso menu.
+- **Vista completa** (modifica, tutti i sistemi): il menu a sinistra di sempre, con «Passa alla vista semplice» sotto
+  la ricerca.
+- **Cosa vuoi fare?** (modifica, tutti i sistemi): riquadri con l'icona a sinistra (Firma un documento, Compila o
+  scrivi, Correggi un testo, Unisci più PDF, Riduci il peso, Trasforma in Word), «Apri un PDF» e «Tutti gli
+  strumenti», file recenti con data e ora su una riga.
+- **Guide** (novità, tutti i sistemi): guide in tre passi anche per «Evidenzia e note» e «Trasforma in Word».
+
 ## 1.6.2
 Nuovo indirizzo del sito di PDFz: https://pdfz.agjin.com/ (la 1.6.1 non è uscita: la pipeline si era fermata
 sull'indirizzo scritto senza https://).

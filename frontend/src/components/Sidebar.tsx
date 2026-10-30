@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
-  ArrowDown, ArrowUp, Check, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, GripVertical, MoreHorizontal,
+  ArrowDown, ArrowUp, Check, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, GripVertical, LayoutPanelTop, MoreHorizontal,
   PanelLeftClose, PanelLeftOpen, Pencil, Plus, Star, Tag, Trash2, X,
 } from "lucide-react";
 import { CATEGORIES, type ToolDef } from "../tools";
@@ -47,6 +47,7 @@ interface Props {
   onPick: (t: ToolDef) => void;
   compact: boolean;              // solo icone
   onToggleCompact: () => void;
+  vista?: { semplice: boolean; cambia: () => void };   // pulsante per passare all'altra vista
 }
 
 type MenuTarget = Menu extends infer M ? (M extends Menu ? Omit<M, "x" | "y"> : never) : never;
@@ -55,7 +56,7 @@ type Menu =
   | { kind: "label"; labelId: string; x: number; y: number };
 
 /** Menu degli strumenti: Preferiti (ordinabili), etichette create dall'utente, poi le sezioni fisse. */
-export function Sidebar({ tools, filter, setFilter, activeTool, isDisabled, onPick, compact, onToggleCompact }: Props) {
+export function Sidebar({ tools, filter, setFilter, activeTool, isDisabled, onPick, compact, onToggleCompact, vista }: Props) {
   const [favs, setFavs] = useState<string[]>(() => load(FAV_KEY, []));
   const [labels, setLabels] = useState<ToolLabel[]>(() => load(LABELS_KEY, []));
   const [closed, setClosed] = useState<string[]>(() => load<string[]>(COLLAPSE_KEY, []).map((k) => (k === FAV_CAT ? FAV_SEC : k)));
@@ -178,6 +179,11 @@ export function Sidebar({ tools, filter, setFilter, activeTool, isDisabled, onPi
         <button className="btn icon ghost side-toggle" title="Espandi il menu degli strumenti" aria-label="Espandi il menu" onClick={onToggleCompact}>
           <PanelLeftOpen size={17} />
         </button>
+        {vista && !vista.semplice && (
+          <button className="btn icon ghost side-toggle" title="Passa alla vista semplice" aria-label="Passa alla vista semplice" onClick={vista.cambia}>
+            <LayoutPanelTop size={17} />
+          </button>
+        )}
         {sections.map((sec) => sec.items.length ? (
           <div key={sec.key} className={`side-sec ${sec.kind === "fav" ? "favs" : ""} ${sec.kind === "label" ? "lbl" : ""}`} title={sec.title}
             style={sec.label ? { borderLeftColor: sec.label.color } : undefined}>
@@ -209,6 +215,11 @@ export function Sidebar({ tools, filter, setFilter, activeTool, isDisabled, onPi
           {allClosed ? <ChevronsUpDown size={15} /> : <ChevronsDownUp size={15} />}
         </button>
       </div>
+      {vista && (
+        <button type="button" className="vista-cambia" onClick={vista.cambia}>
+          {vista.semplice ? "Passa alla vista completa" : "Passa alla vista semplice"}
+        </button>
+      )}
       {sections.map((sec, idx) => {
         const ordered = sec.kind !== "cat";
         if (!sec.items.length && (searching || sec.kind === "cat")) return null;

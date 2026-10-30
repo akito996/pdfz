@@ -8,23 +8,33 @@ semplici e piccoli difetti.
 
 `components/Inizio.tsx`, al posto di "Apri un documento" quando non c'è nessun documento aperto:
 
-- sei riquadri (`COMPITI`): Firma un documento, Compila un modulo, Unisci più PDF, Correggi il testo, Rimpicciolisci il
-  file, Crea un PDF. Se il compito ha bisogno di un documento si apre prima la scelta del file, poi lo strumento
-  (`dopoApertura` in `App.tsx`, valido 2 minuti);
-- "Apri un documento", "Scatta foto" e i **file aperti di recente** (`recenti.ts`): nell'app desktop si ricorda il
+- sei riquadri (`COMPITI`, dalla 1.7.0 con l'icona a sinistra): Firma un documento, Compila o scrivi, Correggi un
+  testo, Unisci più PDF, Riduci il peso, Trasforma in Word. Se il compito ha bisogno di un documento si apre prima la
+  scelta del file, poi lo strumento (`dopoApertura` in `App.tsx`, valido 2 minuti);
+- "Apri un PDF", "Tutti gli strumenti" (lo stesso menu della vista semplice: scelto uno strumento che ha bisogno di un
+  documento, si apre prima il file), "Scatta foto" e i **file aperti di recente** (`recenti.ts`): nell'app desktop si ricorda il
   percorso; sul telefono, nella web app e per i file trascinati una copia resta sul dispositivo (IndexedDB
   `pdfz-recenti`, al massimo 6 file da 40 MB; dopo "Salva" sul telefono c'è la versione salvata). "Svuota l'elenco"
   cancella anche le copie.
 
-## B. Modalità Semplice e Completa
+## B. Vista semplice e vista completa
 
-Si sceglie la prima volta (finestra "Come vuoi usare PDFz?") e si cambia dal menu ☀ (`ThemeMenu`, voce Modalità);
-chiave `hdpdf.modalita`.
+Si sceglie la prima volta (finestra "Come vuoi usare PDFz?") e si cambia con «Vista completa» (a destra della barra
+della vista semplice), «Passa alla vista semplice» (sotto la ricerca del menu a sinistra) o dal menu ☀ (`ThemeMenu`,
+voce Vista); chiave `hdpdf.modalita` (`semplice` | `completa`).
 
-- **Semplice** (`components/Semplice.tsx`): sei pulsanti grandi con la scritta, Firma · Scrivi · Correggi · Spunta ·
-  Pagine · Altro. Sul computer sono la colonna di sinistra (l'elenco completo si apre sopra la pagina con "Altro"); sul
-  telefono una barra in basso, sotto la barra pagina/zoom (`--barra-h`), nascosta mentre un pannello è aperto.
-- **Completa**: l'elenco di tutti gli strumenti, come prima.
+- **Vista semplice** (`components/Semplice.tsx`, aspetto della 1.7.0 preso dalle foto dell'autore): sei pulsanti con
+  icona e nome, Firma · Scrivi · Modifica testo · Timbro · Evidenzia e note · Pagine, poi «Tutti gli strumenti».
+  - computer: barra sotto quella in alto (`.app.con-barra`, righe `52px auto 1fr`), niente colonna a sinistra; sotto i
+    1000 px i nomi corti (Correggi, Note, Tutti), sotto i 1120 px «Vista completa» solo icona;
+  - telefono: barra in basso con i nomi corti e «Altro», sotto la barra pagina/zoom (`--barra-h`), nascosta mentre un
+    pannello è aperto;
+  - **«Tutti gli strumenti»** (`TuttiGliStrumenti`, in un `Popover` allineato a sinistra del pulsante, largo fino a
+    960 px): ricerca in alto (cerca in nome, descrizione, `breve` e parole chiave; Invio apre il primo risultato; sul
+    telefono niente tastiera all'apertura), poi le sezioni con nome e `breve` di ogni strumento, tre colonne sul
+    computer e una sul telefono. Senza documento aperto, uno strumento che ne ha bisogno fa prima scegliere il file.
+- **Vista completa**: il menu a sinistra di sempre (preferiti, etichette, sezioni) con «Passa alla vista semplice».
+  Sul telefono il menu ☰ ha lo stesso pulsante («Passa alla vista completa» se si è nella semplice).
 
 ## C. Guide 1-2-3
 

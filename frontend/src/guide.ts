@@ -26,7 +26,8 @@ export function guidaPer(chiave: string, verbo: string): GuidaDef | null {
     ] },
     compila: { titolo: "Compilare un modulo", passi: [
       { titolo: "Scrivi nei campi", testo: `${v} il campo del modulo e scrivi. Quando hai finito ${vv} fuori dalla casella: il testo va sul foglio.`, dove: PAGINA },
-      { titolo: "Spunta le caselle", testo: `Per le caselle da barrare apri «Spunta e X» e ${vv} la casella.`, dove: "[data-tool='marks']" },
+      { titolo: "Spunta le caselle", testo: `Per le caselle da barrare apri «Spunta e X» (in «Tutti gli strumenti» o nel menu a sinistra) e ${vv} la casella.`,
+        dove: ".semplice-bar .altro" },
       { titolo: "Firma e salva", testo: "Se il modulo va firmato apri «Firma». Alla fine premi Salva.", dove: SALVA },
     ] },
     merge: { titolo: "Unire più PDF", passi: [
@@ -78,6 +79,15 @@ export function guidaPer(chiave: string, verbo: string): GuidaDef | null {
       { titolo: "Scegli quanto", testo: "«Media» va bene quasi sempre: il file diventa più leggero e si legge ancora bene.", dove: PANNELLO },
       { titolo: "Rimpicciolisci", testo: "Premi il pulsante in basso.", dove: PIEDE },
       fine,
+    ] },
+    comments: { titolo: "Evidenziare e aggiungere note", passi: [
+      { titolo: "Scegli cosa fare", testo: "Evidenzia, Sottolinea, Barra oppure Nota.", dove: PANNELLO },
+      { titolo: "Segna sulla pagina", testo: `Scorri sopra il testo da evidenziare; per una nota ${vv} il punto della pagina e scrivi.`, dove: PAGINA },
+      fine,
+    ] },
+    convert_from_pdf: { titolo: "Trasformare in Word", passi: [
+      { titolo: "Scegli il formato", testo: "Word è già scelto; puoi scegliere anche Excel, PowerPoint o immagini.", dove: PANNELLO },
+      { titolo: "Trasforma", testo: "Premi «Converti» in basso e scegli dove salvare il nuovo file.", dove: PIEDE },
     ] },
     create_pdf: { titolo: "Creare un PDF", passi: [
       { titolo: "Scegli i file", testo: "Foto, documenti Word, Excel, PowerPoint… anche più di uno.", dove: PANNELLO },

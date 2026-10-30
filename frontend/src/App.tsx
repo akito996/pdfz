@@ -8,7 +8,7 @@ import { loadPdf, pageSizes, type PDFDoc, type PageSize } from "./pdf";
 import { Ctx, type AppCtx, type Pending, type Tab } from "./context";
 import { ConfirmDialog, type DialogButton, type DialogRequest, type DialogResult } from "./components/ConfirmDialog";
 import { NO_INTERACTION, type Interaction, type NoteInfo, type Overlay } from "./types";
-import { TOOLS, TOOL_BY_ID } from "./tools";
+import { TOOLS, TOOL_BY_ID, testoRicerca } from "./tools";
 import { Viewer } from "./components/Viewer";
 import { Logo } from "./components/Logo";
 import { ToolPanel } from "./panels/ToolPanel";
@@ -719,16 +719,18 @@ export default function App() {
     return () => window.removeEventListener("hdpdf-back", onBack);
   });
 
-  // modalità: Semplice (sei pulsanti grandi) o Completa (tutti gli strumenti, come prima della 1.6.0); si chiede una volta
+  // vista: semplice (pulsanti più usati in alto e "Tutti gli strumenti") o completa (menu a sinistra, come prima della 1.6.0); si chiede una volta
   const [modalita, setModalita] = useStored<"semplice" | "completa" | null>("hdpdf.modalita", null);
   const semplice = modalita === "semplice";
   const chiestaModalita = useRef(false);
   useEffect(() => {
     if (modalita || chiestaModalita.current) return;
     chiestaModalita.current = true;
-    ask("Come vuoi usare PDFz?", <><b>Semplice</b>: sei pulsanti grandi per le cose più comuni (firmare, scrivere, correggere, spuntare, sistemare le pagine) e gli altri strumenti in «Altro».<br /><br />
-      <b>Completa</b>: tutti gli strumenti, come prima.<br /><br />Puoi cambiare quando vuoi dal pulsante dell'aspetto ☀ in alto a destra.</>,
-      [{ label: "Completa", value: "completa" }, { label: "Semplice", value: "semplice", kind: "primary" }])
+    ask("Come vuoi usare PDFz?", <><b>Vista semplice</b>: in alto i pulsanti per le cose più comuni (firmare, scrivere, correggere il testo, timbrare,
+      evidenziare, sistemare le pagine) e tutti gli altri in «Tutti gli strumenti», con la ricerca.<br /><br />
+      <b>Vista completa</b>: tutti gli strumenti nel menu a sinistra, come prima.<br /><br />Puoi cambiare quando vuoi con «Vista completa» o
+      «Passa alla vista semplice», oppure dal pulsante dell'aspetto ☀ in alto a destra.</>,
+      [{ label: "Vista completa", value: "completa" }, { label: "Vista semplice", value: "semplice", kind: "primary" }])
       .then((v) => setModalita(v === "semplice" ? "semplice" : "completa"));
   }, [modalita]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -835,9 +837,13 @@ export default function App() {
   const q = filter.trim().toLowerCase();
   // strumenti solo per l'app Android (es. Scatta foto)
   const available = (t: (typeof TOOLS)[number]) => !t.androidOnly || isLocalEngine();
-  const visibleTools = useMemo(() => TOOLS.filter((t) => available(t) && (!q || `${t.label} ${t.description} ${t.keywords || ""}`.toLowerCase().includes(q))), [q]); // eslint-disable-line react-hooks/exhaustive-deps
+  const visibleTools = useMemo(() => TOOLS.filter((t) => available(t) && (!q || testoRicerca(t).includes(q))), [q]); // eslint-disable-line react-hooks/exhaustive-deps
+  const strumenti = useMemo(() => TOOLS.filter(available), []); // eslint-disable-line react-hooks/exhaustive-deps
   const toolDef = tool ? TOOL_BY_ID[tool] : null;
   const noDocTools = new Set(["create_pdf", "merge", "compare", "p7m"]);
+  // barra della vista semplice e "Tutti gli strumenti": senza documento si apre prima il file, poi lo strumento (come i riquadri)
+  const scegliStrumento = (id: string) => (!doc ? onCompito({ id, titolo: "", sotto: "", tool: id, senzaDoc: noDocTools.has(id) }) : pickTool(id));
+  const barraInAlto = semplice && !mobile;
   const dirty = tab ? isDirtyTab(tab) : false;
   const pickTab = (k: string) => { if (k !== active) guard(() => { setActive(k); setCurrentPage(0); }); };
 
@@ -863,7 +869,7 @@ export default function App() {
 
   return (
     <Ctx.Provider value={ctx}>
-      <div className="app" onDragOver={onDragOverApp} onDragLeave={() => { setDragOver(false); setDropScheda(false); }} onDrop={onDrop}>
+      <div className={`app ${barraInAlto ? "con-barra" : ""}`} onDragOver={onDragOverApp} onDragLeave={() => { setDragOver(false); setDropScheda(false); }} onDrop={onDrop}>
         {dropScheda && <div className="drop-scheda" aria-hidden>Rilascia qui per spostare la scheda in questa finestra</div>}
         <header className="topbar">
           <button className="btn icon ghost mobile-only" onClick={() => setDrawer(true)} title="Strumenti" aria-label="Apri il menu degli strumenti"><Menu size={20} /></button>
@@ -960,15 +966,15 @@ export default function App() {
           <input ref={fileInput} type="file" multiple hidden onChange={(e) => { openFiles(Array.from(e.target.files || [])); e.target.value = ""; }} />
         </header>
 
-        <div className={`main ${drawer ? "drawer-open" : ""} ${toolDef ? "has-panel" : ""} ${semplice ? "semplice" : ""}`} style={{ gridTemplateColumns: `${semplice ? 196 : sideCompact ? 56 : 232}px minmax(0, 1fr)${toolDef ? ` ${panelCollapsed ? 52 : panelW}px` : ""}` }}>
-          {/* modalità Semplice sul computer: sei pulsanti grandi a sinistra; l'elenco completo si apre con "Altro" */}
-          {semplice && !mobile && (
-            <SempliceBar telefono={false} attivo={tool} onAltro={() => setDrawer(true)}
-              onTool={(id) => (!doc ? onCompito({ id, titolo: "", sotto: "", tool: id }) : pickTool(id))} />
+        {/* vista semplice sul computer: i pulsanti più usati in una barra sotto quella in alto, gli altri in "Tutti gli strumenti" */}
+        {barraInAlto && <SempliceBar telefono={false} attivo={tool} strumenti={strumenti} onTool={scegliStrumento} onCompleta={() => setModalita("completa")} />}
+
+        <div className={`main ${drawer ? "drawer-open" : ""} ${toolDef ? "has-panel" : ""} ${semplice ? "semplice" : ""}`} style={{ gridTemplateColumns: `${barraInAlto ? "" : `${sideCompact ? 56 : 232}px `}minmax(0, 1fr)${toolDef ? ` ${panelCollapsed ? 52 : panelW}px` : ""}` }}>
+          {!barraInAlto && (
+            <Sidebar compact={sideCompact} onToggleCompact={() => setSideCompact(!sideCompact)} tools={visibleTools} filter={filter} setFilter={setFilter} activeTool={tool}
+              isDisabled={(t) => !doc && !noDocTools.has(t.id)} vista={{ semplice, cambia: () => { setDrawer(false); setModalita(semplice ? "completa" : "semplice"); } }}
+              onPick={(t) => (!doc && !noDocTools.has(t.id) ? toast("Apri prima un documento.", "info") : pickTool(t.id))} />
           )}
-          <Sidebar compact={sideCompact} onToggleCompact={() => setSideCompact(!sideCompact)} tools={visibleTools} filter={filter} setFilter={setFilter} activeTool={tool}
-            isDisabled={(t) => !doc && !noDocTools.has(t.id)}
-            onPick={(t) => (!doc && !noDocTools.has(t.id) ? toast("Apri prima un documento.", "info") : pickTool(t.id))} />
           <div className="drawer-back" onClick={() => setDrawer(false)} aria-hidden />
 
           <section style={{ minWidth: 0, minHeight: 0, display: "grid" }}>
@@ -987,14 +993,14 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              <Inizio onCompito={onCompito} onApri={onOpenClick} onRecente={onRecente} dragOver={dragOver} touch={touch} locale={isLocalEngine()} />
+              <Inizio onCompito={onCompito} onApri={onOpenClick} onRecente={onRecente} strumenti={strumenti} onTool={scegliStrumento} dragOver={dragOver} touch={touch} locale={isLocalEngine()} />
             )}
           </section>
 
           {toolDef && <ToolPanel key={toolDef.id} def={toolDef} onClose={() => pickTool(null)} />}
-          {/* modalità Semplice sul telefono: barra in basso con i sei pulsanti, quando non c'è un pannello aperto */}
+          {/* vista semplice sul telefono: barra in basso con i pulsanti più usati e "Altro", quando non c'è un pannello aperto */}
           {semplice && mobile && doc && !mainView && (!toolDef || sheetDown) && (
-            <SempliceBar telefono attivo={tool} onAltro={() => setDrawer(true)} onTool={(id) => pickTool(id)} />
+            <SempliceBar telefono attivo={tool} strumenti={strumenti} onTool={scegliStrumento} />
           )}
           {/* telefono: freccia su per riaprire lo strumento abbassato, o l'ultimo usato */}
           {mobile && ((toolDef && sheetDown) || (!toolDef && lastTool && TOOL_BY_ID[lastTool])) && (() => {

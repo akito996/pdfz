@@ -25,7 +25,7 @@ Serve a ritrovare in fretta le informazioni senza rileggere vecchie chat.
 Altri file utili nella radice del progetto: `README.md` (panoramica e comandi), `CHANGELOG.md` (novità per versione,
 usate anche come note della GitHub Release), `frontend/src/novita.json` (novità mostrate nella campanella dell'app).
 
-Ultimo aggiornamento: **1.6.2** — 2026-10-30 (sito degli aggiornamenti sul dominio dell'autore https://pdfz.agjin.com/).
+Ultimo aggiornamento: **1.7.0** — 2026-10-30 (sito degli aggiornamenti sul dominio dell'autore https://pdfz.agjin.com/).
 
 **Flusso:** si modifica nel repository `C:\Dev\10_PDFz` (GitHub `akito996/pdfz`, ramo `main`); si compila con
 `packaging\copia-e-build.ps1` (o `.sh`) nelle copie `C:\Build\PDFz-Windows`, `C:\Build\PDFz-Android`, `~/Build/PDFz-Linux`
