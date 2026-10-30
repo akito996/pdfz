@@ -301,6 +301,10 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   tutte le versioni (soprattutto cellulare / tablet)": `.chiudi-grande` in avvisi (`App.tsx`), campanella e novità
   (`Notifiche.tsx`), 36 px con il mouse e 46 px sugli schermi touch. Provato nel browser a 800 px e nella web app a 375 px.
   Contiene anche la correzione del DMG per Mac (due passi, tentativi, UDZO di riserva).
+  **Release v1.7.2 pubblicata** (commit `6e46329`): pipeline riuscita su tutti i sistemi (DMG in ULMO al primo
+  tentativo), sito aggiornato dopo 9 minuti. Verificato senza login: 4 download da pdfz.agjin.com e da GitHub con le
+  stesse dimensioni — MSI 102,5 MB (1.7.0: 131,8), DMG 112,5 MB (159,8), AppImage 175,2 MB, APK 64,6 MB — sorgente,
+  `/app/`, link della web app relativo su entrambi i domini. Link mandati.
 
 ## Punti aperti
 
