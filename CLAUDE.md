@@ -128,7 +128,7 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
 
 ## Stato attuale (2026-10-30)
 
-- Versione nel codice: **1.6.1** di PDFz (sito degli aggiornamenti su https://pdfz.agjin.com/). Marchio applicato ovunque (2026-10-22, versione 1.3.0): **icona e favicon 24
+- Versione nel codice: **1.6.2** di PDFz (sito degli aggiornamenti su https://pdfz.agjin.com/; la 1.6.1 non è uscita). Marchio applicato ovunque (2026-10-22, versione 1.3.0): **icona e favicon 24
   "Foglio senza fondo"** — documento bianco con contorno nero, piega d'oro, "PDF" rosso, "z" nera, nessun fondo attorno
   (iPhone e icona adattiva Android su fondo bianco); prima la 19 (2026-10-21) e la 17 "Foglio oro" (inviata), palette predefinita Rubino,
   5 palette selezionabili, avvisi solo con le finestre dell'app (provati nel browser: Oscura, domanda annidata dopo
@@ -257,7 +257,8 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
 - **Dominio dell'autore** (2026-10-30): il sito degli aggiornamenti è su **https://pdfz.agjin.com/** (dominio
   personalizzato del progetto Pages, `UPDATE_BASE_URL` cambiata dall'autore); `https://pdfz.pages.dev/` resta attivo per le
   app dalla 1.3.1 alla 1.6.0 e **non va spento né reindirizzato**. La pagina ha link relativi (`sito_aggiornamenti.py`),
-  così da iPhone e iPad la web app si apre sull'indirizzo da cui si è entrati. **Versione 1.6.1** compilata con il nuovo
+  così da iPhone e iPad la web app si apre sull'indirizzo da cui si è entrati. La 1.6.1 si è fermata perché la variabile
+  era `pdfz.agjin.com` senza `https://` (ora si completa da sola; tag `v1.6.1` senza release). **Versione 1.6.2** compilata con il nuovo
   indirizzo (`docs/cloudflare-aggiornamenti.md`).
 
 ## Punti aperti

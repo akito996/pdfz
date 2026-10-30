@@ -9,7 +9,8 @@ cd "$(dirname "$0")/.."
 url="$UPDATE_BASE_URL"
 case "$url" in
   https://*) ;;
-  *) echo "UPDATE_BASE_URL deve iniziare con https:// (c'e' '$url')" >&2; exit 1 ;;
+  *://*) echo "UPDATE_BASE_URL deve usare https:// (c'e' '$url')" >&2; exit 1 ;;
+  *) url="https://$url" ;;   # scritta senza https:// (es. pdfz.agjin.com): si aggiunge
 esac
 # caratteri che romperebbero il sed qui sotto o la stringa Python: non servono in un indirizzo di download
 case "$url" in

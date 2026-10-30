@@ -9,7 +9,7 @@ Scrive in --out:
 La web app per iPhone, se compilata prima in <out>/app (mobile/scripts/build-web.mjs --out <out>/app), resta lì.
 Gli installer non stanno nella cartella: li serve cloudflare/functions/download dall'archivio R2.
 
-    python packaging/sito_aggiornamenti.py --out cloudflare/sito --base https://pdfz.agjin.com/ --tag v1.6.1 --installer assets
+    python packaging/sito_aggiornamenti.py --out cloudflare/sito --base https://pdfz.agjin.com/ --tag v1.6.2 --installer assets
 --radice: cartella del progetto alla versione del tag (versione, novità, icone); predefinita questa. Serve quando lo
 script è più nuovo del tag (es. il flusso rilanciato a mano su una versione vecchia).
 """

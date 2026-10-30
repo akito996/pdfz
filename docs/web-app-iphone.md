@@ -56,7 +56,7 @@ Aprendo il sito in Safari su iPhone l'app ricorda una volta, con un avviso, come
 - **Elenco AgID** (verifica dei file firmati .p7m): il sito AgID non permette il download da una pagina web (CORS),
   quindi la web app usa la copia inclusa nella build, aggiornata a ogni nuova versione pubblicata.
 - **Strumenti**: gli stessi dell'app Android (niente traduzione offline).
-- **Indirizzo fisso**: i dati restano legati all'indirizzo della web app (`https://pdfz.agjin.com/app/` dalla 1.6.1;
+- **Indirizzo fisso**: i dati restano legati all'indirizzo della web app (`https://pdfz.agjin.com/app/` dalla 1.6.2;
   prima `https://pdfz.pages.dev/app/`, che resta attivo).
   Cambiare indirizzo dopo vuol dire reinstallarla sui telefoni e perdere impostazioni e firme salvate.
 

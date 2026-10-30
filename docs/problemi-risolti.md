@@ -6,6 +6,16 @@ Il più recente in cima.
 > Le voci con numeri `AAAAMM.NNN` (es. 202610.014) sono della fase di sviluppo prima di PDFz 1.0.0, quando le versioni
 > avevano quel formato. Restano perché spiegano cosa non rifare.
 
+## 1.6.2 — Release 1.6.1 fallita: UPDATE_BASE_URL scritta senza https://
+
+- **Sintomo:** la pipeline della 1.6.1 si ferma in pochi secondi su tutti i sistemi ("UPDATE_BASE_URL deve iniziare con
+  https://"), nessuna release; il sito resta alla versione prima, con la web app ancora sul vecchio indirizzo.
+- **Causa:** nella variabile del repository c'era `pdfz.agjin.com`, senza `https://` e senza la barra finale.
+- **Soluzione:** `packaging/imposta-url-aggiornamenti.sh` e `cloudflare.yml` aggiungono da soli `https://` e la "/"
+  finale se mancano (un indirizzo `http://` resta un errore). Il tag `v1.6.1` resta senza release (cancellare un tag
+  pubblicato non è permesso senza conferma): la stessa versione esce come **1.6.2**.
+- **Da non rifare:** fermarsi su un valore che si può completare senza dubbi.
+
 ## 1.5.0 — Firme e immagini di traverso sulle pagine ruotate, sfocato della zona sbagliata
 
 - **Sintomo:** su una pagina con rotazione 90° o 270° (molte scansioni) la firma disegnata o da immagine, il timbro

@@ -1,7 +1,8 @@
 # Novità
 
-## 1.6.1
-Nuovo indirizzo del sito di PDFz: https://pdfz.agjin.com/
+## 1.6.2
+Nuovo indirizzo del sito di PDFz: https://pdfz.agjin.com/ (la 1.6.1 non è uscita: la pipeline si era fermata
+sull'indirizzo scritto senza https://).
 
 - **Aggiornamenti da pdfz.agjin.com** (modifica, tutti i sistemi): l'avviso di nuova versione e i download arrivano dal
   nuovo indirizzo https://pdfz.agjin.com/; la web app per iPhone e iPad è su https://pdfz.agjin.com/app/. Il vecchio
