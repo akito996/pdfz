@@ -10,6 +10,9 @@ import pymupdf
 
 from ..store import Item, store
 
+# oltre questi oggetti nel PDF (circa 150 pagine) il salvataggio dopo una modifica usa garbage=1 (vedi Ctx.save)
+OGGETTI_RIORDINO_COMPLETO = 5000
+
 
 class ToolError(Exception):
     """Errore mostrato all'utente così com'è (in italiano)."""
@@ -62,6 +65,11 @@ class Ctx:
         p = self.out()
         opts = dict(garbage=3, deflate=True)
         opts.update(kw)
+        # documenti grandi: il riordino completo (garbage 3-4, cerca gli oggetti doppi) diventa lentissimo a ogni modifica
+        # e non cambia il file (PyMuPDF non duplica le immagini). 800 pagine: 11 s con garbage=3, 0,4 s con garbage=1.
+        # garbage=1 toglie comunque gli oggetti non più usati, quello che conta dopo Oscura o Elimina.
+        if opts.get("garbage", 0) > 1 and doc.xref_length() > OGGETTI_RIORDINO_COMPLETO:
+            opts["garbage"] = 1
         doc.save(p, **opts)
         doc.close()
         return p

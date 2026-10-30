@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import "pdfjs-dist/web/pdf_viewer.css";
+import "./pdf-testo.css";
 import "./styles.css";
 import App from "./App";
 import { initSettings } from "./settings";
@@ -49,6 +49,7 @@ async function startMobile(web: boolean) {
   const [{ startLocalEngine }, { EngineBar, setEngineState }] = await Promise.all([import("./android/bridge"), import("./android/EngineBar")]);
   const ready = startLocalEngine((label, pct) => setEngineState({ label, pct }));
   import("./android/intents").then((m) => { m.listenForFiles(); m.listenForBack(); }).catch(() => {});
+  if (!web) import("./android/barre").then((m) => m.seguiBarreDiSistema()).catch(() => {});
   ready.catch((e: any) => setEngineState({ label: "", pct: 0, error: String(e?.message || e) }));
   applyStoredLook();
   root.render(

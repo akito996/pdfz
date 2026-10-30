@@ -2,6 +2,61 @@
   "_info": "Novità di ogni versione, mostrate nella campanella dell'app e copiate dalla build in versione-<piattaforma>.json. tipo: nuovo | modifica | correzione | installer | ottimizzazione | rimosso. piattaforme: windows, macos, linux, android, ios, web (la web app per iPhone mostra anche le voci ios).",
   "versioni": [
     {
+      "versione": "1.7.1",
+      "data": "2026-10-30",
+      "titolo": "PDFz 1.7.1: correzioni e più velocità",
+      "voci": [
+        {
+          "tipo": "correzione",
+          "piattaforme": [
+            "android"
+          ],
+          "dove": "Barra in alto e menu del tema",
+          "titolo": "Bordi giusti su Android",
+          "dettaglio": "La barra in alto non finisce sotto l'ora e la batteria, il menu del tema resta nello schermo, il tasto indietro chiude menu e domande."
+        },
+        {
+          "tipo": "correzione",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android",
+            "ios"
+          ],
+          "dove": "Firma › Disegna",
+          "titolo": "Firma disegnata completa",
+          "dettaglio": "Il primo tratto della firma non sparisce più."
+        },
+        {
+          "tipo": "correzione",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android",
+            "ios"
+          ],
+          "dove": "Organizza pagine, schede, avvisi",
+          "titolo": "Piccoli errori corretti",
+          "dettaglio": "«Fatto» applica una volta sola, il testo in scrittura non si perde chiudendo la scheda, gli avvisi si leggono interi sul telefono."
+        },
+        {
+          "tipo": "ottimizzazione",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android",
+            "ios"
+          ],
+          "dove": "Avvio e documenti lunghi",
+          "titolo": "Più veloce, meno memoria",
+          "dettaglio": "Si apre prima, regge meglio i PDF lunghi e salva molto più in fretta quelli di centinaia di pagine."
+        }
+      ]
+    },
+    {
       "versione": "1.7.0",
       "data": "2026-10-30",
       "titolo": "PDFz 1.7.0: vista semplice con i pulsanti in alto",

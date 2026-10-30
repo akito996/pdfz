@@ -34,9 +34,9 @@ export function PropertiesPanel({ def, onClose }: { def: ToolDef; onClose: () =>
     if (res) setOrig(v);   // niente più in sospeso anche prima che arrivino le proprietà della nuova versione
     return !!res;
   };
-  usePending(changed, def.label, save);
+  const salvaOra = usePending(changed, def.label, save);
   return (
-    <PanelShell def={def} onClose={onClose} footer={<button className="btn primary block" disabled={!changed} onClick={save}>Salva proprietà</button>}>
+    <PanelShell def={def} onClose={onClose} footer={<button className="btn primary block" disabled={!changed} onClick={salvaOra}>Salva proprietà</button>}>
       {PROPS.slice(0, 2).map(([k, label]) => (
         <div className="field" key={k}>
           <label>{label}</label>
@@ -88,7 +88,7 @@ export function TocPanel({ def, onClose }: { def: ToolDef; onClose: () => void }
     if (res) setOrig(JSON.stringify(items));
     return !!res;
   };
-  usePending(tocChanged, def.label, save);
+  const salvaOra = usePending(tocChanged, def.label, save);
   const detect = async () => {
     if (!app.doc) return;
     try {
@@ -101,7 +101,7 @@ export function TocPanel({ def, onClose }: { def: ToolDef; onClose: () => void }
   };
   return (
     <PanelShell def={def} onClose={onClose}
-      footer={<button className="btn primary block" disabled={!tocChanged} onClick={save}>Salva indice</button>}>
+      footer={<button className="btn primary block" disabled={!tocChanged} onClick={salvaOra}>Salva indice</button>}>
       <div className="btn-row">
         <button className="btn small" onClick={() => setItems((l) => [...l, { level: 1, title: `Pagina ${app.currentPage + 1}`, page: app.currentPage + 1 }])}><Plus size={14} /> Voce alla pagina corrente</button>
         <button className="btn small" onClick={detect}>Rileva dai titoli</button>

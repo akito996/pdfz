@@ -80,7 +80,8 @@ rm -rf "$STAGE" "$DMG"
 mkdir -p "$STAGE"
 cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applicazioni"
-hdiutil create -volname "PDFz" -srcfolder "$STAGE" -ov -format UDZO "$DMG" >/dev/null
+# ULMO = compressione LZMA (macOS 10.15 e successivi; PDFz chiede gia' macOS 11): DMG di 30-40 MB piu' piccolo di UDZO
+hdiutil create -volname "PDFz" -srcfolder "$STAGE" -ov -format ULMO "$DMG" >/dev/null
 if [ -n "${MAC_SIGN_IDENTITY:-}" ]; then
   codesign --sign "$MAC_SIGN_IDENTITY" --timestamp "$DMG"
   if [ -n "${NOTARY_PROFILE:-}" ]; then

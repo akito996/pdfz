@@ -38,13 +38,16 @@ export function ImagesPanel({ def, onClose }: { def: ToolDef; onClose: () => voi
   useEffect(() => {
     setEsistenti([]);
     if (!docId) return;
+    let vivo = true;
     api.tool("list_images", { doc: docId }).then((r) => {
+      if (!vivo) return;   // risposta di una versione già superata
       setEsistenti(r.data.images.map((im: any, i: number) => ({
         id: `x${i}`, page: im.page, kind: "box", locked: true, label: "Immagine del PDF",
         rect: { x: im.bbox[0], y: im.bbox[1], w: im.bbox[2] - im.bbox[0], h: im.bbox[3] - im.bbox[1] },
         meta: { xref: im.xref },
       } as PageObject)));
     }).catch(() => {});
+    return () => { vivo = false; };
   }, [docId]);
   useEffect(() => { if (ap.daSelezionare) { setSelectedId(ap.daSelezionare); ap.selezionata(); } }, [ap.daSelezionare]); // eslint-disable-line react-hooks/exhaustive-deps
 

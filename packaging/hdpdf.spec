@@ -76,7 +76,10 @@ a = Analysis(
               "pypdfium2", "pypdfium2_raw",
               "huggingface_hub", "hf_xet", "safetensors", "tokenizers",
               # strumenti di sviluppo inclusi per sbaglio da alcune librerie
-              "pip", "IPython", "pydoc_data", "lib2to3", "idlelib", "numpy.f2py", "numpy.distutils"],
+              "pip", "IPython", "pydoc_data", "lib2to3", "idlelib", "numpy.f2py", "numpy.distutils",
+              # Pythonwin (win32ui + mfc140u.dll, 6,6 MB): serve solo alla finestra di avanzamento di makepy; l'app usa
+              # win32com.client.DispatchEx, che non lo carica
+              "win32ui", "pywin", "win32uiole", "dde"],
     # python-pptx legge i modelli XML con percorsi relativi ai propri sorgenti
     module_collection_mode={"pptx": "pyz+py", "docx": "pyz+py"},
     noarchive=False,

@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 
 /** Web app (--mode web, per l'iPhone: "Condividi › Aggiungi alla schermata Home"): manifest e indicazioni per Safari.
@@ -47,8 +47,20 @@ function webApp(): Plugin {
   };
 }
 
+/** App Android (VITE_ANDROID in .env.android): viewport-fit=cover già nell'HTML. Capacitor 8 (SystemBars) lo legge
+ *  quando la pagina compare: se lo trovasse solo dopo (scritto da main.tsx) il risultato cambierebbe da un avvio
+ *  all'altro e la barra in alto finiva sotto l'ora e la batteria. Le zone del sistema le lascia libere .app (--sa-*). */
+function androidApp(): Plugin {
+  return {
+    name: "pdfz-android",
+    transformIndexHtml: (html) => html.replace(/<meta name="viewport" content="[^"]*"/,
+      '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"'),
+  };
+}
+
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), ...(mode === "web" ? [webApp()] : [])],
+  plugins: [react(), ...(mode === "web" ? [webApp()] : []),
+    ...(loadEnv(mode, process.cwd()).VITE_ANDROID === "1" ? [androidApp()] : [])],
   base: "./",
   server: { proxy: { "/api": "http://127.0.0.1:8765" } },
   build: {

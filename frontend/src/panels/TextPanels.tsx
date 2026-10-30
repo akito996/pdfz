@@ -77,6 +77,8 @@ export function EditTextPanel({ def, onClose }: { def: ToolDef; onClose: () => v
   const verb = useVerbo();
 
   // nuova versione del documento: le righe si rileggono; la casella che si sta scrivendo resta (si svuota cambiando scheda)
+  const docAttuale = useRef(docId);
+  docAttuale.current = docId;
   useEffect(() => { setSpans({}); loading.current.clear(); }, [docId]);
   const scheda = useSchedaKey();
   useEffect(() => { setObjects([]); setSelectedId(null); }, [scheda]);
@@ -84,8 +86,9 @@ export function EditTextPanel({ def, onClose }: { def: ToolDef; onClose: () => v
   const needSpans = (page: number) => {
     if (!docId || loading.current.has(page)) return;
     loading.current.add(page);
+    const chiesto = docId;
     api.tool("text_spans", { doc: docId, params: { page } })
-      .then((r) => setSpans((s) => ({ ...s, [page]: r.data.spans })))
+      .then((r) => { if (docAttuale.current === chiesto) setSpans((s) => ({ ...s, [page]: r.data.spans })); })   // non di una versione superata
       .catch((e) => app.toast(e.message, "err"));
   };
 

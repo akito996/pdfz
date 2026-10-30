@@ -177,6 +177,7 @@ export function SignPanel({ def, onClose }: { def: ToolDef; onClose: () => void 
     if (await app.run("sign_visual", { items: [it] }, { silent: true })) {
       if (o.kind === "text") rememberTexts([o.text!]);
       ap.aspetta(o.page, o.rect);
+      setTuttePagine(false);   // "la prossima firma": la sigla su ogni pagina vale una volta
     }
   };
 
@@ -397,25 +398,50 @@ function SignaturePad({ value, onChange, color }: { value: string | null; onChan
   const drawing = useRef(false);
   const last = useRef<{ x: number; y: number } | null>(null);
   const dirty = useRef(false);
+  const mio = useRef<string | null>(null);   // l'ultimo valore nato dal disegno qui: è già sul riquadro, non si ridisegna
+  const valore = useRef(value);
+  valore.current = value;
 
-  useEffect(() => {
-    const c = ref.current!;
-    const dpr = window.devicePixelRatio || 1;
-    c.width = c.clientWidth * dpr;
-    c.height = c.clientHeight * dpr;
+  // riquadro della misura giusta, poi l'immagine della firma centrata (o vuoto). Prima si faceva quando il valore
+  // passava da vuoto a pieno: al primo tratto il riquadro si svuotava e quel tratto non entrava nella firma.
+  const ridisegna = (v: string | null) => {
+    const c = ref.current;
+    if (!c) return;
+    const w = c.clientWidth, h = c.clientHeight, dpr = window.devicePixelRatio || 1;
+    if (!w || !h) return;   // pannello compresso o nascosto: ci pensa il ResizeObserver quando ricompare
+    c.width = Math.round(w * dpr);
+    c.height = Math.round(h * dpr);
     const ctx = c.getContext("2d")!;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, c.width, c.height);
-    if (value && !dirty.current) {
-      const img = new Image();
-      img.onload = () => {
-        const s = Math.min(c.clientWidth / img.width, c.clientHeight / img.height, 1);
-        ctx.drawImage(img, (c.clientWidth - img.width * s) / 2, (c.clientHeight - img.height * s) / 2, img.width * s, img.height * s);
-      };
-      img.src = value;
-    }
-    dirty.current = false;
-  }, [value === null]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!v) return;
+    const img = new Image();
+    img.onload = () => {
+      if (valore.current !== v) return;
+      const s = Math.min(w / img.width, h / img.height, 1);
+      ctx.drawImage(img, (w - img.width * s) / 2, (h - img.height * s) / 2, img.width * s, img.height * s);
+    };
+    img.src = v;
+  };
+  // misura: all'apertura e quando cambia (pannello allargato o riaperto, telefono ruotato), altrimenti il tratto
+  // finiva spostato rispetto al dito o al mouse
+  useEffect(() => {
+    const c = ref.current!;
+    let misura = "";
+    const ro = new ResizeObserver(() => {
+      const m = `${c.clientWidth}x${c.clientHeight}`;
+      if (m === misura) return;
+      misura = m;
+      ridisegna(valore.current);
+    });
+    ro.observe(c);
+    return () => ro.disconnect();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // valore cambiato da fuori (Cancella, firma salvata): si ridisegna
+  useEffect(() => {
+    if (value !== null && value === mio.current) return;
+    mio.current = null;
+    ridisegna(value);
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pos = (e: React.PointerEvent) => {
     const r = ref.current!.getBoundingClientRect();
@@ -451,7 +477,12 @@ function SignaturePad({ value, onChange, color }: { value: string | null; onChan
   const up = () => {
     drawing.current = false;
     last.current = null;
-    if (dirty.current) onChange(trim(ref.current!));
+    const c = ref.current!;
+    if (!dirty.current || !c.width || !c.height) return;
+    dirty.current = false;
+    const v = trim(c);
+    mio.current = v;
+    onChange(v);
   };
   return <canvas ref={ref} className="pad" style={{ touchAction: "none" }} onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerLeave={up} />;
 }

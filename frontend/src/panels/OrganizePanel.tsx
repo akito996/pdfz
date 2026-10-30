@@ -26,6 +26,12 @@ export function OrganizePanel({ def, onClose }: { def: ToolDef; onClose: () => v
 
   useEffect(() => { setCards(initialCards(n)); setSel(new Set()); }, [app.doc?.id, n]);
   useEffect(() => { if (app.pdf) setPdfs((p) => ({ ...p, "": app.pdf! })); }, [app.pdf]);
+  // chiudendo lo strumento si liberano i PDF aggiunti (non quello della scheda, "", che resta al visualizzatore)
+  const pdfsRef = useRef(pdfs);
+  pdfsRef.current = pdfs;
+  useEffect(() => () => {
+    for (const [k, p] of Object.entries(pdfsRef.current)) if (k !== "") p.destroy().catch(() => {});
+  }, []);
 
   const changed = cards.length !== n || cards.some((c, i) => c.page !== i || c.rotate || c.src);
   const hasSel = sel.size > 0;
@@ -118,7 +124,7 @@ export function OrganizePanel({ def, onClose }: { def: ToolDef; onClose: () => v
 
   const order = (list: Card[]) => list.map((c) => ({ page: c.page, rotate: c.rotate, src: c.src }));
   const apply = async () => !!(await app.run("organize", { order: order(cards) }));
-  usePending(changed, def.label, apply);
+  const applicaOra = usePending(changed, def.label, apply);
   const extract = () => {
     const base = (app.doc?.name || "documento").replace(/\.pdf$/i, "");
     app.run("organize", { order: order(selectedCards), new_doc: true, name: `${base} (estratto).pdf` }, { newTab: true });
@@ -131,7 +137,7 @@ export function OrganizePanel({ def, onClose }: { def: ToolDef; onClose: () => v
     <PanelShell def={def} onClose={onClose}
       footer={<>
         <button className="btn" onClick={() => { setCards(initialCards(n)); setSel(new Set()); }} disabled={!changed}>Ripristina</button>
-        <button className="btn primary" style={{ flex: 1 }} onClick={async () => { if (await apply()) onClose(); }} disabled={!changed}>Fatto</button>
+        <button className="btn primary" style={{ flex: 1 }} onClick={async () => { if (await applicaOra()) onClose(); }} disabled={!changed}>Fatto</button>
       </>}>
       <input ref={fileRef} type="file" hidden multiple accept=".pdf,application/pdf"
         onChange={(e) => { const f = Array.from(e.target.files || []); e.target.value = ""; if (f.length) addFromPdf(f); }} />

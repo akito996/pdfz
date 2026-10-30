@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef } from "react";
 import type { Capabilities, DocInfo, FontInfo, ToolResponse } from "./api";
 import type { PDFDoc, PageSize } from "./pdf";
 import type { Interaction, Overlay } from "./types";
@@ -62,7 +62,7 @@ export const useApp = () => useContext(Ctx);
 /** Modifiche che stanno ancora nel pannello (per esempio il testo che si sta scrivendo): finché dirty è vero, cambiando
  *  strumento o scheda, salvando o chiudendo l'app, apply le porta sul foglio da sola (dalla 1.6.0 niente "Applica" e
  *  niente domanda). apply deve restituire true se è andato a buon fine. */
-export function usePending(dirty: boolean, label: string, apply: () => Promise<boolean> | boolean) {
+export function usePending(dirty: boolean, label: string, apply: () => Promise<boolean> | boolean): () => Promise<boolean> {
   const app = useApp();
   const applyRef = useRef(apply);
   applyRef.current = apply;
@@ -72,6 +72,14 @@ export function usePending(dirty: boolean, label: string, apply: () => Promise<b
     setPending({ label, apply: async () => !!(await applyRef.current()) });
     return () => setPending(null);
   }, [dirty, label, setPending]);
+  // per il pulsante dello strumento (es. "Fatto"): applica e toglie subito la modifica in sospeso. Altrimenti, chiudendo
+  // lo strumento subito dopo, la si applicava una seconda volta sulla versione di prima (Organizza pagine: due volte
+  // l'operazione, il messaggio doppio e Annulla da premere due volte)
+  return useCallback(async () => {
+    const ok = !!(await applyRef.current());
+    if (ok) setPending(null);
+    return ok;
+  }, [setPending]);
 }
 
 /** Senza "Applica" (dalla 1.6.0): quando si lascia un oggetto (se ne seleziona un altro, nessuno, o si preme Esc) le sue

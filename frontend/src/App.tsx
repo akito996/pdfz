@@ -4,7 +4,7 @@ import { useIsMobile, useMedia } from "./panels/fields";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppWindow, ChevronUp, Menu, Merge, Printer, Redo2, Save, Undo2, X, Lock } from "lucide-react";
 import { api, desktop, download, humanSize, isLocalEngine, onDesktopError, type Capabilities, type DocInfo, type FontInfo, type ToolResponse } from "./api";
-import { loadPdf, pageSizes, type PDFDoc, type PageSize } from "./pdf";
+import { caricaPdfjs, loadPdf, pageSizes, type PDFDoc, type PageSize } from "./pdf";
 import { Ctx, type AppCtx, type Pending, type Tab } from "./context";
 import { ConfirmDialog, type DialogButton, type DialogRequest, type DialogResult } from "./components/ConfirmDialog";
 import { NO_INTERACTION, type Interaction, type NoteInfo, type Overlay } from "./types";
@@ -20,7 +20,7 @@ import { sendToCreatePdf } from "./panels/createInbox";
 import { Popover } from "./components/Popover";
 import { ThemeMenu, useTheme } from "./components/ThemeMenu";
 import { Notifiche } from "./components/Notifiche";
-import { useEvent, useStored } from "./hooks";
+import { useEvent, useIndietro, useStored } from "./hooks";
 import { MIA_FINESTRA, ascolta, invia, type Messaggio } from "./finestre";
 import { aggiungiMessaggio } from "./messaggi";
 import { Inizio, type Compito } from "./components/Inizio";
@@ -45,6 +45,7 @@ export default function App() {
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [active, setActive] = useState<string | null>(null);
   const [pdf, setPdf] = useState<PDFDoc | null>(null);
+  const [pdfErrore, setPdfErrore] = useState("");
   const [sizes, setSizes] = useState<PageSize[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [goto, setGoto] = useState<{ page: number; n: number } | null>(null);
@@ -132,10 +133,20 @@ export default function App() {
   }, [setPending]);
   const guard = (go: () => void) => { resolvePending().then((ok) => { if (ok) go(); }); };
 
+  // caratteri del sistema (sul PC sono centinaia da leggere): servono solo agli strumenti di testo, quindi si chiedono
+  // quando se ne apre uno o un paio di secondi dopo l'avvio, non mentre si apre il primo documento
+  const fontiChieste = useRef(false);
+  const caricaFonti = () => {
+    if (fontiChieste.current) return;
+    fontiChieste.current = true;
+    api.fonts().then(setFonts).catch(() => { fontiChieste.current = false; });
+  };
   useEffect(() => {
-    api.fonts().then(setFonts).catch(() => {});
     api.caps().then(setCaps).catch(() => {});
-  }, []);
+    const t = setTimeout(caricaFonti, 2500);
+    return () => clearTimeout(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (tool) caricaFonti(); }, [tool]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toast = useCallback((msg: string, kind: Toast["kind"] = "info") => {
     const id = Date.now() + Math.random();
@@ -177,20 +188,37 @@ export default function App() {
     return () => { alive = false; stop(); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // carica il PDF della versione corrente
+  // carica il PDF della versione corrente. La versione di prima si libera (pdf.js la teneva in memoria: dopo molte
+  // modifiche a un PDF grande il telefono rallentava), qualche secondo dopo, quando le pagine in disegno hanno finito.
+  const pdfAttuale = useRef<{ p: PDFDoc; scheda?: string } | null>(null);
+  const liberaPdf = () => {
+    const v = pdfAttuale.current?.p;
+    pdfAttuale.current = null;
+    if (v) setTimeout(() => { v.destroy().catch(() => {}); }, 3000);
+  };
+  useEffect(() => () => liberaPdf(), []); // eslint-disable-line react-hooks/exhaustive-deps
+  // pdf.js in sottofondo poco dopo l'avvio: la schermata iniziale compare prima e il primo PDF si apre senza attesa
+  useEffect(() => { const t = setTimeout(() => { caricaPdfjs().catch(() => {}); }, 1200); return () => clearTimeout(t); }, []);
   useEffect(() => {
     let cancel = false;
-    if (!doc || doc.needs_password) { setPdf(null); setSizes([]); return; }
+    setPdfErrore("");
+    if (!doc || doc.needs_password) { setPdf(null); setSizes([]); liberaPdf(); return; }
+    // un'altra scheda: niente pagine della scheda di prima mentre si apre questa
+    if (pdfAttuale.current && pdfAttuale.current.scheda !== tab?.key) { setPdf(null); setSizes([]); }
     (async () => {
       try {
         const p = await loadPdf(api.fileUrl(doc.id), tab?.password);
         const s = await pageSizes(p);
-        if (cancel) return;
+        if (cancel) { p.destroy().catch(() => {}); return; }
+        liberaPdf();
+        pdfAttuale.current = { p, scheda: tab?.key };
         setPdf(p);
         setSizes(s);
         setCurrentPage((c) => Math.min(c, s.length - 1));
       } catch (e: any) {
-        if (!cancel) toast(`Impossibile visualizzare il documento: ${e.message || e}`, "err");
+        if (cancel) return;
+        setPdfErrore(String(e?.message || e));
+        toast(`Impossibile visualizzare il documento: ${e.message || e}`, "err");
       }
     })();
     return () => { cancel = true; };
@@ -478,8 +506,25 @@ export default function App() {
     } else saveAs();
   };
   saveRef.current = (asNew) => { (asNew ? saveAs : save)(); };
+  // Stampa: come Salva, prima va sul foglio quello che si sta ancora scrivendo (si stampava senza l'ultimo testo)
+  const stampaRef = useRef<() => void>(() => {});
+  const stampa = async () => {
+    if (pendingRef.current) {
+      if (await resolvePending()) { await nextCommit(); stampaRef.current(); }
+      return;
+    }
+    if (doc) printDoc(doc.id);
+  };
+  stampaRef.current = () => { stampa(); };
+  const closeRef = useRef<(key: string) => void>(() => {});
   const closeTab = async (key: string) => {
-    if (key === active && !(await resolvePending())) return;
+    if (key === active) {
+      // quello che si sta ancora scrivendo va sul foglio; la scheda si chiude poi con la versione nuova (prima si
+      // leggeva quella vecchia: niente domanda "Modifiche non salvate" e il testo andava perso)
+      const inScrittura = !!pendingRef.current;
+      if (!(await resolvePending())) return;
+      if (inScrittura) { await nextCommit(); closeRef.current(key); return; }
+    }
     const t = tabsRef.current.find((x) => x.key === key);
     if (t && isDirtyTab(t)) {
       // app Android: si può salvare solo la scheda aperta (Salva usa il documento attivo)
@@ -499,9 +544,12 @@ export default function App() {
     }
     dropTab(key);
   };
+  closeRef.current = (key) => { closeTab(key); };
   const dropTab = (key: string) => setTabs((ts) => {
     const rest = ts.filter((x) => x.key !== key);
     setActive((a) => (a === key ? (rest.length ? rest[rest.length - 1].key : null) : a));
+    // chiuso l'ultimo documento: via anche lo strumento che ne aveva bisogno (restava aperto sulla schermata iniziale)
+    if (!rest.length) setTool((t) => (t && !noDocTools.has(t) ? null : t));
     return rest;
   });
 
@@ -695,7 +743,7 @@ export default function App() {
       if (!(e.ctrlKey || e.metaKey)) return;
       const k = e.key.toLowerCase();
       if (k === "o") { e.preventDefault(); onOpenClick(); }
-      else if (k === "p" && doc) { e.preventDefault(); printDoc(doc.id); }
+      else if (k === "p" && doc) { e.preventDefault(); stampa(); }
       else if (k === "s" && e.shiftKey) { e.preventDefault(); saveAs(); }
       else if (k === "s") { e.preventDefault(); save(); }
       else if (k === "z" && !e.shiftKey && !(e.target as HTMLElement).closest("input,textarea")) { e.preventDefault(); undo(); }
@@ -726,10 +774,10 @@ export default function App() {
   useEffect(() => {
     if (modalita || chiestaModalita.current) return;
     chiestaModalita.current = true;
-    ask("Come vuoi usare PDFz?", <><b>Vista semplice</b>: in alto i pulsanti per le cose più comuni (firmare, scrivere, correggere il testo, timbrare,
-      evidenziare, sistemare le pagine) e tutti gli altri in «Tutti gli strumenti», con la ricerca.<br /><br />
-      <b>Vista completa</b>: tutti gli strumenti nel menu a sinistra, come prima.<br /><br />Puoi cambiare quando vuoi con «Vista completa» o
-      «Passa alla vista semplice», oppure dal pulsante dell'aspetto ☀ in alto a destra.</>,
+    ask("Come vuoi usare PDFz?", <><b>Vista semplice</b>: {mobile ? "in basso" : "in alto"} i pulsanti per le cose più comuni (firmare, scrivere,
+      correggere il testo, timbrare, evidenziare, sistemare le pagine) e tutti gli altri in «{mobile ? "Altro" : "Tutti gli strumenti"}», con la ricerca.<br /><br />
+      <b>Vista completa</b>: tutti gli strumenti nel menu {mobile ? "☰" : "a sinistra"}, come prima.<br /><br />Puoi cambiare quando vuoi
+      {mobile ? " dal menu ☰" : " con «Vista completa» o «Passa alla vista semplice»"}, oppure dal pulsante dell'aspetto in alto a destra (☀ o ☾).</>,
       [{ label: "Vista completa", value: "completa" }, { label: "Vista semplice", value: "semplice", kind: "primary" }])
       .then((v) => setModalita(v === "semplice" ? "semplice" : "completa"));
   }, [modalita]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -878,10 +926,10 @@ export default function App() {
           <button className={`${dirty ? "btn salva-ora" : "btn icon ghost"} salva`} onClick={save} disabled={!doc} title="Salva (Ctrl+S)"
             aria-label={dirty ? "Salva le modifiche" : "Salva"}><Save size={17} />{dirty && <span>Salva</span>}</button>
           <button className={`btn icon ghost ${isLocalEngine() ? "" : "desktop-only"}`} onClick={saveAs} disabled={!doc} title="Salva con nome (Ctrl+Shift+S)" aria-label="Salva con nome"><SaveAsIcon size={17} /></button>
-          <button className="btn icon ghost desktop-only" onClick={() => doc && printDoc(doc.id)} disabled={!doc} title="Stampa (Ctrl+P)"><Printer size={17} /></button>
+          <button className="btn icon ghost desktop-only" onClick={stampa} disabled={!doc} title="Stampa (Ctrl+P)"><Printer size={17} /></button>
           <div className="sep" />
           <button className="btn icon ghost" onClick={undo} disabled={!tab || tab.index === 0} title="Annulla (Ctrl+Z)"><Undo2 size={17} /></button>
-          <button className="btn icon ghost" onClick={redo} disabled={!tab || tab.index >= tab.history.length - 1} title="Ripeti (Ctrl+Y)"><Redo2 size={17} /></button>
+          <button className="btn icon ghost ripeti" onClick={redo} disabled={!tab || tab.index >= tab.history.length - 1} title="Ripeti (Ctrl+Y)"><Redo2 size={17} /></button>
           <div className="sep" />
           {mobile ? (
             <TabsMenu active={active} onPick={pickTab} onClose={closeTab}
@@ -900,7 +948,8 @@ export default function App() {
                     // con modifiche non applicate nello strumento la scheda attiva non si sposta (la domanda non si può fare qui)
                     if (t.key === active && pendingRef.current) {
                       e.preventDefault();
-                      toast(`Prima applica o scarta le modifiche in "${pendingRef.current.label}".`, "info");
+                      toast(`Un momento: quello che stai scrivendo in "${pendingRef.current.label}" va sul foglio. Poi trascina di nuovo la scheda.`, "info");
+                      resolvePending();
                       return;
                     }
                     dragTab.current = t.key;
@@ -958,7 +1007,7 @@ export default function App() {
               <button role="menuitem" onClick={() => { setTabMenu(null); closeTab(tabMenu); }}><X size={15} /> Chiudi la scheda</button>
             </Popover>
           )}
-          {doc && <span style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>{humanSize(doc.size)}{dirty ? " · non salvato" : ""}</span>}
+          {doc && <span className="peso" style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>{humanSize(doc.size)}{dirty ? " · non salvato" : ""}</span>}
           {/* app Android: niente elenco dei download (i file vanno in Documenti/PDFz e si apre "Condividi") */}
           {!isLocalEngine() && <Downloads entries={downloads} setEntries={setDownloads} flash={dlFlash} />}
           <Notifiche version={caps?.version} updateUrl={caps?.update_url} />
@@ -992,6 +1041,14 @@ export default function App() {
                   </div>
                 </div>
               </div>
+            ) : doc && tab ? (
+              // documento in apertura (sul telefono il motore può metterci qualche secondo): non la schermata iniziale
+              <div className="empty">
+                <div className="drop">
+                  {pdfErrore ? <><h1>Non riesco a mostrare il documento</h1><p>{pdfErrore}</p></>
+                    : <><div className="spin" aria-hidden /><p>Apro «{doc.name}»…</p></>}
+                </div>
+              </div>
             ) : (
               <Inizio onCompito={onCompito} onApri={onOpenClick} onRecente={onRecente} strumenti={strumenti} onTool={scegliStrumento} dragOver={dragOver} touch={touch} locale={isLocalEngine()} />
             )}
@@ -1003,7 +1060,7 @@ export default function App() {
             <SempliceBar telefono attivo={tool} strumenti={strumenti} onTool={scegliStrumento} />
           )}
           {/* telefono: freccia su per riaprire lo strumento abbassato, o l'ultimo usato */}
-          {mobile && ((toolDef && sheetDown) || (!toolDef && lastTool && TOOL_BY_ID[lastTool])) && (() => {
+          {mobile && doc && ((toolDef && sheetDown) || (!toolDef && lastTool && TOOL_BY_ID[lastTool])) && (() => {
             const t = toolDef || TOOL_BY_ID[lastTool!];
             const Icon = t.icon;
             return (
@@ -1097,6 +1154,7 @@ function PasswordModal({ doc, error, after, onSubmit, onCancel }: {
   const [pw, setPw] = useState("");
   const [show, setShow] = useState(false);
   const restricted = !doc.needs_password && !!doc.restricted;
+  useIndietro(true, onCancel);
   return (
     <div className="modal-back">
       <form className="modal" onSubmit={(e) => { e.preventDefault(); onSubmit(pw); }}>

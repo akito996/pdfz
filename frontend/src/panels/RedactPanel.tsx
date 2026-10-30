@@ -87,13 +87,13 @@ export function RedactPanel({ def, onClose }: { def: ToolDef; onClose: () => voi
     if (res) setAreas([]);
     return !!res;
   };
-  usePending(areas.length > 0, def.label, apply);
+  const applicaOra = usePending(areas.length > 0, def.label, apply);
 
   const nSearch = areas.filter((a) => a.source === "search").length;
   const nDraw = areas.length - nSearch;
   return (
     <PanelShell def={def} onClose={onClose}
-      footer={<button className="btn primary block" style={{ background: "#111", borderColor: "#111" }} disabled={!areas.length} onClick={apply}>Oscura {areas.length || ""} aree</button>}>
+      footer={<button className="btn primary block" style={{ background: "#111", borderColor: "#111" }} disabled={!areas.length} onClick={applicaOra}>Oscura {areas.length || ""} aree</button>}>
       <div className="field">
         <label>Aree manuali</label>
         <div className="btn-row">

@@ -6,6 +6,52 @@ Il più recente in cima.
 > Le voci con numeri `AAAAMM.NNN` (es. 202610.014) sono della fase di sviluppo prima di PDFz 1.0.0, quando le versioni
 > avevano quel formato. Restano perché spiegano cosa non rifare.
 
+## 1.7.1 — Android: barra in alto sotto l'ora e la batteria, menu del tema fuori dallo schermo
+
+- **Sintomo (segnalato dall'autore su Android):** "contorni non centrati", la scelta del tema un po' fuori dallo
+  schermo; con l'aspetto scuro dell'app su un telefono chiaro (o il contrario) le icone di ora e batteria sparivano.
+- **Cause:**
+  - l'app chiedeva di disegnare sotto le barre del sistema (`viewport-fit=cover`) solo da `main.tsx`, dopo il caricamento;
+    Capacitor 8 (`SystemBars`) lo controlla quando la pagina compare: a seconda dei tempi la pagina finiva sotto la
+    barra di stato e i tasti, senza margini;
+  - sotto i 360 px (telefoni stretti o con lo schermo ingrandito nelle impostazioni) i pulsanti della barra in alto si
+    schiacciavano a 25 px (`flex-shrink`), con l'icona fuori centro rispetto al bordo;
+  - le icone delle barre di sistema seguivano il tema del telefono, non quello scelto nell'app.
+- **Soluzione:** `viewport-fit=cover` già nell'HTML dell'app Android (`vite.config.ts`, `VITE_ANDROID` in
+  `frontend/.env.android`) e `initialViewportFitValueHint` in `capacitor.config.json`; zone del sistema `--sa-*` in
+  `styles.css` (`.app` le lascia libere, fasce del colore delle barre sopra e sotto; barre fisse, pannello, avvisi e
+  finestrelle sopra i tasti); `android/barre.ts` mette le icone chiare o scure secondo il tema dell'app e nasconde le
+  barre durante la presentazione. Pulsanti della barra in alto mai schiacciati (sotto i 360 px "Ripeti" si nasconde).
+- **Da non rifare:** impostazioni che Capacitor legge all'avvio (viewport) scritte solo da JavaScript.
+
+## 1.7.1 — Giro da utente: errori trovati e corretti
+
+- **Firma › Disegna:** il primo tratto spariva e non entrava nella firma (il riquadro si ridisegnava quando il valore
+  passava da vuoto a pieno); il riquadro non cambiava misura con il pannello o ruotando il telefono. Ora
+  `ResizeObserver` e nessun ridisegno del valore appena disegnato.
+- **Avvisi sul telefono** (`.toasts`): partivano da 248 px (larghezza del menu del computer) e restavano sotto la barra
+  in basso e il pannello: tagliati o invisibili. Ora larghi quanto lo schermo, sopra le barre.
+- **Finestra stretta sul computer:** la barra del visualizzatore e quella in alto allargavano la loro colonna
+  (colonne `auto` della griglia): con un pannello aperto le pagine e l'indicazione sopra il foglio finivano sotto il
+  pannello e, dopo la prima modifica, tutta l'app scivolava a sinistra. Ora `minmax(0, 1fr)` e `overflow: hidden` su
+  `html, body`.
+- **"Fatto" in Organizza pagine** applicava due volte (la modifica restava "in sospeso" e chiudendo lo strumento si
+  rifaceva sulla versione di prima: messaggio doppio, Annulla da premere due volte). `usePending` restituisce ora la
+  funzione da usare nei pulsanti (`applicaOra`), che toglie subito la modifica in sospeso.
+- **Chiudere la scheda mentre si scrive:** si leggeva la versione di prima (niente domanda "Modifiche non salvate", testo
+  perso). **Stampa** non aspettava il testo in scrittura. **Strumento aperto** dopo aver chiuso l'ultimo documento.
+- **Tasto "indietro" di Android** ignorato da finestrelle, domande, guida e presentazione (l'app andava in secondo
+  piano): `useIndietro` in `hooks.ts`. **Tocco sul foglio per chiudere una finestrella** metteva una firma o un timbro.
+- **Memoria:** le versioni del PDF già sostituite (una a ogni modifica) e quelle delle miniature restavano in pdf.js;
+  le pagine già viste restavano disegnate a piena risoluzione (con un PDF lungo il telefono finiva la memoria). Ora si
+  liberano; oltre ~14 milioni di pixel la pagina si disegna più leggera (Safari dell'iPhone la lasciava bianca).
+- **File recenti nell'app desktop:** le copie dei file trascinati finivano in una memoria che cambia a ogni avvio
+  (porta diversa): ora solo i file con il percorso.
+- **Altri:** guida che prendeva le frecce mentre si scrive, "su tutte le pagine" che restava acceso, risposte del motore
+  di una versione superata che rimettevano forme e immagini dove erano, nomi della barra in basso che uscivano dal
+  pulsante con i caratteri grandi, evidenziazioni che restavano "attaccate" dopo un tocco, testi della prima domanda.
+- **Da non rifare:** chiudere un pannello leggendo lo stato subito dopo aver applicato (aspettare `nextCommit`).
+
 ## 1.6.2 — Release 1.6.1 fallita: UPDATE_BASE_URL scritta senza https://
 
 - **Sintomo:** la pipeline della 1.6.1 si ferma in pochi secondi su tutti i sistemi ("UPDATE_BASE_URL deve iniziare con

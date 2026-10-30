@@ -1,5 +1,23 @@
 # Novità
 
+## 1.7.1
+Correzioni per Android e per tutti i sistemi dopo un giro completo da utente; app più veloce e installer più piccoli.
+
+- **Android: bordi e tema** (correzione): la barra in alto non finisce più sotto l'ora e la batteria, il menu del tema
+  resta dentro lo schermo, le icone di sistema si vedono con l'aspetto chiaro e con quello scuro; sui telefoni stretti
+  i pulsanti in alto non si schiacciano più; il tasto "indietro" chiude menu, domande, guida e presentazione.
+- **Firma disegnata** (correzione, tutti i sistemi): il primo tratto non sparisce più.
+- **Avvisi sul telefono** (correzione): erano tagliati o nascosti sotto le barre; ora si leggono interi.
+- **Finestre strette** (correzione, computer): con un pannello aperto le pagine restano al centro e l'app non scivola
+  più di lato; l'indicazione sopra il foglio sfuma dopo qualche secondo.
+- **Altre correzioni**: "Fatto" in Organizza pagine applicava due volte; chiudendo una scheda mentre si scrive il testo
+  andava perso; Stampa senza l'ultimo testo scritto; strumento aperto dopo aver chiuso l'ultimo documento; tocco sul
+  foglio per chiudere un menu che metteva una firma o un timbro.
+- **Più veloce e leggera** (ottimizzazione): l'app si apre prima (metà del codice iniziale si carica dopo), meno memoria
+  con i PDF lunghi (le pagine lontane si liberano), salvataggio fino a 30 volte più rapido sui PDF di centinaia di
+  pagine; su Android e iPhone l'avvio carica metà delle librerie (quelle di "Trasforma in Word" solo quando servono);
+  installer Windows e macOS più piccoli.
+
 ## 1.7.0
 Vista semplice con i pulsanti in alto e il menu «Tutti gli strumenti»; schermata iniziale più ordinata.
 

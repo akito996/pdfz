@@ -2,6 +2,10 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { BookOpen, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, MessageSquareText, PanelLeft, Presentation, Search, X, ZoomIn, ZoomOut } from "lucide-react";
 import { isLocalEngine } from "../api";
 import { pdfjs, type PDFDoc, type PageSize, renderThumb } from "../pdf";
+
+/** Pixel massimi dell'immagine di una pagina: oltre i ~16,7 milioni Safari dell'iPhone disegna una pagina bianca
+ *  (zoom alto su schermi densi); sotto questo limite la qualità resta quella piena dello schermo. */
+const MAX_PIXEL_PAGINA = 14e6;
 import type { Interaction, NoteInfo, Overlay, Span, VRect } from "../types";
 import { NotePopup } from "./NotePopup";
 import { ObjectBox } from "./ObjectLayer";
@@ -386,7 +390,7 @@ export function Viewer({ pdf, sizes, overlays, interaction, currentPage, onPageC
         )}
       </div>
       <div className="viewer-body" style={{ gridTemplateColumns: showThumbs ? "150px 1fr" : "1fr" }}>
-        {suggerimento && <div className="suggerimento-foglio" role="status">{suggerimento}</div>}
+        {suggerimento && <div key={suggerimento} className="suggerimento-foglio" role="status">{suggerimento}</div>}
         {showThumbs && <Thumbs pdf={pdf} count={sizes.length} current={currentPage} onPick={scrollTo} />}
         <div className={`pages ${libro ? "libro" : ""} ${vista.doppia ? "doppia" : ""}`} ref={pagesRef} onScroll={onScroll}>
           {gruppi.map((g) => (
@@ -434,12 +438,16 @@ export function Thumb({ pdf, index, active, onClick, width = 120 }: { pdf: PDFDo
   const holder = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   useEffect(() => {
-    const io = new IntersectionObserver(([e]) => e.isIntersecting && setVisible(true), { rootMargin: "300px" });
+    const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), { rootMargin: "300px" });
     if (holder.current) io.observe(holder.current);
     return () => io.disconnect();
   }, []);
   useEffect(() => {
-    if (visible && canvas.current) renderThumb(pdf, index, canvas.current, width).catch(() => {});
+    const c = canvas.current;
+    if (!c) return;
+    if (visible) { renderThumb(pdf, index, c, width).catch(() => {}); return; }
+    // miniatura lontana: si libera la sua immagine (con centinaia di pagine restavano tutte in memoria); l'altezza resta
+    if (c.width) { c.style.height = `${c.offsetHeight}px`; c.width = 0; c.height = 0; }
   }, [visible, pdf, index, width]);
   return (
     <div ref={holder} data-thumb={index} className={`thumb ${active ? "active" : ""}`} onClick={onClick}>
@@ -479,7 +487,17 @@ function PageView({ pdf, index, size, scale, overlays, interaction, notes, openN
   }, []);
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) {
+      // pagina lontana dallo schermo: si libera la sua immagine (prima restavano tutte in memoria e con un PDF lungo il
+      // telefono la finiva); la misura resta, quindi lo scorrimento non salta
+      const c = canvas.current;
+      if (c && c.width) {
+        c.width = 0; c.height = 0;
+        pdf.getPage(index + 1).then((p) => p.cleanup()).catch(() => {});   // e i dati della pagina tenuti da pdf.js
+      }
+      if (textLayer.current) textLayer.current.innerHTML = "";
+      return;
+    }
     let cancelled = false;
     let task: any;
     let tl: any;
@@ -487,7 +505,10 @@ function PageView({ pdf, index, size, scale, overlays, interaction, notes, openN
       const page = await pdf.getPage(index + 1);
       if (cancelled || !canvas.current) return;
       const dpr = window.devicePixelRatio || 1;
-      const vp = page.getViewport({ scale: scale * dpr });
+      let s = scale * dpr;
+      const base = page.getViewport({ scale: 1 });
+      if (base.width * base.height * s * s > MAX_PIXEL_PAGINA) s = Math.sqrt(MAX_PIXEL_PAGINA / (base.width * base.height));
+      const vp = page.getViewport({ scale: s });
       const c = canvas.current;
       c.width = Math.floor(vp.width);
       c.height = Math.floor(vp.height);
@@ -495,13 +516,13 @@ function PageView({ pdf, index, size, scale, overlays, interaction, notes, openN
       c.style.height = `${h}px`;
       // durante la modifica delle forme le annotazioni si disegnano come oggetti modificabili (non due volte)
       task = page.render({ canvasContext: c.getContext("2d")!, viewport: vp,
-        annotationMode: hideAnnots ? pdfjs.AnnotationMode.DISABLE : pdfjs.AnnotationMode.ENABLE_FORMS });
+        annotationMode: hideAnnots ? pdfjs().AnnotationMode.DISABLE : pdfjs().AnnotationMode.ENABLE_FORMS });
       try { await task.promise; } catch { return; }
       if (cancelled || !textLayer.current) return;
       textLayer.current.innerHTML = "";
       const tvp = page.getViewport({ scale });
       textLayer.current.style.setProperty("--scale-factor", String(scale));
-      tl = new pdfjs.TextLayer({ textContentSource: page.streamTextContent(), container: textLayer.current, viewport: tvp });
+      tl = new (pdfjs().TextLayer)({ textContentSource: page.streamTextContent(), container: textLayer.current, viewport: tvp });
       tl.render().catch(() => {});
     })();
     return () => {

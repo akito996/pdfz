@@ -85,7 +85,7 @@ export function StampPanel({ def, onClose }: { def: ToolDef; onClose: () => void
       type: kind, preset: preset === "custom" ? "" : preset, text: preset === "custom" ? text : "", subtext, date, color, opacity, angle,
       image: kind === "image" ? image!.id : undefined, items: [{ page, rect, all_pages: tuttePagine }],
     }, { silent: true });
-    if (res) ap.aspetta(page, rect);
+    if (res) { ap.aspetta(page, rect); setTuttePagine(false); }   // "il prossimo timbro": una volta sola
   };
   const patch = (id: string, p: Partial<PageObject>) => { ap.cambia(id, p); };
   const remove = (id: string) => {

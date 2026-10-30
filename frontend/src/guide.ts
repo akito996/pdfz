@@ -47,7 +47,7 @@ export function guidaPer(chiave: string, verbo: string): GuidaDef | null {
     ] },
     marks: { titolo: "Spuntare le caselle", passi: [
       { titolo: "Scegli il segno", testo: "Spunta ✓ oppure X.", dove: PANNELLO },
-      { titolo: "Tocca la casella", testo: `${v} la casella del modulo: il segno va subito sul foglio. Trascinandolo lo sposti.`, dove: PAGINA },
+      { titolo: `${v} la casella`, testo: `${v} la casella del modulo: il segno va subito sul foglio. Trascinandolo lo sposti.`, dove: PAGINA },
       fine,
     ] },
     stamp: { titolo: "Mettere un timbro", passi: [

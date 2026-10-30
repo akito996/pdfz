@@ -4,7 +4,11 @@
  * App desktop: si ricorda il percorso del file e lo si riapre da lì. Telefono, web app e file trascinati: il file non ha
  * un percorso da riaprire, quindi una copia resta su questo dispositivo (IndexedDB, mai su internet), al massimo
  * MAX_COPIE file da MAX_BYTE ciascuno. L'elenco si svuota dalla schermata iniziale.
+ * App desktop: niente copie dei file trascinati. La pagina cambia indirizzo (porta) a ogni avvio e con lui la sua
+ * memoria IndexedDB: dopo il riavvio la copia non si trovava più ("non è più su questo dispositivo") e restava sul disco.
  */
+import { desktop } from "./api";
+
 export interface Recente { id: string; nome: string; quando: number; size: number; path?: string }
 
 const CHIAVE = "hdpdf.recenti";
@@ -12,7 +16,9 @@ const MAX = 8, MAX_COPIE = 6, MAX_BYTE = 40 * 1024 * 1024;
 const ascoltatori = new Set<() => void>();
 
 export function recenti(): Recente[] {
-  try { return JSON.parse(localStorage.getItem(CHIAVE) || "[]"); } catch { return []; }
+  let l: Recente[] = [];
+  try { l = JSON.parse(localStorage.getItem(CHIAVE) || "[]"); } catch { /* archiviazione non disponibile */ }
+  return desktop.available() ? l.filter((r) => r.path) : l;   // app desktop: solo i file con il percorso
 }
 function scrivi(l: Recente[]) {
   try { localStorage.setItem(CHIAVE, JSON.stringify(l.slice(0, MAX))); } catch { /* archiviazione non disponibile */ }
@@ -61,7 +67,7 @@ export async function ricorda(nome: string, size: number, opts: { path?: string;
   const nuovo: Recente = { id, nome, quando: Date.now(), size, path: opts.path };
   let lista = [nuovo, ...l.filter((r) => r.id !== id)];
   if (!opts.path) {
-    if (!opts.file || opts.file.size > MAX_BYTE) return;
+    if (!opts.file || opts.file.size > MAX_BYTE || desktop.available()) return;
     try { await conserva(id, opts.file); } catch { return; }
     // oltre il massimo di copie si tolgono le più vecchie
     const copie = lista.filter((r) => !r.path);

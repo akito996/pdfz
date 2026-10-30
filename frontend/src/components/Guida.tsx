@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useIndietro } from "../hooks";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { GuidaDef } from "../guide";
@@ -18,8 +19,12 @@ export function Guida({ guida, onFine }: { guida: GuidaDef; onFine: () => void }
     return () => el.classList.remove("guida-qui");
   }, [passo]);
 
+  useIndietro(true, onFine);
   useEffect(() => {
     const tasto = (e: KeyboardEvent) => {
+      // mentre si scrive (frecce per spostare il cursore, Esc della casella) o con una domanda aperta: non è per la guida
+      const t = e.target as HTMLElement | null;
+      if (t?.closest?.("input, textarea, select, [contenteditable='true']") || document.querySelector(".modal-back")) return;
       if (e.key === "Escape") onFine();
       else if (e.key === "ArrowRight" && !ultimo) setI(i + 1);
       else if (e.key === "ArrowLeft" && i > 0) setI(i - 1);

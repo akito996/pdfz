@@ -104,6 +104,14 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   copertina da sola, verticale o "a libro"; `hdpdf.vista`), Ctrl+L = presentazione a schermo intero (app desktop:
   `Api.schermo_intero`, pywebview sa solo invertire lo stato). Le finestrelle dei pulsanti in basso (telefono) si aprono
   verso l'alto (`Popover`).
+- **Android e zone del sistema** (1.7.1): l'app Android disegna sotto barra di stato e tasti (`viewport-fit=cover`
+  nell'HTML Android tramite `VITE_ANDROID` in `frontend/.env.android`, mai solo da JavaScript: Capacitor lo legge
+  all'avvio). Ogni elemento fisso in alto o in basso usa `--sa-top`/`--sa-bottom` (`styles.css`); icone delle barre in
+  `android/barre.ts`. Tutto ciò che si apre sopra il resto (finestrelle, domande, guida, presentazione) registra il tasto
+  indietro con `useIndietro` (`hooks.ts`). I pulsanti degli strumenti applicano con la funzione restituita da
+  `usePending` (`applicaOra`), mai con `apply` diretto (si applicava due volte). pdf.js si carica quando serve
+  (`caricaPdfjs`/`pdfjs()` in `pdf.ts`); le pagine fuori vista si liberano. Motore mobile: gruppo `word` (numpy, OpenCV,
+  pdf2docx) caricato solo per "Trasforma in Word" (`prepare-engine.mjs`, `engine.worker.ts`).
 - **Immagini sulle pagine ruotate**: ogni `insert_image` vuole `rotate=page.rotation` (resta diritta come la si vede);
   `get_pixmap(clip=…)` vuole il riquadro visivo.
 - **Modifica testo**: la riga originale si cancella con una fascia sottile all'altezza delle minuscole (`_area_da_cancellare`
@@ -128,7 +136,7 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
 
 ## Stato attuale (2026-10-30)
 
-- Versione nel codice: **1.7.0** di PDFz (vista semplice con la barra in alto e il menu «Tutti gli strumenti»). Marchio applicato ovunque (2026-10-22, versione 1.3.0): **icona e favicon 24
+- Versione nel codice: **1.7.1** di PDFz (correzioni Android e del giro da utente, ottimizzazioni di velocità e spazio). Marchio applicato ovunque (2026-10-22, versione 1.3.0): **icona e favicon 24
   "Foglio senza fondo"** — documento bianco con contorno nero, piega d'oro, "PDF" rosso, "z" nera, nessun fondo attorno
   (iPhone e icona adattiva Android su fondo bianco); prima la 19 (2026-10-21) e la 17 "Foglio oro" (inviata), palette predefinita Rubino,
   5 palette selezionabili, avvisi solo con le finestre dell'app (provati nel browser: Oscura, domanda annidata dopo
@@ -270,7 +278,21 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   basso con «Altro» che apre lo stesso menu. Vista completa con «Passa alla vista semplice». Schermata iniziale come
   nelle foto (riquadri orizzontali, «Trasforma in Word», «Apri un PDF» e «Tutti gli strumenti»), guide per Evidenzia e
   note e Trasforma in Word. Colori della palette di PDFz. Provato nel browser (1400, 1000, 800 px e telefono 375 px) e
-  nella web app a 375 px. Non provato su un telefono vero.
+  nella web app a 375 px. Non provato su un telefono vero. **Release v1.7.0 pubblicata** (commit `5a72db5`): Release in
+  7 minuti; verificati senza login i 4 download da pdfz.agjin.com e da GitHub (MSI 131,8 MB, DMG 159,8 MB, AppImage
+  175,2 MB, APK 64,6 MB), sorgente e web app. Link mandati.
+
+- **Versione 1.7.1** (2026-10-30): segnalazione dell'autore su Android ("bug sulla scelta del tema", "contorni non
+  centrati", tema "un po' fuori dallo schermo") e richiesta di un giro completo da utente e di ottimizzare velocità e
+  spazio. Fatto: Android disegna sotto le barre del sistema in modo stabile (`viewport-fit=cover` nell'HTML Android,
+  zone `--sa-*`, icone delle barre secondo il tema dell'app, barre nascoste nella presentazione), barra in alto che non
+  si schiaccia sotto i 360 px, tasto indietro per menu, domande, guida e presentazione; 20 errori trovati nel giro e
+  nella revisione del codice (firma disegnata senza il primo tratto, avvisi fuori schermo sul telefono, app che scivolava
+  di lato nelle finestre strette, "Fatto" applicato due volte, chiusura della scheda e Stampa senza il testo in
+  scrittura, memoria di pdf.js mai liberata…: `docs/problemi-risolti.md`); ottimizzazioni misurate (`docs/decisioni.md`).
+  Provato: 89 test del motore, browser a 1280, 1000 e 800 px, vista telefono 320, 360 e 375 px con le barre di Android
+  simulate (24 e 48 px), web app con il motore Pyodide (firma col dito, Organizza, tasto indietro, "Trasforma in Word"
+  con il caricamento su richiesta). Non provato su un telefono vero né l'MSI con LZX / il DMG ULMO fuori dalla pipeline.
 
 ## Punti aperti
 
@@ -306,6 +328,12 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
 12. **Presentazione sull'iPhone**: Safari non ha lo schermo intero per le pagine (solo per i video): la presentazione
    copre la pagina dell'app ma restano le barre di Safari, salvo nella web app aggiunta alla Home. Il libro su
    Android/iPhone (scorrimento col dito con aggancio) è provato solo con il mouse in vista telefono.
+14. **1.7.1 da provare su dispositivi veri**: barre del sistema e tema su Android (anche con WebView prima della 140, dove
+   Capacitor non fa disegnare sotto le barre), tasto indietro, MSI compresso con LZX e DMG ULMO (installazione e avvio).
+   Ottimizzazioni rimandate perché da provare su un telefono o un Mac veri: R8 su Android (circa −3 MB), OpenCV ridotto
+   sul computer (circa −20 MB), librerie "full" precompilate sul telefono (più veloci, +3 MB), zstd 19 per l'AppImage,
+   versioni vecchie dei documenti mai liberate nel motore del telefono. Le copie dei file trascinati salvate dall'app
+   desktop prima della 1.7.1 restano nella sua memoria del browser (`<dati>\webview`) finché non la si svuota.
 13. **Facilità d'uso (1.6.0)**: da provare con persone non esperte (la parte "prova con 5 persone" della strada 💎 la fa
    l'autore). Compilare i moduli con campi veri (AcroForm) non c'è ancora: "Compila un modulo" usa Scrivi e Spunta.
    Le modifiche fatte prima della 1.6.0 a un testo aggiunto non si riaprono (manca lo stile nel segno): si spostano o

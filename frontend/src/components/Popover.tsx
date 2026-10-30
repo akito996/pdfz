@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
+import { useIndietro } from "../hooks";
 
 /**
  * Finestrella (menu Tema, notifiche, download) che si apre da un pulsante della barra in alto.
@@ -34,7 +35,10 @@ export function Popover({ anchor, onClose, width, allinea = "destra", className 
       const w = Math.min(width, vw - 16);
       const left = Math.min(Math.max(8, allinea === "destra" ? a.right - w : a.left), vw - w - 8);   // dentro lo schermo
       const top = Math.round(a.bottom + 6);
-      const sotto = vh - top - 12, sopra = a.top - 18;
+      // app Android: non sotto l'ora e la batteria né sotto i tasti del sistema (zone scritte da Capacitor)
+      const css = getComputedStyle(document.documentElement);
+      const zona = (lato: string) => parseFloat(css.getPropertyValue(`--safe-area-inset-${lato}`)) || 0;
+      const sotto = vh - top - 12 - zona("bottom"), sopra = a.top - 18 - zona("top");
       // pulsante in basso (barra pagina/zoom del telefono): la finestrella si apre verso l'alto
       if (sotto < 240 && sopra > sotto) setPos({ bottom: Math.round(vh - a.top + 6), left: Math.round(left), width: Math.round(w), maxHeight: sopra });
       else setPos({ top, left: Math.round(left), width: Math.round(w), maxHeight: Math.max(160, sotto) });
@@ -50,6 +54,9 @@ export function Popover({ anchor, onClose, width, allinea = "destra", className 
     const down = (e: PointerEvent) => {
       const t = e.target as Node;
       if (box.current?.contains(t) || anchor.current?.contains(t)) return;
+      // tocco sul foglio per chiudere: chiude e basta. Con Firma, Timbro o Spunta aperti avrebbe messo un oggetto sulla
+      // pagina (dalla 1.6.0 va subito sul foglio), per esempio chiudendo l'elenco dei download che si apre dopo Salva
+      if ((t as Element).closest?.(".pages")) { e.preventDefault(); e.stopPropagation(); }
       close.current();
     };
     const esc = (e: KeyboardEvent) => { if (e.key === "Escape") close.current(); };
@@ -58,6 +65,7 @@ export function Popover({ anchor, onClose, width, allinea = "destra", className 
     return () => { document.removeEventListener("pointerdown", down, true); window.removeEventListener("keydown", esc); };
   }, [anchor]);
 
+  useIndietro(true, () => close.current());
   return createPortal(
     <div ref={box} className={`pop ${className}`} role={role} aria-label={label}
       style={pos ? { top: pos.top, bottom: pos.bottom, left: pos.left, width: pos.width, maxHeight: pos.maxHeight } : { visibility: "hidden" }}>

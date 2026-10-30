@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useIndietro } from "../hooks";
 
 export interface DialogButton { label: string; value: string; kind?: "primary" | "danger" }
 /** Campo di testo nella finestra (al posto di window.prompt): il testo scritto arriva insieme al pulsante premuto. */
@@ -20,6 +21,7 @@ export function ConfirmDialog({ req, onChoose }: { req: DialogRequest; onChoose:
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [req, onChoose, text]);
+  useIndietro(true, () => onChoose({ value: req.buttons[0].value, text }));   // Android: come Esc
   // con il campo di testo il cursore va lì, con il nome già selezionato (si può riscrivere subito)
   useEffect(() => { inputRef.current?.select(); }, []);
   return (

@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
-import { desktop } from "../api";
+import { desktop, isLocalEngine } from "../api";
+import { useIndietro } from "../hooks";
 import type { PDFDoc, PageSize } from "../pdf";
 
 /**
@@ -23,6 +24,7 @@ export function Presentazione({ pdf, sizes, gruppi, inizio, onClose }: {
   const chiudi = useRef(() => onClose(gruppo[0]));
   chiudi.current = () => onClose(gruppo[0]);
   const vai = (d: number) => setIdx((i) => Math.min(Math.max(i + d, 0), gruppi.length - 1));
+  useIndietro(true, () => chiudi.current());   // Android: "indietro" esce dalla presentazione
 
   // schermo intero all'apertura, ritorno alla chiusura; uscendo dallo schermo intero (Esc del browser) si chiude
   useEffect(() => {
@@ -32,9 +34,12 @@ export function Presentazione({ pdf, sizes, gruppi, inizio, onClose }: {
     else if (el?.requestFullscreen && !document.fullscreenElement) {
       el.requestFullscreen().then(() => { browser = true; }).catch(() => {});
     }
+    // app Android: il WebView non fa lo schermo intero della pagina, si nascondono ora/batteria e tasti del sistema
+    if (isLocalEngine()) import("../android/barre").then((m) => m.barreNascoste(true)).catch(() => {});
     const cambio = () => { if (browser && !document.fullscreenElement) chiudi.current(); };
     document.addEventListener("fullscreenchange", cambio);
     return () => {
+      if (isLocalEngine()) import("../android/barre").then((m) => m.barreNascoste(false)).catch(() => {});
       document.removeEventListener("fullscreenchange", cambio);
       if (desktop.available()) desktop.fullScreen(false);
       else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});

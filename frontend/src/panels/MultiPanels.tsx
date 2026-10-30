@@ -72,10 +72,16 @@ export function MergePanel({ def, onClose }: { def: ToolDef; onClose: () => void
     let alive = true;
     for (const d of list) {
       if (pdfs[d.id]) continue;
-      loadPdf(api.fileUrl(d.id), passwordOf(d.id)).then((p) => { if (alive) setPdfs((m) => ({ ...m, [d.id]: p })); }).catch(() => {});
+      loadPdf(api.fileUrl(d.id), passwordOf(d.id)).then((p) => {
+        if (alive) setPdfs((m) => ({ ...m, [d.id]: p })); else p.destroy().catch(() => {});
+      }).catch(() => {});
     }
     return () => { alive = false; };
   }, [view, list]); // eslint-disable-line react-hooks/exhaustive-deps
+  // chiudendo lo strumento si liberano i PDF delle miniature (pdf.js li terrebbe in memoria)
+  const pdfsRef = useRef(pdfs);
+  pdfsRef.current = pdfs;
+  useEffect(() => () => { for (const p of Object.values(pdfsRef.current)) p.destroy().catch(() => {}); }, []);
 
   // vista Pagine: tiene le pagine già sistemate, aggiunge quelle dei file nuovi, toglie quelle dei file rimossi
   useEffect(() => {

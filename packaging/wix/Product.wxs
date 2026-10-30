@@ -35,12 +35,13 @@
     </Property>
     <SetProperty Id="HDOLDVERSION" Action="HdOldVersionFromUser" Value="[HDOLDVERSIONU]" After="AppSearch" Sequence="ui"
                  Condition="NOT HDOLDVERSION AND HDOLDVERSIONU" />
-    <!-- MSZIP a blocchi da 200 MB: la compressione "high" (LZX) usa un solo core e su 360 MB di file
-         puo' durare ore; MSZIP finisce in pochi minuti e l'MSI e' solo un po' piu' grande -->
+    <!-- LZX ("high") a blocchi da 100 MB, compressi in parallelo: MSI di circa 20 MB piu' piccolo che con MSZIP
+         (misurato nella 1.7.1 su 286 MB di file: 100,9 MB contro 122,8) e 2-3 minuti in piu' di build; l'installazione
+         resta veloce come prima. (Il vecchio timore di "ore" con LZX non e' confermato dalle misure.) -->
     <!-- installazione più rapida: 1 = niente punto di ripristino di Windows (può richiedere decine di secondi),
          2 = calcolo dello spazio solo sui file (salta i controlli che qui non servono). L'avanzamento resta dettagliato. -->
     <Property Id="MSIFASTINSTALL" Value="3" />
-    <MediaTemplate EmbedCab="yes" CompressionLevel="mszip" MaximumUncompressedMediaSize="200" />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" MaximumUncompressedMediaSize="100" />
 
     <Icon Id="AppIcon" SourceFile="..\assets\icon.ico" />
     <Property Id="ARPPRODUCTICON" Value="AppIcon" />

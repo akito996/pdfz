@@ -11,6 +11,10 @@ let py: any = null;
 let handle: any = null;
 let basic: Promise<void> | null = null;   // sufficiente per aprire e vedere i documenti
 let full: Promise<void> | null = null;    // tutte le librerie (conversioni, firma…)
+let word: Promise<void> | null = null;    // numpy, OpenCV e pdf2docx: solo "Trasforma in Word", caricate quando servono
+let caricaWord: () => Promise<void> = async () => {};
+/** richieste che servono a "Trasforma in Word" (e le altre conversioni dal PDF, stesso strumento) */
+const PER_WORD = /^\/api\/tools\/convert_from_pdf$/;
 let syncTimer: any;
 
 const post = (m: any, t?: Transferable[]) => ctx.postMessage(m, t || []);
@@ -62,6 +66,12 @@ pyodide_bridge.init("/data")
     }
     post({ type: "full" });
   })();
+  // "word": dopo "full" (pdf2docx usa python-docx, lxml e fonttools), una volta sola e solo se serve
+  caricaWord = () => (word ??= (async () => {
+    await full;
+    const pacchetti = [...(man.packages.word || []), ...(man.wheels.word || []).map(wheel)];
+    if (pacchetti.length) await py.loadPackage(pacchetti, { messageCallback: () => {}, checkIntegrity: false });
+  })());
 }
 
 function persistSoon() {
@@ -73,6 +83,7 @@ async function serve(r: Req) {
   try {
     await basic;
     if (r.heavy) await full;
+    if (PER_WORD.test(r.path)) await caricaWord();
     const body = r.body ? new Uint8Array(r.body) : null;
     const call = async () => {
       const res = await handle(r.method, r.path, r.query, py.toPy(r.headers), body ? py.toPy(body) : null);
@@ -81,11 +92,11 @@ async function serve(r: Req) {
       return out;
     };
     let [status, headers, data] = await call();
-    // serviva una libreria non ancora caricata (es. Word dentro "Crea PDF"): si aspetta e si ripete una volta
-    if (status >= 400 && !r.heavy && full && new TextDecoder().decode(data as Uint8Array).includes("No module named")) {
-      await full;
-      [status, headers, data] = await call();
-    }
+    // serviva una libreria non ancora caricata (es. Word dentro "Crea PDF"): prima tutte le librerie in sottofondo,
+    // poi, se manca ancora qualcosa, anche quelle di "Trasforma in Word"; ogni volta si ripete la richiesta
+    const manca = () => status >= 400 && new TextDecoder().decode(data as Uint8Array).includes("No module named");
+    if (manca() && full && !r.heavy) { await full; [status, headers, data] = await call(); }
+    if (manca() && full && !word) { await caricaWord(); [status, headers, data] = await call(); }
     const buf = (data as Uint8Array).slice().buffer;
     post({ type: "response", id: r.id, status, headers, body: buf }, [buf]);
     if (r.method !== "GET") persistSoon();

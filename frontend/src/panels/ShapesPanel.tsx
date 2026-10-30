@@ -50,7 +50,9 @@ export function ShapesPanel({ def, onClose }: { def: ToolDef; onClose: () => voi
   useEffect(() => {
     setObjects([]); setSelectedId(null);
     if (!docId) return;
+    let vivo = true;   // una risposta per una versione già superata non rimette le forme dove erano prima
     api.tool("list_shapes", { doc: docId }).then((r) => {
+      if (!vivo) return;
       // tutte le forme del documento restano visibili e modificabili (anche spunte e X)
       const l: PageObject[] = r.data.shapes.map((s: any) => ({
         id: `x${s.xref}`, page: s.page, kind: "shape", rect: s.rect, opacity: s.opacity,
@@ -64,6 +66,7 @@ export function ShapesPanel({ def, onClose }: { def: ToolDef; onClose: () => voi
         && Math.abs(x.rect.y - w.rect.y) < 2 && Math.abs(x.rect.w - w.rect.w) < 2 && Math.abs(x.rect.h - w.rect.h) < 2);
       if (o) setSelectedId(o.id);
     }).catch(() => {});
+    return () => { vivo = false; };
   }, [docId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // senza "Applica": ogni forma nuova, spostata o cambiata va subito sul foglio (e resta selezionata)

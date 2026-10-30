@@ -87,7 +87,7 @@ export function ThemeMenu({ theme, setTheme, modalita, setModalita }: {
       {open && (
         <Popover anchor={btn} onClose={() => setOpen(false)} width={260} className="menu theme-pop" role="menu" label="Tema e colori">
           <div className="menu-title">Vista</div>
-          {([["semplice", "Vista semplice", "i pulsanti più usati in alto"], ["completa", "Vista completa", "tutti gli strumenti a sinistra"]] as const).map(([v, l, d]) => (
+          {([["semplice", "Vista semplice", "i pulsanti più usati sempre a portata"], ["completa", "Vista completa", "tutti gli strumenti nel menu"]] as const).map(([v, l, d]) => (
             <button key={v} role="menuitemradio" aria-checked={modalita === v} onClick={() => { setModalita(v); setOpen(false); }}>
               <span className="grow">{l}<small>{d}</small></span> {modalita === v && <Check size={15} color="var(--brand)" />}
             </button>

@@ -23,19 +23,23 @@ const CACHE = path.join(MOBILE, "cache");
 const PYODIDE_VERSION = "0.29.5";   // Python 3.13, ABI pyemscripten_2025_0 (come la ruota WebAssembly di PyMuPDF)
 const CDN = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
 
-// librerie di Pyodide: "basic" serve per aprire e vedere i documenti, "full" si carica in sottofondo
+// librerie di Pyodide: "basic" serve per aprire e vedere i documenti, "full" si carica in sottofondo, "word" (numpy,
+// OpenCV e pdf2docx: solo "Trasforma in Word") quando serve. Prima "word" stava in "full": metà del caricamento in
+// sottofondo a ogni avvio (misurato: 4,9 s e 130 MB di memoria in più) per un solo strumento
 const PACKAGES = {
   basic: ["fastapi", "pydantic", "starlette", "anyio", "pillow", "tzdata"],
-  full: ["numpy", "opencv-python", "lxml", "cryptography", "requests", "pyyaml", "fonttools", "charset-normalizer"],
+  full: ["lxml", "cryptography", "requests", "pyyaml", "fonttools", "charset-normalizer"],
+  word: ["numpy", "opencv-python"],
 };
 // librerie da PyPI [nome, versione]; null = ultima. Le versioni sono quelle compatibili con le librerie di Pyodide.
 const WHEELS = {
   basic: [["pymupdf", "1.28.2"], ["python-multipart", null], ["asn1crypto", null]],
   full: [
     ["python-docx", null], ["openpyxl", null], ["et-xmlfile", null], ["python-pptx", null], ["xlsxwriter", null],
-    ["pdfplumber", "0.11.7"], ["pdfminer.six", "20250506"], ["pdf2docx", null],
+    ["pdfplumber", "0.11.7"], ["pdfminer.six", "20250506"],
     ["pyhanko", "0.29.1"], ["pyhanko-certvalidator", "0.27.0"], ["tzlocal", null], ["uritools", null], ["oscrypto", null],
   ],
+  word: [["pdf2docx", null]],
 };
 const TESSDATA = ["ita", "eng"];   // "osd" (riconoscimento orientamento, 10 MB) non serve: l'app non lo usa
 
@@ -98,7 +102,7 @@ const add = (n) => {
   closure.add(k);
   for (const d of lock.packages[k].depends || []) add(d);
 };
-[...PACKAGES.basic, ...PACKAGES.full].forEach(add);
+[...PACKAGES.basic, ...PACKAGES.full, ...PACKAGES.word].forEach(add);
 let pyBytes = 0;
 for (const k of closure) {
   const f = lock.packages[k].file_name;
@@ -135,8 +139,8 @@ async function wheelFor(name, version) {
   if (!pick) throw new Error(`Nessuna versione WebAssembly o "pura" di ${name} ${meta.info.version}`);
   return download(pick.url, path.join(CACHE, "wheels", pick.filename));
 }
-const manifest = { packages: PACKAGES, wheels: { basic: [], full: [] }, tessdata: [], pyodide: PYODIDE_VERSION };
-for (const group of ["basic", "full"]) {
+const manifest = { packages: PACKAGES, wheels: { basic: [], full: [], word: [] }, tessdata: [], pyodide: PYODIDE_VERSION };
+for (const group of ["basic", "full", "word"]) {
   for (const [name, version] of WHEELS[group]) {
     const f = await wheelFor(name, version);
     const dst = path.join(outWheels, path.basename(f));
@@ -146,7 +150,7 @@ for (const group of ["basic", "full"]) {
     manifest.wheels[group].push(path.basename(f));
   }
 }
-log(`${manifest.wheels.basic.length + manifest.wheels.full.length} librerie`);
+log(`${manifest.wheels.basic.length + manifest.wheels.full.length + manifest.wheels.word.length} librerie`);
 
 // ------------------------------------------------------------------ codice degli strumenti
 step("Codice di PDFz (backend/hdpdf)");
