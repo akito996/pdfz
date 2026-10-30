@@ -3,7 +3,7 @@ import { Eraser, MousePointerClick, ShieldOff, Trash2, Upload } from "lucide-rea
 import { api } from "../api";
 import { useEvent, useStored } from "../hooks";
 import { transparentSignature } from "../imageTools";
-import { useApp, usePending } from "../context";
+import { useApp } from "../context";
 import type { ToolDef } from "../tools";
 import type { PageObject, VRect } from "../types";
 import { PanelShell } from "./ToolPanel";
@@ -54,6 +54,7 @@ export function SignPanel({ def, onClose }: { def: ToolDef; onClose: () => void 
   const [textSize, setTextSize] = useState(26);
   const [color, setColor] = useState("#1d3a8a");
   const [caption, setCaption] = useState(false);
+  const [tuttePagine, setTuttePagine] = useState(false);   // sigla: la prossima firma su ogni pagina
   // certificato
   const [cert, setCert] = useState<AssetValue | null>(null);
   const [certPw, setCertPw] = useState("");
@@ -126,7 +127,7 @@ export function SignPanel({ def, onClose }: { def: ToolDef; onClose: () => void 
   };
 
   const onPlace = async (page: number, pt: { x: number; y: number }) => {
-    if (selectedId && !placing) { setSelectedId(null); return; }
+    if (selectedId) { setSelectedId(null); return; }   // un tocco fuori deseleziona; il tocco dopo mette una firma nuova
     const size = app.sizes[page];
     const fit = (w: number, h: number) => {
       const x = Math.min(Math.max(pt.x - w / 2, 0), Math.max(size.w - w, 0));
@@ -155,17 +156,32 @@ export function SignPanel({ def, onClose }: { def: ToolDef; onClose: () => void 
       o = { id: `s${seq++}`, page, kind: "image", imageUrl: src.url, keepRatio: true, rect: fit(w, h),
         meta: { type: kind === "draw" ? "draw" : "image", key: src.key, natW: w, natH: h } };
     }
-    setObjects((l) => [...l.filter((x) => !x.meta?.cert), o]);
-    setSelectedId(o.id);
+    metti(o);
   };
 
-  // le firme di testo si ridimensionano come un'immagine: il corpo segue la larghezza
-  const patchObj = (id: string, p: Partial<PageObject>) => ap.cambia(id, p) || setObjects((l) => l.map((x) => {
-    if (x.id !== id) return x;
-    const n = { ...x, ...p };
-    if (x.meta?.type === "text" && p.rect && !p.size) n.size = x.meta.baseSize * p.rect.w / x.meta.natW;
-    return n;
-  }));
+  // la firma va subito sul foglio (niente "Applica") e resta selezionata: si sposta e si ridimensiona come le altre
+  const caricate = useRef(new Map<string, string>());   // immagine della firma -> file già passato al motore
+  const metti = async (o: PageObject) => {
+    const it: any = { page: o.page, rect: o.rect, caption, all_pages: tuttePagine };
+    if (o.kind === "text") Object.assign(it, { type: "text", text: o.text, font: o.fontId, size: o.size, color: o.color });
+    else {
+      try {
+        let id = caricate.current.get(o.imageUrl!);
+        if (!id) { id = (await api.dataUrl(o.imageUrl!, "firma.png")).id; caricate.current.set(o.imageUrl!, id); }
+        Object.assign(it, { type: o.meta.type, image: id });
+      } catch (e: any) {
+        app.toast(e.message || String(e), "err");
+        return;
+      }
+    }
+    if (await app.run("sign_visual", { items: [it] }, { silent: true })) {
+      if (o.kind === "text") rememberTexts([o.text!]);
+      ap.aspetta(o.page, o.rect);
+    }
+  };
+
+  // oggetti sulla pagina: le firme già applicate (spostamento nel motore) e il riquadro della firma digitale
+  const patchObj = (id: string, p: Partial<PageObject>) => ap.cambia(id, p) || setObjects((l) => l.map((x) => (x.id === id ? { ...x, ...p } : x)));
   const removeObj = (id: string) => {
     const a = ap.scelto(id), f = id.startsWith(FD) ? digitali.find((x) => FD + x.field === id) : undefined;
     if (a) { elimina([{ page: a.page, id: a.id }]); return; }
@@ -185,61 +201,24 @@ export function SignPanel({ def, onClose }: { def: ToolDef; onClose: () => void 
     app.setInteraction({
       mode: "objects", objects: [...giaFirmate, ...objects], selectedId, onSelect: setSelectedId, onObjectChange: patchObjE, onObjectDelete: removeObjE,
       onObjectDrop: dropE, onPlace: placing ? onPlaceE : deselectE,
-      placeHint: placing ? "Clicca dove inserire la firma" : undefined, fontStyle: app.fontStyle,
+      placeHint: placing ? (isCert ? `${verb} dove mostrare la firma digitale` : `${verb} la pagina dove vuoi la firma`) : undefined, fontStyle: app.fontStyle,
     });
-  }, [objects, selectedId, placing, app.fontStyle, ap.boxes, digitali]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [objects, selectedId, placing, app.fontStyle, ap.boxes, digitali, isCert, verb]); // eslint-disable-line react-hooks/exhaustive-deps
+  // la firma appena messa sul foglio resta selezionata
+  useEffect(() => { if (ap.daSelezionare) { setSelectedId(ap.daSelezionare); ap.selezionata(); } }, [ap.daSelezionare]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => app.setInteraction({ mode: "none" }), []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const sel = objects.find((o) => o.id === selectedId) || null;
-  const scalePct = sel ? Math.round((sel.rect.w / (sel.meta.natW || sel.rect.w)) * 100) : 100;
-  const setScale = (pct: number) => {
-    if (!sel || !(pct > 0)) return;
-    const w = (sel.meta.natW || sel.rect.w) * pct / 100;
-    const h = (sel.meta.natH || sel.rect.h) * pct / 100;
-    const cx = sel.rect.x + sel.rect.w / 2, cy = sel.rect.y + sel.rect.h / 2;
-    const patch: Partial<PageObject> = { rect: { x: cx - w / 2, y: cy - h / 2, w, h } };
-    patchObj(sel.id, patch);
-  };
-  const setWidthCm = (cm: number) => sel && cm > 0 && setScale((cm * CM / (sel.meta.natW || sel.rect.w)) * 100);
-
-  const placed = objects.filter((o) => !o.meta?.cert);
   const certBox = objects.find((o) => o.meta?.cert);
-
-  const apply = async () => {
-    if (isCert) {
-      if (!cert) { app.toast("Scegli prima il certificato (.pfx / .p12).", "info"); return false; }
-      const res = await app.run("sign_cert", {
-        certificate: cert.id, cert_password: certPw, visible, page: certBox?.page ?? 0, rect: certBox?.rect,
-        reason, location: place, tsa_url: tsa || undefined, certify,
-      });
-      if (res) { setObjects([]); app.toast("Salva ora il documento: ogni ulteriore modifica invaliderebbe la firma.", "info"); }
-      return !!res;
-    }
-    const assets: Record<string, string> = {};
-    const items = [];
-    try {
-      for (const o of placed) {
-        const it: any = { page: o.page, rect: o.rect, caption, all_pages: !!o.meta.allPages };
-        if (o.kind === "text") Object.assign(it, { type: "text", text: o.text, font: o.fontId, size: o.size, color: o.color });
-        else {
-          if (!assets[o.meta.key]) assets[o.meta.key] = (await api.dataUrl(o.imageUrl!, "firma.png")).id;
-          Object.assign(it, { type: o.meta.type, image: assets[o.meta.key] });
-        }
-        items.push(it);
-      }
-    } catch (e: any) {
-      app.toast(e.message || String(e), "err");
-      return false;
-    }
-    const res = await app.run("sign_visual", { items });
-    if (res && kind === "text") rememberTexts([text]);
-    if (res) { setObjects([]); setSelectedId(null); }
-    return !!res;
+  // la firma digitale resta un'azione da confermare: serve il certificato e deve essere l'ultima modifica
+  const firmaDigitale = async () => {
+    if (!cert) { app.toast("Scegli prima il certificato (.pfx / .p12).", "info"); return; }
+    const res = await app.run("sign_cert", {
+      certificate: cert.id, cert_password: certPw, visible, page: certBox?.page ?? 0, rect: certBox?.rect,
+      reason, location: place, tsa_url: tsa || undefined, certify,
+    });
+    if (res) { setObjects([]); app.toast("Salva ora il documento: ogni ulteriore modifica invaliderebbe la firma.", "info"); }
   };
-  // in sospeso solo le firme già messe sulla pagina (per il certificato: il riquadro della firma visibile)
-  usePending(isCert ? !!certBox : placed.length > 0, def.label, apply);
-
-  const ready = isCert ? !!cert && (!visible || !!certBox) : placed.length > 0;
+  const ready = !!cert && (!visible || !!certBox);
   // immagine (o foto) della firma: sfondo reso trasparente se richiesto, poi salvata nella casella scelta
   const loadSlot = async (f: File) => {
     let data = await fileToDataUrl(f);
@@ -252,9 +231,7 @@ export function SignPanel({ def, onClose }: { def: ToolDef; onClose: () => void 
 
   return (
     <PanelShell def={def} onClose={onClose}
-      footer={<button className="btn primary block" disabled={!ready} onClick={apply}>
-        {isCert ? "Firma digitalmente" : `Applica ${placed.length > 1 ? `${placed.length} firme` : "firma"}`}
-      </button>}>
+      footer={isCert ? <button className="btn primary block" disabled={!ready} onClick={firmaDigitale}>Firma digitalmente</button> : undefined}>
       <Seg value={kind} onChange={(v) => { setKind(v as SigKind); setPlacing(true); }} options={[
         { value: "draw", label: "Disegna" }, { value: "image", label: "Immagine" }, { value: "text", label: "Testo" }, { value: "cert", label: "Certificato" },
       ]} />
@@ -335,16 +312,10 @@ export function SignPanel({ def, onClose }: { def: ToolDef; onClose: () => void 
           <button className={`btn ${placing ? "primary" : ""}`} onClick={() => setPlacing((p) => !p)}>
             <MousePointerClick size={15} /> {placing ? "Disegna sulla pagina… (attivo)" : "Disegna sulla pagina"}
           </button>
-          <div className="hint">{placing ? "Clicca sulla pagina: la firma viene inserita alla sua dimensione, poi puoi spostarla e ridimensionarla dagli angoli." : "Attiva per inserire la firma con un clic."}</div>
+          <div className="hint">{placing ? `${verb} la pagina: la firma va subito sul foglio; poi la sposti trascinandola e la ridimensioni dagli angoli.` : "Attiva per inserire la firma con un tocco."}</div>
         </div>
       )}
 
-      {sel && !sel.meta?.cert && (
-        <>
-          <div className="section-title">Firma selezionata</div>
-          <button className="btn small danger" style={{ alignSelf: "flex-start" }} onClick={() => removeObj(sel.id)}><Trash2 size={13} /> Rimuovi firma</button>
-        </>
-      )}
       {scelto && <ApplicatoScelto a={scelto} tutti={ap.items} onElimina={elimina} />}
       {digitale && (
         <InVista key={digitale.field}>
@@ -353,7 +324,7 @@ export function SignPanel({ def, onClose }: { def: ToolDef; onClose: () => void 
           <button className="btn small danger" style={{ alignSelf: "flex-start" }} onClick={() => eliminaDigitale(digitale)}><ShieldOff size={13} /> Elimina firma digitale</button>
         </InVista>
       )}
-      {!sel && !scelto && !digitale && (ap.items.length > 0 || digitali.some((f) => f.rect)) && (
+      {!scelto && !digitale && (ap.items.length > 0 || digitali.some((f) => f.rect)) && (
         <div className="hint">{verb} una firma già applicata per spostarla o eliminarla.</div>
       )}
       <Advanced>
@@ -390,20 +361,11 @@ export function SignPanel({ def, onClose }: { def: ToolDef; onClose: () => void 
             <label className="check"><input type="checkbox" checked={certify} onChange={(e) => setCertify(e.target.checked)} /> Certifica il documento (blocca le modifiche successive)</label>
           </>
         )}
-        {sel && !sel.meta?.cert && (
-          <>
-            <div className="row" style={{ alignItems: "flex-end" }}>
-              <div className="field"><label>Larghezza (cm)</label>
-                <input className="input" type="number" step={0.1} min={0.5} value={Math.round(sel.rect.w / CM * 10) / 10} onChange={(e) => setWidthCm(Number(e.target.value))} /></div>
-              <div className="field"><label>Scala (%)</label>
-                <input className="input" type="number" step={5} min={10} max={500} value={scalePct} onChange={(e) => setScale(Number(e.target.value))} /></div>
-            </div>
-            <input type="range" min={20} max={300} step={5} value={scalePct} onChange={(e) => setScale(Number(e.target.value))} />
-            <label className="check"><input type="checkbox" checked={!!sel.meta.allPages} onChange={(e) => patchObj(sel.id, { meta: { ...sel.meta, allPages: e.target.checked } })} /> Ripeti su tutte le pagine (sigla)</label>
-          </>
-        )}
         {!isCert && (
-          <label className="check"><input type="checkbox" checked={caption} onChange={(e) => setCaption(e.target.checked)} /> Aggiungi data e ora sotto le firme</label>
+          <>
+            <label className="check"><input type="checkbox" checked={tuttePagine} onChange={(e) => setTuttePagine(e.target.checked)} /> Metti la prossima firma su tutte le pagine (sigla)</label>
+            <label className="check"><input type="checkbox" checked={caption} onChange={(e) => setCaption(e.target.checked)} /> Aggiungi data e ora sotto le firme</label>
+          </>
         )}
         <ElencoApplicati titolo="Firme nel documento" items={ap.items} onElimina={elimina}
           onVai={(a) => { app.gotoPage(a.page); if (a.rect) setSelectedId(boxId(a)); }} />

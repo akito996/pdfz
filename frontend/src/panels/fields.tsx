@@ -10,6 +10,11 @@ import { recentTexts } from "../textHistory";
 // telefono (anche in orizzontale) e tablet in verticale: interfaccia "a cassetto" con pannello dal basso
 const MOBILE_MQ = "(max-width: 760px), (max-height: 520px) and (pointer: coarse), (orientation: portrait) and (pointer: coarse) and (max-width: 1100px)";
 /** Vero se lo schermo corrisponde alla media query (si aggiorna ruotando il dispositivo). */
+/** "Tocca" sugli schermi touch, "Clicca" con il mouse: per le indicazioni scritte nei pannelli e sulla pagina. */
+export function useVerbo() {
+  return useMedia("(pointer: coarse)") ? "Tocca" : "Clicca";
+}
+
 export function useMedia(mq: string) {
   const [m, setM] = useState(() => typeof window !== "undefined" && !!window.matchMedia?.(mq).matches);
   useEffect(() => {

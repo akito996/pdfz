@@ -193,6 +193,10 @@ export function Viewer({ pdf, sizes, overlays, interaction, currentPage, onPageC
   useEffect(() => { setHits([]); }, [pdf]);
 
   const libro = vista.libro;
+  // indicazione dello strumento aperto, ben visibile sopra la pagina (prima era solo il suggerimento del mouse)
+  const suggerimento = interaction.mode === "objects" ? interaction.placeHint
+    : interaction.mode === "textsel" ? interaction.cursorHint
+    : interaction.mode === "rect" ? "Trascina sulla pagina per segnare l'area" : undefined;
   const scrollTo = useCallback((p: number) => {
     const el = pagesRef.current?.querySelector(`[data-page="${p}"]`) as HTMLElement | null;
     if (!el || !pagesRef.current) return;
@@ -382,6 +386,7 @@ export function Viewer({ pdf, sizes, overlays, interaction, currentPage, onPageC
         )}
       </div>
       <div className="viewer-body" style={{ gridTemplateColumns: showThumbs ? "150px 1fr" : "1fr" }}>
+        {suggerimento && <div className="suggerimento-foglio" role="status">{suggerimento}</div>}
         {showThumbs && <Thumbs pdf={pdf} count={sizes.length} current={currentPage} onPick={scrollTo} />}
         <div className={`pages ${libro ? "libro" : ""} ${vista.doppia ? "doppia" : ""}`} ref={pagesRef} onScroll={onScroll}>
           {gruppi.map((g) => (

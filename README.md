@@ -1,6 +1,6 @@
 # PDFz
 
-Editor PDF open source che lavora **interamente in locale**: visualizza, modifica, firma, converte e protegge i PDF
+Editor PDF open source che lavora **interamente in locale**, con una schermata iniziale "Cosa vuoi fare?", una modalità Semplice a sei pulsanti e guide passo passo: visualizza, modifica, firma, converte e protegge i PDF
 senza che nessun file lasci il dispositivo (niente cloud, niente account). Per Windows, macOS, Linux, Android e iPhone/iPad.
 
 Autore: **agjin** · Licenza: **GNU AGPL-3.0** · Codice: <https://github.com/akito996/pdfz>
@@ -139,11 +139,11 @@ Dettagli, opzioni e prerequisiti:
 ## Distribuzione sui PC Windows
 
 ```bat
-msiexec /i PDFz-1.5.0-x64.msi /qn                    :: silenziosa
-msiexec /i PDFz-1.5.0-x64.msi /qn DESKTOPSHORTCUT=0  :: senza icona sul desktop
-msiexec /i PDFz-1.5.0-x64.msi /qn HDSCOPE=user       :: solo per l'utente corrente
-msiexec /i PDFz-1.5.0-x64.msi /qn HDCONTEXTMENU=0    :: senza la voce nel menu del tasto destro
-msiexec /x PDFz-1.5.0-x64.msi /qn                    :: disinstallazione
+msiexec /i PDFz-1.6.0-x64.msi /qn                    :: silenziosa
+msiexec /i PDFz-1.6.0-x64.msi /qn DESKTOPSHORTCUT=0  :: senza icona sul desktop
+msiexec /i PDFz-1.6.0-x64.msi /qn HDSCOPE=user       :: solo per l'utente corrente
+msiexec /i PDFz-1.6.0-x64.msi /qn HDCONTEXTMENU=0    :: senza la voce nel menu del tasto destro
+msiexec /x PDFz-1.6.0-x64.msi /qn                    :: disinstallazione
 ```
 
 * Installazione per tutti gli utenti in `C:\Program Files\PDFz`, collegamento nel menu Start.

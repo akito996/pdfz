@@ -1,5 +1,22 @@
 # Novità
 
+## 1.6.0
+PDFz più semplice: si parte da "Cosa vuoi fare?", modalità Semplice, guide passo passo e niente più "Applica".
+
+- **Niente più "Applica"** (modifica, tutti i sistemi): firme, timbri, immagini, forme e spunte vanno sul foglio appena
+  tocchi la pagina e restano selezionate per spostarle; il testo scritto o corretto ci va appena tocchi fuori dalla
+  casella. Resta solo **Salva**, che diventa un pulsante rosso con la scritta quando c'è qualcosa da salvare. Un testo
+  aggiunto si riapre toccandolo e si corregge.
+- **Cosa vuoi fare?** (novità, tutti i sistemi): la schermata iniziale ha sei riquadri grandi (Firma un documento,
+  Compila un modulo, Unisci più PDF, Correggi il testo, Rimpicciolisci il file, Crea un PDF) e i file aperti di recente.
+- **Modalità Semplice** (novità, tutti i sistemi): sei pulsanti grandi con la scritta (Firma, Scrivi, Correggi, Spunta,
+  Pagine, Altro); sul telefono sono una barra in basso. La modalità Completa resta com'era; si cambia dal menu ☀.
+- **Guide 1-2-3** (novità, tutti i sistemi): la prima volta che apri uno strumento PDFz ti chiede se vuoi una guida
+  veloce in tre passi, che evidenzia dove toccare; si riapre con il "?" del pannello.
+- **Parole semplici** (modifica, tutti i sistemi): «Pulisci prima di inviare» al posto di Sanitizza, «Blocca moduli e
+  commenti» al posto di Appiattisci, «Riduci dimensione», «Controlla il PDF» e altri; le indicazioni ("Tocca la pagina
+  dove vuoi la firma") si vedono sopra la pagina; le novità di una versione nuova non coprono più lo schermo.
+
 ## 1.5.0
 Firme già applicate da spostare, nuovi modi di lettura e presentazione a schermo intero.
 

@@ -10,7 +10,7 @@ import pymupdf
 
 from .. import fonts
 from ..store import store
-from .applicati import marca, nuovo_id
+from .applicati import elenca, marca, nuovo_id, togli
 from .base import (MM, Ctx, Result, ToolError, boolean, color, num, parse_pages, point_from,
                    position_rect, rect_from, tool, visual_rect)
 
@@ -307,10 +307,13 @@ def edit_text(ctx: Ctx) -> Result:
 
 @tool("add_text")
 def add_text(ctx: Ctx) -> Result:
-    """params.items: [{page, rect|x,y, text, font, size, color, opacity, align, angle}]"""
+    """params.items: [{page, rect|x,y, text, font, size, color, opacity, align, angle}];
+    params.remove: [{page, id}] testi aggiunti prima da togliere (testo riaperto e cambiato: si sostituisce)."""
     doc = ctx.open()
     items = ctx.params.get("items") or ([ctx.params] if ctx.params.get("text") else [])
-    if not items:
+    sostituiti = togli(doc, ctx.params["remove"]) if ctx.params.get("remove") else []
+    items = [it for it in items if str(it.get("text", "")).strip()]
+    if not items and not sostituiti:
         raise ToolError("Scrivi il testo da aggiungere.")
     for it in items:
         pages = parse_pages(it.get("pages"), doc.page_count) if it.get("pages") else [int(num(it.get("page"), 0))]
@@ -323,13 +326,19 @@ def add_text(ctx: Ctx) -> Result:
             else:
                 x, y = num(it.get("x"), 50), num(it.get("y"), 50)
                 box = pymupdf.Rect(x, y, visual_rect(pg).x1 - 20, visual_rect(pg).y1)
-            # testo aggiunto: si può eliminare dopo (riquadro alto quanto le righe scritte)
-            with marca(pg, "testo", testo, gid=gid) as m:
+            # testo aggiunto: si può eliminare dopo (riquadro alto quanto le righe scritte) e riaprire per cambiarlo
+            # (testo e stile restano nel segno)
+            stile = {"testo": str(it.get("text", "")), "font": it.get("font") or "helv", "size": num(it.get("size"), 12),
+                     "color": it.get("color") or "#000000", "align": it.get("align", "left"), "opacity": num(it.get("opacity"), 1),
+                     "wrap": boolean(it.get("wrap"), True), "w": box.width}
+            with marca(pg, "testo", testo, gid=gid, extra=stile) as m:
                 h = write_lines(pg, box, it.get("text", ""), it.get("font") or "helv", num(it.get("size"), 12),
                                 color(it.get("color")), num(it.get("opacity"), 1), it.get("align", "left"),
                                 angle=num(it.get("angle"), 0), wrap=boolean(it.get("wrap"), True))
                 m.rect = pymupdf.Rect(box.x0, box.y0, box.x1, box.y0 + max(h, 1))
-    return Result(pdf=ctx.save(doc), message="Testo aggiunto.")
+    if not items:
+        return Result(pdf=ctx.save(doc, garbage=4), message="Testo eliminato.")
+    return Result(pdf=ctx.save(doc, garbage=4 if sostituiti else 3), message="Testo modificato." if sostituiti else "Testo aggiunto.")
 
 
 # ------------------------------------------------------------ immagini
@@ -339,9 +348,18 @@ def add_text(ctx: Ctx) -> Result:
 def list_images(ctx: Ctx) -> Result:
     doc = ctx.open()
     out = []
+    # le immagini inserite con PDFz sono oggetti applicati (si spostano e si eliminano da lì): qui non si ripetono
+    inserite: dict[int, list] = {}
+    for v in elenca(doc, ["immagine"]):
+        if v["rect"]:
+            r = v["rect"]
+            inserite.setdefault(v["page"], []).append(pymupdf.Rect(r["x"] - 1, r["y"] - 1, r["x"] + r["w"] + 1, r["y"] + r["h"] + 1))
     for pno, pg in enumerate(doc):
         for info in pg.get_image_info(xrefs=True):
-            out.append({"page": pno, "xref": info.get("xref", 0), "bbox": _vis(pg, info["bbox"]),
+            bbox = _vis(pg, info["bbox"])
+            if any(pymupdf.Rect(bbox) in r for r in inserite.get(pno, [])):
+                continue
+            out.append({"page": pno, "xref": info.get("xref", 0), "bbox": bbox,
                         "width": info.get("width"), "height": info.get("height")})
     doc.close()
     return Result(data={"images": out})
@@ -443,11 +461,14 @@ def images(ctx: Ctx) -> Result:
             cache[key] = _image_bytes(store.get(aid), opacity)
         data = cache[key]
         pages = range(doc.page_count) if boolean(it.get("all_pages")) else [int(num(it.get("page"), 0))]
+        gid = nuovo_id()
         for pno in pages:
             pg = doc[pno]
-            pg.insert_image(rect_from(it["rect"], pg), stream=data,
-                            keep_proportion=boolean(it.get("keep_proportion"), True),
-                            overlay=not boolean(it.get("behind"), False), rotate=pg.rotation)
+            # immagine inserita: si sposta, si ridimensiona e si elimina anche dopo (oggetto applicato)
+            with marca(pg, "immagine", it.get("name") or "Immagine", it["rect"], gid):
+                pg.insert_image(rect_from(it["rect"], pg), stream=data,
+                                keep_proportion=boolean(it.get("keep_proportion"), True),
+                                overlay=not boolean(it.get("behind"), False), rotate=pg.rotation)
             added += 1
     if not removed and not added:
         raise ToolError("Nessuna modifica: inserisci o rimuovi almeno un'immagine.")

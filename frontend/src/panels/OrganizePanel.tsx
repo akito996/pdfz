@@ -131,7 +131,7 @@ export function OrganizePanel({ def, onClose }: { def: ToolDef; onClose: () => v
     <PanelShell def={def} onClose={onClose}
       footer={<>
         <button className="btn" onClick={() => { setCards(initialCards(n)); setSel(new Set()); }} disabled={!changed}>Ripristina</button>
-        <button className="btn primary" style={{ flex: 1 }} onClick={apply} disabled={!changed}>Applica</button>
+        <button className="btn primary" style={{ flex: 1 }} onClick={async () => { if (await apply()) onClose(); }} disabled={!changed}>Fatto</button>
       </>}>
       <input ref={fileRef} type="file" hidden multiple accept=".pdf,application/pdf"
         onChange={(e) => { const f = Array.from(e.target.files || []); e.target.value = ""; if (f.length) addFromPdf(f); }} />

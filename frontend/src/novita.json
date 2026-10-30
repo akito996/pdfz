@@ -2,6 +2,78 @@
   "_info": "Novità di ogni versione, mostrate nella campanella dell'app e copiate dalla build in versione-<piattaforma>.json. tipo: nuovo | modifica | correzione | installer | ottimizzazione | rimosso. piattaforme: windows, macos, linux, android, ios, web (la web app per iPhone mostra anche le voci ios).",
   "versioni": [
     {
+      "versione": "1.6.0",
+      "data": "2026-10-30",
+      "titolo": "PDFz 1.6.0: più semplice, senza «Applica»",
+      "voci": [
+        {
+          "tipo": "modifica",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android",
+            "ios"
+          ],
+          "dove": "Firma, Timbro, Scrivi, Forme…",
+          "titolo": "Niente più «Applica»",
+          "dettaglio": "Quello che metti va subito sul foglio e resta selezionato per spostarlo; il testo ci va appena tocchi fuori dalla casella. Resta solo Salva."
+        },
+        {
+          "tipo": "nuovo",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android",
+            "ios"
+          ],
+          "dove": "Schermata iniziale",
+          "titolo": "Cosa vuoi fare?",
+          "dettaglio": "Sei riquadri grandi per le cose più comuni e i file aperti di recente."
+        },
+        {
+          "tipo": "nuovo",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android",
+            "ios"
+          ],
+          "dove": "Menu ☀ › Modalità",
+          "titolo": "Modalità Semplice",
+          "dettaglio": "Sei pulsanti grandi con la scritta: Firma, Scrivi, Correggi, Spunta, Pagine, Altro."
+        },
+        {
+          "tipo": "nuovo",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android",
+            "ios"
+          ],
+          "dove": "Ogni strumento › ?",
+          "titolo": "Guide in 3 passi",
+          "dettaglio": "La prima volta che apri uno strumento puoi seguire una guida veloce che ti mostra dove toccare."
+        },
+        {
+          "tipo": "modifica",
+          "piattaforme": [
+            "windows",
+            "macos",
+            "linux",
+            "android",
+            "ios"
+          ],
+          "dove": "Nomi degli strumenti",
+          "titolo": "Parole più semplici",
+          "dettaglio": "Per esempio «Pulisci prima di inviare» al posto di Sanitizza; le indicazioni si leggono sopra la pagina."
+        }
+      ]
+    },
+    {
       "versione": "1.5.0",
       "data": "2026-10-30",
       "titolo": "PDFz 1.5.0: firme da spostare, lettura a libro e presentazione",

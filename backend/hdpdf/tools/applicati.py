@@ -25,7 +25,8 @@ from .base import Ctx, Result, ToolError, rect_from, tool
 
 # tipo: (nome, plurale, femminile) per i messaggi
 TIPI = {"firma": ("firma", "firme", True), "timbro": ("timbro", "timbri", False), "testo": ("testo", "testi", False),
-        "filigrana": ("filigrana", "filigrane", True), "numeri": ("numerazione", "numerazioni", True)}
+        "filigrana": ("filigrana", "filigrane", True), "numeri": ("numerazione", "numerazioni", True),
+        "immagine": ("immagine", "immagini", True)}
 _ETICHETTA = b"PDFz"
 
 
@@ -44,8 +45,9 @@ class _Segno:
 
 
 @contextmanager
-def marca(page: pymupdf.Page, tipo: str, nome: str = "", rect=None, gid: str | None = None):
+def marca(page: pymupdf.Page, tipo: str, nome: str = "", rect=None, gid: str | None = None, extra: dict | None = None):
     """Tutto il contenuto che il blocco aggiunge alla pagina diventa un oggetto applicato eliminabile.
+    extra: dati per riaprire l'oggetto e cambiarlo (es. testo, carattere e dimensione del testo aggiunto), in /X.
 
         with marca(pg, "firma", "Firma disegnata", box, gid) as m:
             pg.insert_image(...)
@@ -66,7 +68,18 @@ def marca(page: pymupdf.Page, tipo: str, nome: str = "", rect=None, gid: str | N
         r = rect_from(segno.rect, page) * ~page.transformation_matrix   # spazio PDF della pagina
         r.normalize()
         props += f" /R [{r.x0:.2f} {r.y0:.2f} {r.x1:.2f} {r.y1:.2f}]".encode()
-    props += f" /D (D:{dt.datetime.now():%Y%m%d%H%M%S})>>".encode()
+    props += f" /D (D:{dt.datetime.now():%Y%m%d%H%M%S})".encode()
+    if extra:
+        valori = []
+        for k, v in extra.items():
+            if isinstance(v, bool):
+                valori.append(f"/{k} {'true' if v else 'false'}".encode())
+            elif isinstance(v, (int, float)):
+                valori.append(f"/{k} {float(v):.4f}".rstrip("0").rstrip(".").encode())
+            elif v is not None:
+                valori.append(f"/{k} ".encode() + _testo_pdf(str(v)[:4000]))
+        props += b" /X <<" + b" ".join(valori) + b">>"
+    props += b">>"
     for x in nuovi:
         doc.update_stream(x, b"/PDFz " + props + b" BDC\n" + doc.xref_stream(x) + b"\nEMC\n")
 
@@ -191,7 +204,7 @@ class _Lettore:
         except ValueError:
             pass
         if parola in (b"true", b"false", b"null"):
-            return "kw", parola, i
+            return "kw", {b"true": True, b"false": False, b"null": None}[parola], i
         if parola == b"ID":   # immagine in linea: dati binari fino a EI
             m = _FINE_EI.search(d, j + 1)
             self.i = m.end() if m else self.n
@@ -270,8 +283,12 @@ def elenca(doc: pymupdf.Document, tipi=None) -> list[dict]:
                     data_iso = dt.datetime.strptime(d[2:16], "%Y%m%d%H%M%S").isoformat() if d.startswith("D:") else ""
                 except ValueError:
                     pass
+                extra = {}
+                if isinstance(props.get("X"), dict):
+                    for k, v in props["X"].items():
+                        extra[k] = _testo(v) if isinstance(v, (bytes, bytearray)) else v
                 visti[gid] = {"page": page.number, "id": gid, "tipo": tipo, "nome": _testo(props.get("Nome")),
-                              "data": data_iso, "rect": rect}
+                              "data": data_iso, "rect": rect, "extra": extra}
         out += visti.values()
     return out
 
@@ -344,6 +361,8 @@ def messaggio(tipi: set[str], tolti: list[tuple[int, str]]) -> str:
 
 def _oggetto_pdf(v) -> bytes:
     """Valore letto da _Lettore di nuovo in sintassi PDF (per riscrivere le proprietà della sequenza)."""
+    if isinstance(v, bool) or v is None:
+        return {True: b"true", False: b"false", None: b"null"}[v]
     if isinstance(v, str):
         return b"/" + v.encode("latin-1")
     if isinstance(v, (bytes, bytearray)):

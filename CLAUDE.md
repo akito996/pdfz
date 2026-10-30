@@ -75,8 +75,17 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   sistema quando la pagina non risponde alla chiusura (`_ask_quit`) e "Lasciare il sito?" del browser su Linux.
 - **Finestrelle dei pulsanti in alto** (Tema, Notifiche, Download e future): solo con `components/Popover.tsx` (disegnate
   in `<body>`, posizione fissa). Mai `position: absolute` dentro `.topbar`: sul telefono la barra scorre e le taglia.
-- **Strumenti con "Applica"**: ogni pannello registra le modifiche non applicate con `usePending(dirty, def.label, apply)`
-  (`apply` restituisce `true` se riuscito). L'app chiede Applica / Non applicare / Annulla quando si lascia lo strumento.
+- **Niente "Applica"** (dalla 1.6.0, `docs/facilita-uso.md`): quello che si mette sulla pagina va subito sul foglio
+  (firma, timbro, immagine, forma: al tocco, poi resta selezionato e si sposta come oggetto applicato); il testo quando
+  si lascia la casella (`useApplicaLasciando`). Quello che resta nel pannello si registra con `usePending(dirty, label,
+  apply)`: uscendo, cambiando scheda o salvando l'app lo porta sul foglio **senza domande** (solo Oscura e la firma
+  digitale chiedono conferma). Gli strumenti con il modulo hanno il pulsante con il verbo (`submitLabel`, altrimenti il
+  nome) e uscendo non eseguono niente. Mai più un pulsante "Applica".
+- **Facilità d'uso**: schermata iniziale `components/Inizio.tsx` (sei compiti, file recenti `recenti.ts`), modalità
+  Semplice/Completa (`components/Semplice.tsx`, `hdpdf.modalita`, menu ☀), guide 1-2-3 (`guide.ts`,
+  `components/Guida.tsx`, offerte al primo uso, "?" nel pannello), indicazione sopra la pagina (`placeHint` →
+  `suggerimento-foglio`), "Tocca"/"Clicca" con `useVerbo`. Nomi degli strumenti in parole semplici; i nomi vecchi
+  restano cercabili (`ANCHE` in `tools.ts`).
 - **Chiusura dell'app desktop**: `desktop.py` ferma la chiusura e chiama `window.hdpdfRequestClose` da un altro thread; la pagina
   chiede salva/applica e poi chiama `api.quit()`. Mai `evaluate_js` dentro l'evento `closing` (blocca la finestra).
   **Più finestre** (scheda trascinata fuori): `apri_finestra()` in `run()` crea ogni finestra con la sua `Api`; `quit()` chiude
@@ -117,7 +126,7 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
 
 ## Stato attuale (2026-10-30)
 
-- Versione nel codice: **1.5.0** di PDFz (oggetti applicati spostabili, Vista e presentazione Ctrl+L, pagine ruotate). Marchio applicato ovunque (2026-10-22, versione 1.3.0): **icona e favicon 24
+- Versione nel codice: **1.6.0** di PDFz (più semplice: schermata iniziale, modalità Semplice, guide, niente «Applica»). Marchio applicato ovunque (2026-10-22, versione 1.3.0): **icona e favicon 24
   "Foglio senza fondo"** — documento bianco con contorno nero, piega d'oro, "PDF" rosso, "z" nera, nessun fondo attorno
   (iPhone e icona adattiva Android su fondo bianco); prima la 19 (2026-10-21) e la 17 "Foglio oro" (inviata), palette predefinita Rubino,
   5 palette selezionabili, avvisi solo con le finestre dell'app (provati nel browser: Oscura, domanda annidata dopo
@@ -231,6 +240,14 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   DMG 159,7 MB, AppImage 175,2 MB, APK 64,6 MB), sorgente, web app 1.5.0 in `/app/`. Link mandati, con l'analisi
   della facilità d'uso (pagina Artifact e capitolo 10 del Word: 5 proposte, consigliate la 5 e la 3, poi la 1).
 
+- **Versione 1.6.0** (2026-10-30): l'autore ha scelto 💎 e le strade A, B, C, D, E (`docs/facilita-uso.md`):
+  schermata "Cosa vuoi fare?" con sei compiti e file recenti, modalità Semplice (sei pulsanti con la scritta, sul
+  telefono barra in basso) e Completa, guide 1-2-3 offerte la prima volta, niente "Applica" (firme, timbri, immagini,
+  forme e spunte al tocco e selezionate; testo quando si lascia la casella, riapribile), Salva evidenziato, parole
+  semplici, indicazione sopra la pagina, novità come avviso breve. Motore: testo aggiunto con testo e stile nel segno
+  (`/X`), `add_text` con `remove`, immagini inserite come oggetti applicati (89 passati, 2 saltati con PyMuPDF 1.28.2
+  e 2.0). Provato nel browser a 1280×800 e nella web app a 375 px (Pyodide). Non provato su un telefono vero.
+
 ## Punti aperti
 
 1. **Copia di riserva della chiave Android**: `C:\Dev\PDFz-chiave-android` (`pdfz-release.jks` + `password.txt`, creata
@@ -265,3 +282,7 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
 12. **Presentazione sull'iPhone**: Safari non ha lo schermo intero per le pagine (solo per i video): la presentazione
    copre la pagina dell'app ma restano le barre di Safari, salvo nella web app aggiunta alla Home. Il libro su
    Android/iPhone (scorrimento col dito con aggancio) è provato solo con il mouse in vista telefono.
+13. **Facilità d'uso (1.6.0)**: da provare con persone non esperte (la parte "prova con 5 persone" della strada 💎 la fa
+   l'autore). Compilare i moduli con campi veri (AcroForm) non c'è ancora: "Compila un modulo" usa Scrivi e Spunta.
+   Le modifiche fatte prima della 1.6.0 a un testo aggiunto non si riaprono (manca lo stile nel segno): si spostano o
+   si eliminano.

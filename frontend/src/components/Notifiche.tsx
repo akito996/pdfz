@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useApp } from "../context";
 import {
   AlertTriangle, Bell, CheckCircle2, Copy, Download, ExternalLink, Gauge, Info, MinusCircle, PackageCheck, PencilLine, Sparkles, Trash2,
   Wrench, X,
@@ -152,10 +153,23 @@ export function Notifiche({ version, updateUrl }: { version?: string; updateUrl?
     return () => { alive = false; window.clearInterval(t); };
   }, [version, updateUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // primo avvio dopo un aggiornamento (o nuova versione disponibile): l'anteprima si apre da sola, una volta
+  // primo avvio dopo un aggiornamento (o nuova versione disponibile): un avviso breve, una volta, e il numero sulla
+  // campanella. Prima si apriva la finestra delle novità, che sul telefono copriva tutto lo schermo
+  // l'avviso si mostra una volta per versione; il numero sulla campanella resta finché non la si apre
+  const app = useApp();
+  const [avvisato, setAvvisato] = useStored<string | null>("hdpdf.avvisoNovita", null);
+  const verbo = window.matchMedia?.("(pointer: coarse)").matches ? "Tocca" : "Clicca";
   useEffect(() => {
     if (auto.current || !version) return;
-    if (nuove.length || updNuovo) { auto.current = true; apriPopup(); }
+    if (updNuovo && aggiornamento && avvisato !== `agg-${aggiornamento.latest}`) {
+      auto.current = true;
+      setAvvisato(`agg-${aggiornamento.latest}`);
+      app.toast(`È disponibile PDFz ${aggiornamento.latest}. ${verbo} la campanella per scaricarlo.`, "info");
+    } else if (nuove.length && avvisato !== version) {
+      auto.current = true;
+      setAvvisato(version);
+      app.toast(`PDFz è aggiornato alla versione ${version}. ${verbo} la campanella per vedere le novità.`, "info");
+    }
   }, [version, nuove.length, updNuovo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const apriPopup = () => {

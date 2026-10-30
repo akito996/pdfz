@@ -1,54 +1,68 @@
 import { useEffect, useRef, useState } from "react";
-import { ImagePlus, Lock, Trash2, Unlock } from "lucide-react";
+import { ImagePlus, Trash2 } from "lucide-react";
 import { api } from "../api";
 import { useEvent } from "../hooks";
-import { useApp, usePending } from "../context";
+import { useApp } from "../context";
 import type { ToolDef } from "../tools";
 import type { PageObject } from "../types";
 import { PanelShell } from "./ToolPanel";
 import { CameraButton } from "../components/PhotoScan";
-import { Advanced } from "./fields";
+import { Advanced, useVerbo } from "./fields";
+import { ApplicatoScelto, ElencoApplicati, boxId, useApplicati } from "./applicati";
 
-let seq = 0;
-type Unit = "px" | "cm" | "%";
-const PT_PER = { px: 0.75, cm: 72 / 2.54 };
+const PT_PER_CM = 72 / 2.54;
 
 interface Pending { asset: string; url: string; name: string; w: number; h: number }
 
+/** Immagini senza "Applica" (dalla 1.6.0): l'immagine scelta va sul foglio dove si tocca la pagina e resta selezionata
+ *  (si sposta e si ridimensiona come firme e timbri); quelle che c'erano già nel PDF si tolgono subito. */
 export function ImagesPanel({ def, onClose }: { def: ToolDef; onClose: () => void }) {
   const app = useApp();
-  const [objects, setObjects] = useState<PageObject[]>([]);
+  const verb = useVerbo();
+  const [esistenti, setEsistenti] = useState<PageObject[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
-  const [unit, setUnit] = useState<Unit>("cm");
+  // impostazioni della prossima immagine
+  const [opacity, setOpacity] = useState(1);
+  const [allPages, setAllPages] = useState(false);
+  const [behind, setBehind] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const docId = app.doc?.id;
-  const sel = objects.find((o) => o.id === selectedId) || null;
+  // immagini inserite con PDFz (oggetti applicati): si spostano, si ridimensionano e si eliminano
+  const ap = useApplicati(["immagine"]);
+  const scelto = ap.scelto(selectedId);
+  const elimina = async (v: { page?: number; id: string }[]) => { if (await ap.elimina(v)) setSelectedId(null); };
+  const esistente = esistenti.find((o) => o.id === selectedId) || null;
 
-  // immagini già presenti nel PDF: selezionabili per rimuoverle
+  // immagini che c'erano già nel PDF: si toccano per toglierle
   useEffect(() => {
-    setObjects([]);
-    setSelectedId(null);
+    setEsistenti([]);
     if (!docId) return;
     api.tool("list_images", { doc: docId }).then((r) => {
-      setObjects(r.data.images.map((im: any, i: number) => ({
+      setEsistenti(r.data.images.map((im: any, i: number) => ({
         id: `x${i}`, page: im.page, kind: "box", locked: true, label: "Immagine del PDF",
         rect: { x: im.bbox[0], y: im.bbox[1], w: im.bbox[2] - im.bbox[0], h: im.bbox[3] - im.bbox[1] },
-        meta: { existing: true, xref: im.xref, removed: false },
+        meta: { xref: im.xref },
       } as PageObject)));
     }).catch(() => {});
   }, [docId]);
+  useEffect(() => { if (ap.daSelezionare) { setSelectedId(ap.daSelezionare); ap.selezionata(); } }, [ap.daSelezionare]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const patchObj = (id: string, p: Partial<PageObject>) => setObjects((l) => l.map((x) => (x.id === id ? { ...x, ...p } : x)));
-  const remove = (id: string) => {
-    const o = objects.find((x) => x.id === id);
-    if (!o) return;
-    if (o.meta?.existing) toggleRemoveExisting(o);
-    else { setObjects((l) => l.filter((x) => x.id !== id)); setSelectedId(null); }
+  const togliEsistente = async (o: PageObject) => {
+    setSelectedId(null);
+    await app.run("images", { remove: [{ page: o.page, xref: o.meta.xref, rect: o.rect }] });
   };
-  const toggleRemoveExisting = (o: PageObject) => {
-    const removed = !o.meta.removed;
-    patchObj(o.id, { meta: { ...o.meta, removed }, tone: removed ? "danger" : undefined, label: removed ? "Da rimuovere" : "Immagine del PDF" });
+  const togliTutte = async () => {
+    const n = esistenti.length;
+    const c = await app.ask("Togliere tutte le immagini?", <>Le <b>{n}</b> immagini che c'erano nel documento verranno tolte da tutte le pagine. Puoi tornare indietro con Annulla.</>,
+      [{ label: "Annulla", value: "cancel" }, { label: "Togli tutte", value: "ok", kind: "danger" }]);
+    if (c === "ok") app.run("images", { remove_all: true });
+  };
+  const remove = (id: string) => {
+    const a = ap.scelto(id);
+    if (a) { elimina([{ page: a.page, id: a.id }]); return; }
+    const o = esistenti.find((x) => x.id === id);
+    if (o) togliEsistente(o);
   };
 
   const pick = async (f: File) => {
@@ -68,139 +82,70 @@ export function ImagesPanel({ def, onClose }: { def: ToolDef; onClose: () => voi
     }
   };
 
-  const place = (page: number, pt: { x: number; y: number }) => {
+  const place = async (page: number, pt: { x: number; y: number }) => {
     if (!pending) { setSelectedId(null); return; }
     const size = app.sizes[page];
     // dimensioni originali (96 DPI), ridotte solo se più grandi della pagina
     let w = pending.w * 0.75, h = pending.h * 0.75;
     const k = Math.min(1, (size.w * 0.95) / w, (size.h * 0.95) / h);
     w *= k; h *= k;
-    const x = Math.min(Math.max(pt.x - w / 2, 0), size.w - w);
-    const y = Math.min(Math.max(pt.y - h / 2, 0), size.h - h);
-    const o: PageObject = {
-      id: `i${seq++}`, page, kind: "image", imageUrl: pending.url, keepRatio: true, opacity: 1,
-      rect: { x, y, w, h },
-      meta: { asset: pending.asset, name: pending.name, naturalW: pending.w * 0.75, naturalH: pending.h * 0.75, allPages: false, behind: false },
-    };
-    setObjects((l) => [...l, o]);
-    setSelectedId(o.id);
-    setPending(null);
+    const rect = { x: Math.min(Math.max(pt.x - w / 2, 0), size.w - w), y: Math.min(Math.max(pt.y - h / 2, 0), size.h - h), w, h };
+    const res = await app.run("images", { items: [{
+      image: pending.asset, page, rect, opacity, keep_proportion: true, all_pages: allPages, behind, name: pending.name,
+    }] }, { silent: true });
+    if (res) { setPending(null); ap.aspetta(page, rect); }
   };
 
-  const patchObjE = useEvent(patchObj);
-  const removeE = useEvent(remove);
   const placeE = useEvent(place);
+  const removeE = useEvent(remove);
+  const patchE = useEvent((id: string, p: Partial<PageObject>) => { ap.cambia(id, p); });
+  const dropE = useEvent((id: string) => { ap.lascia(id); });
   useEffect(() => {
     app.setInteraction({
-      mode: "objects", objects, selectedId, onSelect: setSelectedId, onObjectChange: patchObjE, onObjectDelete: removeE,
-      onPlace: placeE, placeHint: pending ? "Clicca dove inserire l'immagine" : undefined,
+      mode: "objects", objects: [...esistenti, ...ap.boxes], selectedId, onSelect: setSelectedId, onObjectChange: patchE,
+      onObjectDelete: removeE, onObjectDrop: dropE, onPlace: placeE,
+      placeHint: pending ? `${verb} la pagina dove vuoi l'immagine` : undefined,
     });
-  }, [objects, selectedId, pending]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [esistenti, ap.boxes, selectedId, pending, verb]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => app.setInteraction({ mode: "none" }), []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const toUnit = (pt: number, natural: number) => unit === "%" ? (pt / natural) * 100 : pt / PT_PER[unit];
-  const fromUnit = (v: number, natural: number) => unit === "%" ? (v / 100) * natural : v * PT_PER[unit];
-  const setSize = (dim: "w" | "h", v: number) => {
-    if (!sel || !(v > 0)) return;
-    const nat = dim === "w" ? sel.meta.naturalW : sel.meta.naturalH;
-    const pt = fromUnit(v, nat);
-    const ratio = sel.rect.w / sel.rect.h;
-    const rect = { ...sel.rect };
-    if (dim === "w") { rect.w = pt; if (sel.keepRatio) rect.h = pt / ratio; }
-    else { rect.h = pt; if (sel.keepRatio) rect.w = pt * ratio; }
-    patchObj(sel.id, { rect });
-  };
-
-  const added = objects.filter((o) => !o.meta?.existing);
-  const toRemove = objects.filter((o) => o.meta?.existing && o.meta.removed);
-  const existing = objects.filter((o) => o.meta?.existing);
-
-  const apply = async () => {
-    const res = await app.run("images", {
-      remove: toRemove.map((o) => ({ page: o.page, xref: o.meta.xref, rect: o.rect })),
-      items: added.map((o) => ({
-        image: o.meta.asset, page: o.page, rect: o.rect, opacity: o.opacity, keep_proportion: o.keepRatio,
-        all_pages: o.meta.allPages, behind: o.meta.behind,
-      })),
-    });
-    if (res) setSelectedId(null);
-    return !!res;
-  };
-  usePending(added.length + toRemove.length > 0, def.label, apply);
-
-  const fmt = (v: number) => (unit === "px" ? Math.round(v) : Math.round(v * 10) / 10);
   return (
-    <PanelShell def={def} onClose={onClose}
-      footer={<button className="btn primary block" disabled={!added.length && !toRemove.length} onClick={apply}>
-        Applica{added.length ? ` · ${added.length} da inserire` : ""}{toRemove.length ? ` · ${toRemove.length} da rimuovere` : ""}
-      </button>}>
+    <PanelShell def={def} onClose={onClose}>
       <div className="btn-row">
-        <button className="btn" onClick={() => fileRef.current?.click()}><ImagePlus size={15} /> Inserisci immagine…</button>
+        <button className="btn" onClick={() => fileRef.current?.click()}><ImagePlus size={15} /> Scegli un'immagine…</button>
         <CameraButton onPhoto={pick} title="Scatta una foto e inseriscila nel documento" />
       </div>
       <input ref={fileRef} type="file" hidden accept="image/*" onChange={(e) => { const f = e.target.files?.[0]; if (f) pick(f); e.target.value = ""; }} />
       {pending && (
         <div className="note ok" style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <img src={pending.url} style={{ width: 40, height: 40, objectFit: "contain", background: "#fff" }} />
-          <div>Clicca sulla pagina dove inserire <b>{pending.name}</b> ({pending.w}×{pending.h} px).</div>
+          <div>{verb} la pagina dove vuoi <b>{pending.name}</b>: va subito sul foglio, poi la sposti e la ridimensioni.</div>
         </div>
       )}
-
-      {sel && !sel.meta?.existing && (
-        <>
-          <div className="section-title">Immagine selezionata</div>
-          <div className="row" style={{ alignItems: "flex-end" }}>
-            <div className="field"><label>Larghezza</label>
-              <input className="input" type="number" min={1} step={unit === "px" ? 1 : 0.1} value={fmt(toUnit(sel.rect.w, sel.meta.naturalW))} onChange={(e) => setSize("w", Number(e.target.value))} /></div>
-            <button className="btn icon" style={{ flex: "none" }} title={sel.keepRatio ? "Proporzioni bloccate" : "Proporzioni libere"}
-              onClick={() => patchObj(sel.id, { keepRatio: !sel.keepRatio })}>{sel.keepRatio ? <Lock size={15} /> : <Unlock size={15} />}</button>
-            <div className="field"><label>Altezza</label>
-              <input className="input" type="number" min={1} step={unit === "px" ? 1 : 0.1} value={fmt(toUnit(sel.rect.h, sel.meta.naturalH))} onChange={(e) => setSize("h", Number(e.target.value))} /></div>
-          </div>
-          <button className="btn small danger" style={{ alignSelf: "flex-start" }} onClick={() => remove(sel.id)}><Trash2 size={13} /> Rimuovi immagine</button>
-        </>
-      )}
-      {sel && sel.meta?.existing && (
+      {scelto && <ApplicatoScelto a={scelto} tutti={ap.items} onElimina={elimina} />}
+      {esistente && (
         <>
           <div className="section-title">Immagine del documento</div>
-          <div className="hint">Pagina {sel.page + 1} · {Math.round(sel.rect.w / PT_PER.cm * 10) / 10}×{Math.round(sel.rect.h / PT_PER.cm * 10) / 10} cm</div>
-          <button className={`btn small ${sel.meta.removed ? "" : "danger"}`} style={{ alignSelf: "flex-start" }} onClick={() => toggleRemoveExisting(sel)}>
-            <Trash2 size={13} /> {sel.meta.removed ? "Non rimuovere" : "Rimuovi immagine"}
-          </button>
+          <div className="hint">Pagina {esistente.page + 1} · {Math.round(esistente.rect.w / PT_PER_CM * 10) / 10}×{Math.round(esistente.rect.h / PT_PER_CM * 10) / 10} cm</div>
+          <button className="btn small danger" style={{ alignSelf: "flex-start" }} onClick={() => togliEsistente(esistente)}><Trash2 size={13} /> Togli l'immagine</button>
         </>
       )}
-
+      {!pending && !scelto && !esistente && (esistenti.length > 0 || ap.items.length > 0) && (
+        <div className="hint">{verb} un'immagine sulla pagina per spostarla o toglierla.</div>
+      )}
       <Advanced>
-        {sel && !sel.meta?.existing && (
-          <>
-          <div className="row">
-            <span className="label" style={{ flex: "none" }}>Unità</span>
-            <div className="seg">
-              {(["px", "cm", "%"] as Unit[]).map((u) => <button key={u} type="button" className={unit === u ? "on" : ""} onClick={() => setUnit(u)}>{u}</button>)}
-            </div>
-          </div>
-          <div className="btn-row">
-            <button className="btn small" onClick={() => patchObj(sel.id, { rect: { ...sel.rect, w: sel.meta.naturalW, h: sel.meta.naturalH } })}>Dimensione originale</button>
-          </div>
-          <div className="field">
-            <label>Opacità</label>
-            <div className="row">
-              <input type="range" min={0.1} max={1} step={0.05} value={sel.opacity ?? 1} onChange={(e) => patchObj(sel.id, { opacity: Number(e.target.value) })} />
-              <span style={{ flex: "none", width: 40, textAlign: "right" }}>{Math.round((sel.opacity ?? 1) * 100)}%</span>
-            </div>
-          </div>
-          <label className="check"><input type="checkbox" checked={sel.meta.allPages} onChange={(e) => patchObj(sel.id, { meta: { ...sel.meta, allPages: e.target.checked } })} /> Ripeti su tutte le pagine</label>
-          <label className="check"><input type="checkbox" checked={sel.meta.behind} onChange={(e) => patchObj(sel.id, { meta: { ...sel.meta, behind: e.target.checked } })} /> Metti dietro al contenuto</label>
-          </>
-        )}
-      <div className="section-title">Immagini nel documento ({existing.length})</div>
-      {existing.length ? (
-        <div className="btn-row">
-          <button className="btn small" onClick={() => setObjects((l) => l.map((o) => o.meta?.existing ? { ...o, meta: { ...o.meta, removed: true }, tone: "danger", label: "Da rimuovere" } : o))}>Seleziona tutte per la rimozione</button>
-          {toRemove.length > 0 && <button className="btn small ghost" onClick={() => setObjects((l) => l.map((o) => o.meta?.existing ? { ...o, meta: { ...o.meta, removed: false }, tone: undefined, label: "Immagine del PDF" } : o))}>Annulla</button>}
+        <div className="field">
+          <label>Opacità della prossima immagine · {Math.round(opacity * 100)}%</label>
+          <input type="range" min={0.1} max={1} step={0.05} value={opacity} onChange={(e) => setOpacity(Number(e.target.value))} />
         </div>
-      ) : <div className="hint">Il documento non contiene immagini.</div>}
-      <div className="hint">Clicca su un'immagine per selezionarla. Le nuove immagini si spostano trascinandole e si ridimensionano dagli angoli; <kbd>Canc</kbd> le elimina.</div>
+        <label className="check"><input type="checkbox" checked={allPages} onChange={(e) => setAllPages(e.target.checked)} /> Mettila su tutte le pagine</label>
+        <label className="check"><input type="checkbox" checked={behind} onChange={(e) => setBehind(e.target.checked)} /> Mettila dietro al testo</label>
+        <ElencoApplicati titolo="Immagini inserite" items={ap.items} onElimina={elimina}
+          onVai={(a) => { app.gotoPage(a.page); if (a.rect) setSelectedId(boxId(a)); }} />
+        <div className="section-title">Immagini che c'erano nel documento ({esistenti.length})</div>
+        {esistenti.length
+          ? <button className="btn small" style={{ alignSelf: "flex-start" }} onClick={togliTutte}><Trash2 size={13} /> Togli tutte</button>
+          : <div className="hint">Nessuna.</div>}
       </Advanced>
     </PanelShell>
   );

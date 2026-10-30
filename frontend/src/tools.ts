@@ -105,6 +105,7 @@ export const TOOLS: ToolDef[] = [
       { key: "files", label: "File da allegare", type: "files", required: true },
       { key: "description", label: "Descrizione (facoltativa)", type: "text" },
     ],
+    submitLabel: "Allega",
   },
   {
     id: "watermark", label: "Filigrana", category: "Modifica", icon: Droplets, panel: "form", endpoint: "watermark",
@@ -126,6 +127,7 @@ export const TOOLS: ToolDef[] = [
       { key: "behind", label: "Sotto al contenuto", type: "checkbox", default: false },
       { key: "to_image", label: "Converti le pagine in immagine (filigrana non rimovibile)", type: "checkbox", default: false },
     ],
+    submitLabel: "Aggiungi la filigrana",
   },
   {
     id: "stamp", label: "Timbro", category: "Modifica", icon: Stamp, panel: "form", endpoint: "stamp",
@@ -160,7 +162,7 @@ export const TOOLS: ToolDef[] = [
     },
   },
   {
-    id: "redact", label: "Oscura", category: "Modifica", icon: Eraser, panel: "redact",
+    id: "redact", label: "Nascondi dati (oscura)", category: "Modifica", icon: Eraser, panel: "redact",
     description: "Oscura o sfoca in modo definitivo aree o testi (email, IBAN, codici fiscali…): il contenuto viene eliminato dal file.",
     keywords: "censura privacy gdpr anonimizza",
   },
@@ -252,10 +254,11 @@ export const TOOLS: ToolDef[] = [
       { key: "margin", label: "Distanza dal bordo", type: "number", default: 10, unit: "mm" },
       pagesField("Vuoto = tutte. Es. 2- per non numerare la copertina."),
     ],
+    submitLabel: "Numera le pagine",
     build: (v) => ({ ...v, format: v.format === "custom" ? v.custom_format : v.format }),
   },
   {
-    id: "create_index", label: "Crea indice", category: "Pagine", icon: ListOrdered, panel: "form", endpoint: "create_index",
+    id: "create_index", label: "Aggiungi sommario", category: "Pagine", icon: ListOrdered, panel: "form", endpoint: "create_index",
     description: "Genera una pagina di indice (sommario) cliccabile all'inizio del documento.",
     fields: [
       { key: "source", label: "Voci dell'indice", type: "seg", default: "bookmarks",
@@ -274,7 +277,7 @@ export const TOOLS: ToolDef[] = [
     description: "Firma disegnando, con un'immagine, con testo o con un certificato digitale (PAdES).",
   },
   {
-    id: "p7m", label: "File firmati (p7m)", category: "Firma e sicurezza", icon: BadgeCheck, panel: "p7m",
+    id: "p7m", label: "Apri file firmati (.p7m)", category: "Firma e sicurezza", icon: BadgeCheck, panel: "p7m",
     description: "Apri un file firmato digitalmente (.p7m o .p7s, come ArubaSign): verifica le firme con l'elenco AgID ed estrai il documento.",
     keywords: "p7m p7s cades firma digitale verifica arubasign dike busta estrai fattura elettronica",
   },
@@ -314,49 +317,51 @@ export const TOOLS: ToolDef[] = [
     keywords: "password protezione cifratura permessi sicurezza lucchetto verifica",
   },
   {
-    id: "remove_signature", label: "Rimuovi firma digitale", category: "Firma e sicurezza", icon: ShieldOff, panel: "form", endpoint: "remove_signature",
+    id: "remove_signature", label: "Togli le firme digitali", category: "Firma e sicurezza", icon: ShieldOff, panel: "form", endpoint: "remove_signature",
     description: "Elimina le firme digitali (e i relativi campi) dal documento.",
     fields: [{ key: "n", type: "note", tone: "warn", label: "Il documento non risulterà più firmato. L'operazione non modifica il contenuto visibile delle pagine." }],
+    submitLabel: "Togli le firme",
   },
   {
-    id: "sanitize", label: "Sanitizza", category: "Firma e sicurezza", icon: Sparkles, panel: "form", endpoint: "sanitize",
-    description: "Rimuovi elementi potenzialmente pericolosi o informazioni nascoste prima di condividere il file.",
+    id: "sanitize", label: "Pulisci prima di inviare", category: "Firma e sicurezza", icon: Sparkles, panel: "form", endpoint: "sanitize",
+    description: "Togli dal PDF le informazioni nascoste e i comandi automatici prima di mandarlo ad altri.",
     fields: [
-      { key: "javascript", label: "JavaScript e azioni automatiche", type: "checkbox", default: true },
-      { key: "embedded_files", label: "File incorporati (allegati)", type: "checkbox", default: true },
-      { key: "xmp_metadata", label: "Metadati XMP", type: "checkbox", default: true },
-      { key: "metadata", label: "Metadati del documento (autore, titolo, software…)", type: "checkbox", default: false },
-      { key: "links", label: "Collegamenti esterni (web, file, altre app)", type: "checkbox", default: false },
-      { key: "fonts", label: "Caratteri incorporati", type: "checkbox", default: false },
-      { key: "n", type: "note", tone: "warn", label: "Rimuovendo i caratteri incorporati il testo potrebbe essere visualizzato con un font sostitutivo.", show: (v) => v.fonts },
+      { key: "javascript", label: "Comandi automatici nascosti (JavaScript)", type: "checkbox", default: true },
+      { key: "embedded_files", label: "File allegati dentro il PDF", type: "checkbox", default: true },
+      { key: "xmp_metadata", label: "Informazioni nascoste sul file (XMP)", type: "checkbox", default: true },
+      { key: "metadata", label: "Autore, titolo e programma usato", type: "checkbox", default: false },
+      { key: "links", label: "Collegamenti a siti, file e altre app", type: "checkbox", default: false },
+      { key: "fonts", label: "Caratteri inclusi nel file", type: "checkbox", default: false },
+      { key: "n", type: "note", tone: "warn", label: "Senza i caratteri inclusi il testo potrebbe comparire con un carattere diverso.", show: (v) => v.fonts },
     ],
-    submitLabel: "Sanitizza",
+    submitLabel: "Pulisci",
   },
   {
-    id: "unlock_forms", label: "Sblocca moduli PDF", category: "Firma e sicurezza", icon: LockOpen, panel: "form", endpoint: "unlock_forms",
+    id: "unlock_forms", label: "Rendi compilabili i moduli", category: "Firma e sicurezza", icon: LockOpen, panel: "form", endpoint: "unlock_forms",
     description: "Rende di nuovo compilabili i campi dei moduli impostati in sola lettura.",
     fields: [],
     submitLabel: "Sblocca",
   },
   {
-    id: "flatten", label: "Appiattisci", category: "Firma e sicurezza", icon: Layers, panel: "form", endpoint: "flatten",
-    description: "Fissa moduli e annotazioni nel contenuto, oppure converti le pagine in immagini alla risoluzione scelta.",
+    id: "flatten", label: "Blocca moduli e commenti", category: "Firma e sicurezza", icon: Layers, panel: "form", endpoint: "flatten",
+    description: "Rendi definitivi moduli compilati e commenti (non si modificano più), oppure trasforma le pagine in immagini.",
     fields: [
       { key: "mode", label: "Modalità", type: "seg", default: "forms",
-        options: [{ value: "forms", label: "Solo moduli/annotazioni" }, { value: "full", label: "Completo (immagine)" }] },
+        options: [{ value: "forms", label: "Solo moduli e commenti" }, { value: "full", label: "Tutta la pagina come immagine" }] },
       { key: "dpi", label: "Risoluzione di rendering", type: "select", default: "150", show: (v) => v.mode === "full",
         options: [{ value: "72", label: "72 DPI (file leggero)" }, { value: "100", label: "100 DPI" }, { value: "150", label: "150 DPI (consigliato)" },
           { value: "200", label: "200 DPI" }, { value: "300", label: "300 DPI (stampa)" }] },
       { key: "quality", label: "Qualità JPEG", type: "number", default: 85, min: 30, max: 100, show: (v) => v.mode === "full" },
       { key: "grayscale", label: "Scala di grigi", type: "checkbox", default: false, show: (v) => v.mode === "full" },
       { key: "pages", label: "Pagine", type: "pages", show: (v) => v.mode === "full", hint: "Vuoto = tutte." },
-      { key: "n", type: "note", tone: "warn", label: "In modalità completa il testo non sarà più selezionabile (puoi usare poi l'OCR).", show: (v) => v.mode === "full" },
+      { key: "n", type: "note", tone: "warn", label: "Come immagine il testo non si potrà più selezionare (poi puoi usare «Testo ricercabile»).", show: (v) => v.mode === "full" },
     ],
+    submitLabel: "Blocca",
   },
 
   // ------------------------------------------------------------ Ottimizza e analizza
   {
-    id: "compress", label: "Comprimi PDF", category: "Ottimizza e analizza", icon: Archive, panel: "form", endpoint: "compress",
+    id: "compress", label: "Riduci dimensione (comprimi)", category: "Ottimizza e analizza", icon: Archive, panel: "form", endpoint: "compress",
     description: "Riduci le dimensioni del file ricomprimendo immagini, caratteri e struttura.",
     fields: [
       { key: "level", label: "Livello", type: "select", default: "media",
@@ -379,7 +384,7 @@ export const TOOLS: ToolDef[] = [
     description: "Evidenzia le differenze di testo e grafiche tra due versioni di un documento.",
   },
   {
-    id: "ocr", label: "OCR", category: "Ottimizza e analizza", icon: ScanText, panel: "form", endpoint: "ocr",
+    id: "ocr", label: "Testo ricercabile (OCR)", category: "Ottimizza e analizza", icon: ScanText, panel: "form", endpoint: "ocr",
     description: "Riconosci il testo nelle pagine scansionate, rendendolo ricercabile e copiabile.",
     fields: [
       { key: "languages", label: "Lingue del documento", type: "checks", default: ["ita", "eng"], options: [] },
@@ -392,11 +397,11 @@ export const TOOLS: ToolDef[] = [
     submitLabel: "Avvia OCR",
   },
   {
-    id: "info", label: "Info complete", category: "Ottimizza e analizza", icon: Info, panel: "info",
+    id: "info", label: "Informazioni sul file", category: "Ottimizza e analizza", icon: Info, panel: "info",
     description: "Tutte le informazioni sul PDF: versione, pagine, caratteri, immagini, sicurezza, moduli, allegati.",
   },
   {
-    id: "validate", label: "Convalida PDF", category: "Ottimizza e analizza", icon: FileCheck2, panel: "validate",
+    id: "validate", label: "Controlla il PDF", category: "Ottimizza e analizza", icon: FileCheck2, panel: "validate",
     description: "Verifica struttura del file, firme digitali, caratteri e conformità PDF/A dichiarata.",
   },
 
@@ -407,19 +412,19 @@ export const TOOLS: ToolDef[] = [
     keywords: "commento nota evidenzia sottolinea barra revisione revisore accetta rifiuta risposta annotazioni",
   },
   {
-    id: "properties", label: "Modifica proprietà", category: "Revisione", icon: FileCog, panel: "properties",
+    id: "properties", label: "Titolo e autore", category: "Revisione", icon: FileCog, panel: "properties",
     description: "Titolo, autore, oggetto, parole chiave e date del documento.",
     keywords: "metadati",
   },
   {
-    id: "toc", label: "Modifica indice", category: "Revisione", icon: ListTree, panel: "toc",
+    id: "toc", label: "Segnalibri", category: "Revisione", icon: ListTree, panel: "toc",
     description: "Crea e modifica i segnalibri (indice di navigazione) del documento.",
     keywords: "segnalibri bookmark struttura",
   },
 
   // ------------------------------------------------------------ Converti
   {
-    id: "convert_from_pdf", label: "PDF in Office e altri formati", category: "Converti", icon: FileOutput, panel: "form", endpoint: "convert_from_pdf",
+    id: "convert_from_pdf", label: "Trasforma in Word, Excel…", category: "Converti", icon: FileOutput, panel: "form", endpoint: "convert_from_pdf",
     description: "Converti il PDF in Word, Excel, PowerPoint, OpenDocument, testo, immagini o PDF/A.",
     fields: [
       { key: "format", label: "Formato", type: "select", default: "docx",
@@ -443,11 +448,21 @@ export const TOOLS: ToolDef[] = [
     submitLabel: "Converti",
   },
   {
-    id: "create_pdf", label: "Crea PDF da file", category: "Converti", icon: FileInput, panel: "create_pdf",
+    id: "create_pdf", label: "Crea PDF da foto e file", category: "Converti", icon: FileInput, panel: "create_pdf",
     description: "Converti in PDF documenti Word, Excel, PowerPoint, immagini, testo e altri formati.",
     keywords: "word excel immagini jpg",
   },
 ];
+
+// nomi di prima e parole d'uso comune: la ricerca degli strumenti le trova ancora
+const ANCHE: Record<string, string> = {
+  redact: "oscura censura", create_index: "crea indice sommario", p7m: "file firmati p7m", remove_signature: "rimuovi firma digitale",
+  sanitize: "sanitizza metadati pulisci", unlock_forms: "sblocca moduli", flatten: "appiattisci", compress: "comprimi riduci peso email",
+  ocr: "ocr scansione riconosci testo", info: "info complete", validate: "convalida verifica", properties: "modifica proprietà metadati",
+  toc: "modifica indice segnalibri", convert_from_pdf: "converti office word excel powerpoint", create_pdf: "crea pdf da file foto scansiona",
+  sign: "firmare sigla", add_text: "scrivi compila modulo campo", marks: "compila modulo casella", organize: "ruota elimina pagine ordine",
+};
+for (const t of TOOLS) if (ANCHE[t.id]) t.keywords = `${t.keywords || ""} ${ANCHE[t.id]}`.trim();
 
 export const TOOL_BY_ID = Object.fromEntries(TOOLS.map((t) => [t.id, t]));
 

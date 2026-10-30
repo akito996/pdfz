@@ -7,11 +7,15 @@ import type { PageObject, VRect } from "../types";
 
 /** Oggetto già applicato al documento (firma, timbro, testo aggiunto, filigrana, numeri di pagina): lo ritrova il
  *  motore (tools/applicati.py) e si elimina anche dopo "Applica", da una pagina o da tutte. */
-export interface Applicato { page: number; id: string; tipo: string; nome: string; data: string; rect: VRect | null }
+export interface Applicato {
+  page: number; id: string; tipo: string; nome: string; data: string; rect: VRect | null;
+  extra?: Record<string, any>;   // per riaprirlo e cambiarlo (testo aggiunto: testo, carattere, dimensione, colore…)
+}
 type Voce = { page?: number; id: string };
 
 export const ETICHETTE: Record<string, string> = {
   firma: "Firma applicata", timbro: "Timbro applicato", testo: "Testo aggiunto", filigrana: "Filigrana", numeri: "Numeri di pagina",
+  immagine: "Immagine inserita",
 };
 const PREFISSO = "ap:";
 export const boxId = (a: Applicato) => `${PREFISSO}${a.page}:${a.id}`;
@@ -45,6 +49,14 @@ export function useApplicati(tipi: string[]) {
   // oggetti che si stanno spostando: riquadro nuovo e immagine dell'oggetto (fino alla nuova versione del documento)
   const [spostati, setSpostati] = useState<Record<string, { rect: VRect; img?: string }>>({});
   const chiave = tipi.join(",");
+  // oggetto appena messo sul foglio (niente "Applica"): quando compare nell'elenco lo si seleziona, così si sposta subito
+  const [attesa, setAttesa] = useState<{ page: number; rect: VRect } | null>(null);
+  const [daSelezionare, setDaSelezionare] = useState<string | null>(null);
+  useEffect(() => {
+    if (!attesa) return;
+    const a = items.find((x) => x.page === attesa.page && x.rect && Math.abs(x.rect.x - attesa.rect.x) < 2 && Math.abs(x.rect.y - attesa.rect.y) < 2);
+    if (a) { setDaSelezionare(boxId(a)); setAttesa(null); }
+  }, [items, attesa]);
   useEffect(() => {
     setItems([]);
     setSpostati({});
@@ -71,6 +83,10 @@ export function useApplicati(tipi: string[]) {
   }, [items, spostati]);
   return {
     items,
+    /** dopo aver messo un oggetto sul foglio: selezionalo appena compare (page e riquadro con cui è stato messo) */
+    aspetta: (page: number, rect: VRect) => setAttesa({ page, rect }),
+    daSelezionare,
+    selezionata: () => setDaSelezionare(null),
     /** riquadri sulla pagina: si toccano per selezionarli, si trascinano per spostarli, dagli angoli si ridimensionano */
     boxes,
     scelto: (selectedId: string | null) => (selectedId ? trova(selectedId) : undefined),

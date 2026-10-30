@@ -822,6 +822,35 @@ def test_firma_immagine_diritta_su_pagina_ruotata(rot):
         assert shot.pixel(int(box["x"]) + 115, int(box["y"]) + 55) == (200, 30, 30), (tool, rot)
 
 
+def test_testo_aggiunto_si_riapre_e_immagini_inserite_si_spostano(doc):
+    """Senza "Applica": il testo aggiunto ricorda testo e stile e si sostituisce; le immagini inserite si spostano."""
+    d1 = run("add_text", doc, items=[{"page": 0, "rect": {"x": 72, "y": 400, "w": 200, "h": 20}, "text": "Prima riga\nseconda",
+                                      "font": "tiro", "size": 14, "color": "#c8102e", "align": "center"}])["doc"]["id"]
+    v = run("list_applied", d1, tipi=["testo"])["data"]["items"][0]
+    assert v["extra"]["testo"] == "Prima riga\nseconda" and v["extra"]["font"] == "tiro" and v["extra"]["size"] == 14
+    assert v["extra"]["color"] == "#c8102e" and v["extra"]["align"] == "center" and v["extra"]["wrap"] is True
+    res = run("add_text", d1, remove=[{"page": 0, "id": v["id"]}],
+              items=[{"page": 0, "rect": {"x": 72, "y": 450, "w": 200, "h": 20}, "text": "Riga corretta", "size": 14}])
+    assert res["message"] == "Testo modificato."
+    t = load(res["doc"]["id"])[0].get_text()
+    assert "Riga corretta" in t and "Prima riga" not in t
+    assert [x["nome"] for x in run("list_applied", res["doc"]["id"], tipi=["testo"])["data"]["items"]] == ["Riga corretta"]
+    # testo svuotato: si toglie e basta
+    v = run("list_applied", res["doc"]["id"], tipi=["testo"])["data"]["items"][0]
+    res = run("add_text", res["doc"]["id"], remove=[{"page": 0, "id": v["id"]}], items=[{"page": 0, "text": " "}])
+    assert res["message"] == "Testo eliminato." and "Riga corretta" not in load(res["doc"]["id"])[0].get_text()
+
+    foto = asset(png_bytes(120, 60), "foto.png")
+    d2 = run("images", doc, items=[{"image": foto, "page": 0, "rect": {"x": 300, "y": 300, "w": 120, "h": 60}, "name": "foto.png"}])["doc"]["id"]
+    ins = run("list_applied", d2, tipi=["immagine"])["data"]["items"]
+    assert len(ins) == 1 and ins[0]["nome"] == "foto.png"
+    gia = run("list_images", d2)["data"]["images"]
+    assert len(gia) == 1 and gia[0]["width"] == 200   # solo l'immagine che c'era già, non quella inserita
+    d3 = run("move_applied", d2, page=0, id=ins[0]["id"], rect={"x": 100, "y": 100, "w": 240, "h": 120})["doc"]["id"]
+    img = next(i for i in load(d3)[0].get_image_info() if i["width"] == 120)
+    assert all(abs(a - b) < 0.6 for a, b in zip(img["bbox"], (100, 100, 340, 220)))
+
+
 def test_oggetti_applicati_dopo_oscura_e_pagina_ruotata():
     d0 = pymupdf.open("pdf", make_pdf(pages=1))
     d0[0].set_rotation(90)

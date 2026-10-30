@@ -45,6 +45,8 @@ export interface AppCtx {
   askText: (title: string, body: React.ReactNode, value: string, opts?: { ok?: string; suffix?: string; placeholder?: string }) => Promise<string | null>;
   /** Avviso con il solo pulsante OK. */
   notify: (title: string, body: React.ReactNode) => Promise<void>;
+  /** Guida passo passo di uno strumento (guide.ts), anche se è già stata vista. */
+  mostraGuida: (chiave: string) => void;
 }
 
 /** Modifiche fatte in uno strumento ma non ancora applicate al documento (pulsante "Applica").
@@ -57,8 +59,9 @@ export interface Pending {
 export const Ctx = createContext<AppCtx>(null as any);
 export const useApp = () => useContext(Ctx);
 
-/** Da chiamare nei pannelli con un pulsante "Applica": finché dirty è vero, cambiando strumento, scheda o
- *  chiudendo l'app compare la domanda "Applicare le modifiche?". apply deve restituire true se è andato a buon fine. */
+/** Modifiche che stanno ancora nel pannello (per esempio il testo che si sta scrivendo): finché dirty è vero, cambiando
+ *  strumento o scheda, salvando o chiudendo l'app, apply le porta sul foglio da sola (dalla 1.6.0 niente "Applica" e
+ *  niente domanda). apply deve restituire true se è andato a buon fine. */
 export function usePending(dirty: boolean, label: string, apply: () => Promise<boolean> | boolean) {
   const app = useApp();
   const applyRef = useRef(apply);
@@ -69,4 +72,17 @@ export function usePending(dirty: boolean, label: string, apply: () => Promise<b
     setPending({ label, apply: async () => !!(await applyRef.current()) });
     return () => setPending(null);
   }, [dirty, label, setPending]);
+}
+
+/** Senza "Applica" (dalla 1.6.0): quando si lascia un oggetto (se ne seleziona un altro, nessuno, o si preme Esc) le sue
+ *  modifiche vanno subito sul foglio. applica(id) decide se c'è qualcosa da scrivere. */
+export function useApplicaLasciando(selectedId: string | null, applica: (id: string) => void) {
+  const prima = useRef(selectedId);
+  const fn = useRef(applica);
+  fn.current = applica;
+  useEffect(() => {
+    const p = prima.current;
+    prima.current = selectedId;
+    if (p && p !== selectedId) fn.current(p);
+  }, [selectedId]);
 }

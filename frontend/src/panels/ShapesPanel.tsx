@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeftRight, FlipHorizontal2, Minus, MoveVertical, Trash2 } from "lucide-react";
 import { api } from "../api";
 import { useApp, usePending } from "../context";
@@ -7,7 +7,7 @@ import type { ToolDef } from "../tools";
 import type { PageObject, VRect } from "../types";
 import { ShapeSvg, type LineDir, type ShapeKind } from "../components/ShapeSvg";
 import { PanelShell } from "./ToolPanel";
-import { Advanced } from "./fields";
+import { Advanced, useVerbo } from "./fields";
 
 let seq = 0;
 const LABEL: Record<ShapeKind, string> = { rect: "Rettangolo", ellipse: "Cerchio / Ovale", line: "Segmento", arrow: "Freccia", check: "Spunta", cross: "X" };
@@ -39,30 +39,59 @@ export function ShapesPanel({ def, onClose }: { def: ToolDef; onClose: () => voi
   const [style, setStyle] = useStored<Style>(marks ? "hdpdf.stileSegni" : "hdpdf.stileForme", marks ? { ...DEFAULT_STYLE, stroke: "#000000", width: 2 } : DEFAULT_STYLE);
   const [markSize, setMarkSize] = useStored("hdpdf.dimensioneSegni", 12);
   const [objects, setObjects] = useState<PageObject[]>([]);
-  const [removed, setRemoved] = useState<{ page: number; xref: number }[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const docId = app.doc?.id;
+  const verb = useVerbo();
   const sel = objects.find((o) => o.id === selectedId) || null;
+  // forma appena scritta sul foglio: quando si rilegge il documento la si seleziona di nuovo (si continua a modificarla)
+  const riseleziona = useRef<{ page: number; kind: string; rect: VRect } | null>(null);
 
   // forme già presenti: modificabili e spostabili
   useEffect(() => {
-    setObjects([]); setRemoved([]); setSelectedId(null);
+    setObjects([]); setSelectedId(null);
     if (!docId) return;
     api.tool("list_shapes", { doc: docId }).then((r) => {
       // tutte le forme del documento restano visibili e modificabili (anche spunte e X)
-      setObjects(r.data.shapes.map((s: any) => ({
+      const l: PageObject[] = r.data.shapes.map((s: any) => ({
         id: `x${s.xref}`, page: s.page, kind: "shape", rect: s.rect, opacity: s.opacity,
+        keepRatio: isMark(s.kind) ? true : undefined,
         meta: { shape: s.kind, stroke: s.stroke, fill: s.fill, width: s.width, dash: s.dash, dir: s.dir, xref: s.xref, origPage: s.page, dirty: false },
-      } as PageObject)));
+      }));
+      setObjects(l);
+      const w = riseleziona.current;
+      riseleziona.current = null;
+      const o = w && l.find((x) => x.page === w.page && x.meta.shape === w.kind && Math.abs(x.rect.x - w.rect.x) < 2
+        && Math.abs(x.rect.y - w.rect.y) < 2 && Math.abs(x.rect.w - w.rect.w) < 2 && Math.abs(x.rect.h - w.rect.h) < 2);
+      if (o) setSelectedId(o.id);
     }).catch(() => {});
   }, [docId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // senza "Applica": ogni forma nuova, spostata o cambiata va subito sul foglio (e resta selezionata)
+  const salva = async (o: PageObject) => {
+    if (attesa.current) { clearTimeout(attesa.current.t); attesa.current = null; }
+    riseleziona.current = { page: o.page, kind: o.meta.shape, rect: o.rect };
+    const ok = !!(await app.run("shapes", { items: [{
+      kind: o.meta.shape, page: o.page, rect: o.rect, dir: o.meta.dir, stroke: o.meta.stroke, fill: o.meta.fill,
+      width: o.meta.width, dash: o.meta.dash, opacity: o.opacity, xref: o.meta.xref, orig_page: o.meta.origPage,
+    }] }, { silent: true }));
+    if (!ok) riseleziona.current = null;
+    return ok;
+  };
+  // colore, spessore e simili: si scrive dopo una breve pausa, così trascinando un cursore non si scrive a ogni passo
+  const attesa = useRef<{ id: string; t: number } | null>(null);
+  const salvaTraPoco = (id: string) => {
+    if (attesa.current) clearTimeout(attesa.current.t);
+    attesa.current = { id, t: window.setTimeout(() => { const o = objectsRef.current.find((x) => x.id === id); attesa.current = null; if (o) salva(o); }, 600) };
+  };
+  const objectsRef = useRef(objects);
+  objectsRef.current = objects;
 
   const newObj = (page: number, rect: VRect, dir: LineDir = "tl-br"): PageObject => ({
     id: `s${seq++}`, page, kind: "shape", rect, opacity: style.opacity,
     keepRatio: isMark(kind) ? true : undefined,
     meta: { shape: kind, stroke: style.stroke, fill: isLine(kind) || isMark(kind) ? null : style.fill, width: style.width, dash: style.dash, dir, dirty: true },
   });
-  const add = (o: PageObject) => { setObjects((l) => [...l, o]); setSelectedId(o.id); };
+  const add = (o: PageObject) => { setObjects((l) => [...l, o]); setSelectedId(o.id); salva(o); };
 
   const onDraw = useEvent((page: number, rect: VRect, a: { x: number; y: number }, b: { x: number; y: number }) => {
     if (isMark(kind)) { const s = Math.max(rect.w, rect.h); add(newObj(page, { x: rect.x, y: rect.y, w: s, h: s })); return; }
@@ -78,21 +107,30 @@ export function ShapesPanel({ def, onClose }: { def: ToolDef; onClose: () => voi
     const w = s || (isLine(kind) ? 120 : 120), h = s || (isLine(kind) ? 8 : kind === "ellipse" ? 80 : 70);
     add(newObj(page, { x: pt.x - w / 2, y: pt.y - h / 2, w, h }, isLine(kind) ? "l-r" : "tl-br"));
   });
-  const patch = (id: string, p: Partial<PageObject>) =>
+  // spostamento e ridimensionamento: si scrive al rilascio (onObjectDrop); il resto dopo una breve pausa
+  const patch = (id: string, p: Partial<PageObject>) => {
     setObjects((l) => l.map((o) => (o.id === id ? { ...o, ...p, meta: { ...o.meta, ...(p.meta || {}), dirty: true } } : o)));
-  const patchE = useEvent(patch);
-  const remove = useEvent((id: string) => {
+    if (p.meta || p.opacity !== undefined || (p.rect && !trascino.current)) salvaTraPoco(id);
+  };
+  const trascino = useRef(false);
+  const patchE = useEvent((id: string, p: Partial<PageObject>) => { if (p.rect && !p.meta) trascino.current = true; patch(id, p); });
+  const dropE = useEvent((id: string) => {
+    trascino.current = false;
+    const o = objectsRef.current.find((x) => x.id === id);
+    if (o) salva(o);
+  });
+  const remove = useEvent(async (id: string) => {
     const o = objects.find((x) => x.id === id);
-    if (o?.meta.xref) setRemoved((r) => [...r, { page: o.meta.origPage, xref: o.meta.xref }]);
     setObjects((l) => l.filter((x) => x.id !== id));
     setSelectedId(null);
+    if (o?.meta.xref) await app.run("shapes", { remove: [{ page: o.meta.origPage, xref: o.meta.xref }] }, { silent: true });
   });
 
   useEffect(() => {
     app.setInteraction({
-      mode: "objects", objects, selectedId, onSelect: setSelectedId, onObjectChange: patchE, onObjectDelete: remove,
+      mode: "objects", objects, selectedId, onSelect: setSelectedId, onObjectChange: patchE, onObjectDelete: remove, onObjectDrop: dropE,
       onDraw, onPlace, hideAnnotations: true,
-      placeHint: marks ? "Clicca sulla casella da riempire (o trascina per scegliere la dimensione)" : "Trascina sulla pagina per disegnare la forma",
+      placeHint: marks ? `${verb} la casella da riempire` : "Trascina sulla pagina per disegnare la forma",
     });
   }, [objects, selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => app.setInteraction({ mode: "none" }), []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -105,24 +143,15 @@ export function ShapesPanel({ def, onClose }: { def: ToolDef; onClose: () => voi
   const cur: Style = sel ? { stroke: sel.meta.stroke, fill: sel.meta.fill, width: sel.meta.width, dash: sel.meta.dash, opacity: sel.opacity ?? 1 } : style;
   const curKind: ShapeKind = sel ? sel.meta.shape : kind;
 
-  const dirty = objects.filter((o) => o.meta.dirty);
-  const apply = async () => {
-    const res = await app.run("shapes", {
-      items: dirty.map((o) => ({
-        kind: o.meta.shape, page: o.page, rect: o.rect, dir: o.meta.dir, stroke: o.meta.stroke, fill: o.meta.fill,
-        width: o.meta.width, dash: o.meta.dash, opacity: o.opacity, xref: o.meta.xref, orig_page: o.meta.origPage,
-      })),
-      remove: removed,
-    });
-    if (res) setSelectedId(null);
-    return !!res;
-  };
-  const changes = dirty.length + removed.length;
-  usePending(changes > 0, def.label, apply);
+  // uscendo mentre una modifica aspetta la breve pausa: si scrive subito
+  usePending(!!attesa.current, def.label, async () => {
+    const a = attesa.current;
+    const o = a && objectsRef.current.find((x) => x.id === a.id);
+    return o ? salva(o) : true;
+  });
 
   return (
-    <PanelShell def={def} onClose={onClose}
-      footer={<button className="btn primary block" disabled={!changes} onClick={apply}>Applica{changes ? ` · ${changes} ${changes === 1 ? "modifica" : "modifiche"}` : ""}</button>}>
+    <PanelShell def={def} onClose={onClose}>
       <div className="shape-picker" role="radiogroup" aria-label="Forma">
         {kinds.map((k) => (
           <button key={k} type="button" role="radio" aria-checked={kind === k} className={`shape-btn ${kind === k ? "on" : ""}`}
@@ -134,8 +163,8 @@ export function ShapesPanel({ def, onClose }: { def: ToolDef; onClose: () => voi
         ))}
       </div>
       <div className="hint">{marks
-        ? "Clicca dentro una casella del modulo per inserire il segno; trascina per sceglierne la grandezza."
-        : "Trascina sulla pagina per disegnare. Clicca una forma per spostarla, ridimensionarla dagli angoli o cambiarne lo stile."}</div>
+        ? `${verb} dentro una casella del modulo: il segno va subito sul foglio. Trascina per sceglierne la grandezza.`
+        : `Trascina sulla pagina per disegnare: la forma va subito sul foglio. ${verb} una forma per spostarla o cambiarne lo stile.`}</div>
 
       {sel && <div className="section-title">{LABEL[curKind]} selezionata{sel.meta.xref ? " (già nel documento)" : ""}</div>}
       {!sel && <div className="section-title">Stile</div>}

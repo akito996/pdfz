@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Trash2 } from "lucide-react";
 import { api, isLocalEngine } from "../api";
-import { useApp, usePending } from "../context";
+import { useApp } from "../context";
 import { useEvent } from "../hooks";
 import type { ToolDef } from "../tools";
 import type { PageObject } from "../types";
@@ -19,7 +18,6 @@ const PRESETS = [
   ["visto", "Visto"], ["custom", "Testo personalizzato…"],
 ] as const;
 const MM = 72 / 25.4;
-let seq = 0;
 
 export function StampPanel({ def, onClose }: { def: ToolDef; onClose: () => void }) {
   const app = useApp();
@@ -35,9 +33,8 @@ export function StampPanel({ def, onClose }: { def: ToolDef; onClose: () => void
   const verb = touch ? "Tocca" : "Clicca";
   const [image, setImage] = useState<(AssetValue & { w?: number; h?: number }) | null>(null);
   const [preview, setPreview] = useState<{ url: string; w: number; h: number } | null>(null);
-  const [objects, setObjects] = useState<PageObject[]>([]);
+  const [tuttePagine, setTuttePagine] = useState(false);   // il prossimo timbro su ogni pagina
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const sel = objects.find((o) => o.id === selectedId) || null;
   // timbri già applicati: si toccano sulla pagina e si eliminano
   const ap = useApplicati(["timbro"]);
   const scelto = ap.scelto(selectedId);
@@ -70,13 +67,6 @@ export function StampPanel({ def, onClose }: { def: ToolDef; onClose: () => void
     const w = 60 * MM;
     return { url: image.url, w, h: (w * image.h) / image.w };
   };
-  // cambiando le impostazioni si aggiornano anche i timbri già posizionati
-  useEffect(() => {
-    const l = look();
-    if (!l) return;
-    setObjects((os) => os.map((o) => ({ ...o, imageUrl: l.url, opacity })));
-  }, [preview, image, kind, opacity]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const place = (page: number, pt: { x: number; y: number }) => {
     // come nella firma: con un timbro selezionato, un clic fuori lo deseleziona (non ne aggiunge un altro)
     if (selectedId) { setSelectedId(null); return; }
@@ -85,19 +75,22 @@ export function StampPanel({ def, onClose }: { def: ToolDef; onClose: () => void
     const size = app.sizes[page];
     const k = Math.min(1, (size.w * 0.9) / l.w, (size.h * 0.9) / l.h);
     const w = l.w * k, h = l.h * k;
-    const o: PageObject = {
-      id: `t${seq++}`, page, kind: "image", imageUrl: l.url, keepRatio: true, opacity,
-      rect: { x: Math.min(Math.max(pt.x - w / 2, 0), size.w - w), y: Math.min(Math.max(pt.y - h / 2, 0), size.h - h), w, h },
-      meta: { allPages: false },
-    };
-    setObjects((os) => [...os, o]);
-    setSelectedId(o.id);
+    const rect = { x: Math.min(Math.max(pt.x - w / 2, 0), size.w - w), y: Math.min(Math.max(pt.y - h / 2, 0), size.h - h), w, h };
+    metti(page, rect);
   };
-  const patch = (id: string, p: Partial<PageObject>) => ap.cambia(id, p) || setObjects((os) => os.map((o) => (o.id === id ? { ...o, ...p } : o)));
+  // il timbro va subito sul foglio (niente "Applica") con le impostazioni di adesso e resta selezionato
+  const metti = async (page: number, rect: { x: number; y: number; w: number; h: number }) => {
+    if (kind === "image" && !image) { app.toast("Scegli l'immagine del timbro.", "info"); return; }
+    const res = await app.run("stamp", {
+      type: kind, preset: preset === "custom" ? "" : preset, text: preset === "custom" ? text : "", subtext, date, color, opacity, angle,
+      image: kind === "image" ? image!.id : undefined, items: [{ page, rect, all_pages: tuttePagine }],
+    }, { silent: true });
+    if (res) ap.aspetta(page, rect);
+  };
+  const patch = (id: string, p: Partial<PageObject>) => { ap.cambia(id, p); };
   const remove = (id: string) => {
     const a = ap.scelto(id);
-    if (a) { elimina([{ page: a.page, id: a.id }]); return; }
-    setObjects((os) => os.filter((o) => o.id !== id)); setSelectedId(null);
+    if (a) elimina([{ page: a.page, id: a.id }]);
   };
 
   const placeE = useEvent(place);
@@ -106,32 +99,16 @@ export function StampPanel({ def, onClose }: { def: ToolDef; onClose: () => void
   const dropE = useEvent((id: string) => { ap.lascia(id); });
   useEffect(() => {
     app.setInteraction({
-      mode: "objects", objects: [...ap.boxes, ...objects], selectedId, onSelect: setSelectedId, onObjectChange: patchE, onObjectDelete: removeE,
-      onObjectDrop: dropE, onPlace: placeE, placeHint: selectedId ? undefined : `${verb} la pagina dove mettere il timbro`,
+      mode: "objects", objects: ap.boxes, selectedId, onSelect: setSelectedId, onObjectChange: patchE, onObjectDelete: removeE,
+      onObjectDrop: dropE, onPlace: placeE, placeHint: `${verb} la pagina dove vuoi il timbro`,
     });
-  }, [objects, selectedId, verb, ap.boxes]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedId, verb, ap.boxes]); // eslint-disable-line react-hooks/exhaustive-deps
+  // il timbro appena messo sul foglio resta selezionato
+  useEffect(() => { if (ap.daSelezionare) { setSelectedId(ap.daSelezionare); ap.selezionata(); } }, [ap.daSelezionare]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => app.setInteraction({ mode: "none" }), []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const apply = async () => {
-    if (kind === "image" && !image) { app.toast("Scegli l'immagine del timbro.", "info"); return false; }
-    const res = await app.run("stamp", {
-      type: kind, preset: preset === "custom" ? "" : preset, text: preset === "custom" ? text : "", subtext, date, color, opacity, angle,
-      image: kind === "image" ? image!.id : undefined,
-      items: objects.map((o) => ({ page: o.page, rect: o.rect, all_pages: !!o.meta?.allPages })),
-    });
-    if (res) { setObjects([]); setSelectedId(null); }
-    return !!res;
-  };
-  usePending(objects.length > 0, def.label, apply);
-
   return (
-    <PanelShell def={def} onClose={onClose}
-      footer={<>
-        <button className="btn" onClick={() => { setObjects([]); setSelectedId(null); }} disabled={!objects.length}>Scarta</button>
-        <button className="btn primary" style={{ flex: 1 }} onClick={apply} disabled={!objects.length}>
-          Applica {objects.length > 1 ? `${objects.length} timbri` : "timbro"}
-        </button>
-      </>}>
+    <PanelShell def={def} onClose={onClose}>
       <Seg value={kind} onChange={(v) => setKind(v as "text" | "image")} options={[{ value: "text", label: "Testo" }, { value: "image", label: "Immagine" }]} />
       {kind === "text" ? (
         <>
@@ -151,8 +128,7 @@ export function StampPanel({ def, onClose }: { def: ToolDef; onClose: () => void
         <div className="field"><label>Immagine del timbro</label>
           <FileInput value={image} onChange={setImage} accept="image/*" /></div>
       )}
-      <div className="hint">{verb} la pagina dove mettere il timbro, poi trascinalo o allargalo dagli angoli. Puoi metterne più di uno, anche su pagine diverse.</div>
-      {sel && <button className="btn small danger" style={{ alignSelf: "flex-start" }} onClick={() => remove(sel.id)}><Trash2 size={13} /> Togli questo timbro</button>}
+      <div className="hint">{verb} la pagina: il timbro va subito sul foglio, poi lo sposti trascinandolo. Puoi metterne più di uno, anche su pagine diverse.</div>
       {scelto ? <ApplicatoScelto a={scelto} tutti={ap.items} onElimina={elimina} />
         : ap.items.length > 0 && <div className="hint">{verb} un timbro già applicato per spostarlo o eliminarlo.</div>}
       <Advanced>
@@ -172,10 +148,7 @@ export function StampPanel({ def, onClose }: { def: ToolDef; onClose: () => void
         )}
         <div className="field"><label>Opacità · {Math.round(opacity * 100)}%</label>
           <input type="range" min={0.2} max={1} step={0.05} value={opacity} onChange={(e) => setOpacity(Number(e.target.value))} /></div>
-        {sel && (
-          <label className="check"><input type="checkbox" checked={!!sel.meta?.allPages}
-            onChange={(e) => patch(sel.id, { meta: { ...sel.meta, allPages: e.target.checked } })} /> Ripeti questo timbro su tutte le pagine</label>
-        )}
+        <label className="check"><input type="checkbox" checked={tuttePagine} onChange={(e) => setTuttePagine(e.target.checked)} /> Metti il prossimo timbro su tutte le pagine</label>
         <ElencoApplicati titolo="Timbri nel documento" items={ap.items} onElimina={elimina}
           onVai={(a) => { app.gotoPage(a.page); if (a.rect) setSelectedId(boxId(a)); }} />
       </Advanced>

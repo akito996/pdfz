@@ -144,7 +144,7 @@ export function CommentsPanel({ def, onClose }: { def: ToolDef; onClose: () => v
     if (res) app.toast(res.message === "Commento aggiunto." ? `${actInfo(a).label}: fatto.` : res.message || "Fatto.", "ok");
     return !!res;
   };
-  // telefono/tablet: la selezione non si applica subito; si allarga con i cerchietti e si conferma con "Applica"
+  // telefono/tablet: la selezione non si applica subito; si allarga con i cerchietti e si conferma con il pulsante dell'azione
   const touch = useMedia("(pointer: coarse)");
   const mobile = useIsMobile();
   const [pend, setPend] = useState<{ page: number; a: { x: number; y: number }; b: { x: number; y: number }; rects: VRect[] } | null>(null);
@@ -232,7 +232,7 @@ export function CommentsPanel({ def, onClose }: { def: ToolDef; onClose: () => v
     if (res) { setDraft(null); setText(""); app.setOverlays([]); app.toast(res.message || "Fatto.", "ok"); }
     return !!res;
   };
-  // in sospeso: la selezione del telefono non ancora confermata con "Applica" e il testo scritto in Sostituisci/Inserisci
+  // in sospeso: la selezione del telefono non ancora confermata e il testo scritto in Sostituisci/Inserisci
   usePending(!!pend || (!!draft && !!text.trim()), def.label, () => (pend ? applySel(pend.page, pend.rects) : submitDraft()));
   const op = async (params: any, done?: () => void) => {
     const res = await app.run("comments", { author, ...params }, { silent: true });
@@ -280,11 +280,11 @@ export function CommentsPanel({ def, onClose }: { def: ToolDef; onClose: () => v
             ))}
           </div>
           <div className="hint">{touch && SEL_ACTS.includes(act)
-            ? "Tocca una parola, poi trascina i cerchietti per allargare la selezione e premi Applica."
+            ? `Tocca una parola, poi trascina i cerchietti per allargare la selezione e premi «${actInfo(act).label}».`
             : actInfo(act).hint}</div>
           {pend && (
             <div className="btn-row">
-              <button className="btn primary" onClick={() => applySel(pend.page, pend.rects)}><Check size={15} /> Applica: {actInfo(act).label}</button>
+              <button className="btn primary" onClick={() => applySel(pend.page, pend.rects)}><Check size={15} /> {actInfo(act).label}</button>
               <button className="btn ghost" onClick={() => { setPend(null); app.setOverlays([]); }}>Annulla</button>
             </div>
           )}

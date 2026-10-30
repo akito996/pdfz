@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Maximize2, Minimize2, PanelRightClose, PanelRightOpen, X } from "lucide-react";
-import { useApp, usePending } from "../context";
+import { ChevronDown, CircleHelp, Maximize2, Minimize2, PanelRightClose, PanelRightOpen, X } from "lucide-react";
+import { useApp } from "../context";
 import { useEvent, useStored } from "../hooks";
 import type { Field, ToolDef } from "../tools";
 import type { Overlay } from "../types";
@@ -40,7 +40,7 @@ const APPLICATI: Record<string, [tipo: string, titolo: string]> = {
 
 export function PanelShell({ def, onClose, children, footer }: { def: ToolDef; onClose: () => void; children: React.ReactNode; footer?: React.ReactNode }) {
   const Icon = def.icon;
-  const { panelLayout: L } = useApp();
+  const { panelLayout: L, mostraGuida } = useApp();
   const mobile = useIsMobile();
   // telefono: l'altezza del pannello serve alla barra pagina/zoom/ricerca, che gli sta appoggiata sopra
   const box = useRef<HTMLElement>(null);
@@ -116,6 +116,7 @@ export function PanelShell({ def, onClose, children, footer }: { def: ToolDef; o
           title={mobile ? "Trascina in su o in giù per ingrandire o ridurre il pannello" : undefined}>
           <h2><Icon size={18} color="var(--brand)" /> {def.label}
             <span style={{ flex: 1 }} />
+            <button className={`btn icon ghost ${mobile ? "sheet-btn" : "small"}`} onClick={() => mostraGuida(def.id)} title="Guida passo passo" aria-label="Guida passo passo"><CircleHelp size={mobile ? 19 : 16} /></button>
             {mobile ? (
               // telefono: ingrandisci/riduci il pannello; freccia in giù = abbassa il pannello (lo strumento resta attivo),
               // si riapre con la freccia su
@@ -206,17 +207,6 @@ function defaults(def: ToolDef) {
   return v;
 }
 
-/** Valori del modulo in forma confrontabile: i campi vuoti (null, "", [], casella non spuntata) valgono come non impostati. */
-function snapshot(v: Record<string, any>) {
-  const out: Record<string, any> = {};
-  for (const k of Object.keys(v).sort()) {
-    const x = v[k];
-    if (x == null || x === "" || x === false || (Array.isArray(x) && !x.length)) continue;
-    out[k] = x;
-  }
-  return JSON.stringify(out);
-}
-
 export function FormPanel({ def, onClose }: { def: ToolDef; onClose: () => void }) {
   const app = useApp();
   const [values, setValues] = useState<Record<string, any>>(() => defaults(def));
@@ -224,13 +214,8 @@ export function FormPanel({ def, onClose }: { def: ToolDef; onClose: () => void 
   const [result, setResult] = useState<string | null>(null);
   const fields = (def.fields || []).filter((f) => !f.show || f.show(values));
   const set = (k: string, v: any) => setValues((s) => ({ ...s, [k]: v }));
-  // valori di riferimento: quelli iniziali o gli ultimi applicati; se diversi ci sono modifiche non applicate
-  const [baseline, setBaseline] = useState(() => snapshot(defaults(def)));
-  const dirty = snapshot(values) !== baseline;
-  // cambiando documento (scheda) le scelte restano, ma non sono più "in sospeso" per il nuovo documento
-  const valuesRef = useRef(values);
-  valuesRef.current = values;
-  useEffect(() => { setBaseline(snapshot(valuesRef.current)); }, [app.doc?.id]);
+  // le opzioni scelte e non usate non sono modifiche al documento: uscendo non si chiede niente e non si esegue niente
+  // (dalla 1.6.0; prima compariva "applicare le modifiche?")
 
   // vista "Pagine" (griglia di miniature con selezione multipla) per gli strumenti sulle pagine
   const [view, setView] = useState<"doc" | "grid">(def.pageView || "doc");
@@ -321,13 +306,11 @@ export function FormPanel({ def, onClose }: { def: ToolDef; onClose: () => void 
       for (const f of def.fields || []) if (f.type === "rect") next[f.key] = null;
       if (def.pageView) next.pages = "";
       setValues(next);
-      setBaseline(snapshot(next));
       const req = (def.fields || []).find((f) => f.type === "rect" && f.required);
       if (req) setRectKey(req.key);
     }
     return !!res;
   };
-  usePending(dirty, def.label, submit);
 
   const renderField = (f: Field) => (
     <FieldView key={f.key} f={f.type === "pages" && view === "grid" && def.pageView ? { ...f, type: "text", placeholder: "Nessuna selezione" } : f}
@@ -337,7 +320,7 @@ export function FormPanel({ def, onClose }: { def: ToolDef; onClose: () => void 
 
   return (
     <PanelShell def={def} onClose={onClose}
-      footer={<button className="btn primary block" onClick={submit} disabled={missing.length > 0}>{def.submitLabel || "Applica"}</button>}>
+      footer={<button className="btn primary block" onClick={submit} disabled={missing.length > 0}>{def.submitLabel || def.label}</button>}>
       {def.pageView && (
         <div className="field">
           <label>Vista</label>

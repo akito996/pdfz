@@ -71,7 +71,10 @@ const OPTIONS: { value: ThemeChoice; label: string; icon: typeof Sun }[] = [
   { value: "system", label: "Tema del sistema", icon: Monitor },
 ];
 
-export function ThemeMenu({ theme, setTheme }: { theme: ThemeChoice; setTheme: (t: ThemeChoice) => void }) {
+export function ThemeMenu({ theme, setTheme, modalita, setModalita }: {
+  theme: ThemeChoice; setTheme: (t: ThemeChoice) => void;
+  modalita: "semplice" | "completa"; setModalita: (m: "semplice" | "completa") => void;
+}) {
   const [open, setOpen] = useState(false);
   const [palette, setPalette] = usePalette();
   const btn = useRef<HTMLButtonElement>(null);
@@ -83,6 +86,12 @@ export function ThemeMenu({ theme, setTheme }: { theme: ThemeChoice; setTheme: (
       </button>
       {open && (
         <Popover anchor={btn} onClose={() => setOpen(false)} width={260} className="menu theme-pop" role="menu" label="Tema e colori">
+          <div className="menu-title">Modalità</div>
+          {([["semplice", "Semplice", "sei pulsanti grandi"], ["completa", "Completa", "tutti gli strumenti"]] as const).map(([v, l, d]) => (
+            <button key={v} role="menuitemradio" aria-checked={modalita === v} onClick={() => { setModalita(v); setOpen(false); }}>
+              <span className="grow">{l}<small>{d}</small></span> {modalita === v && <Check size={15} color="var(--brand)" />}
+            </button>
+          ))}
           <div className="menu-title">Aspetto</div>
           {OPTIONS.map(({ value, label, icon: Icon }) => (
             <button key={value} role="menuitemradio" aria-checked={theme === value} onClick={() => { setTheme(value); setOpen(false); }}>
