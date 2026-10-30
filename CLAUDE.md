@@ -61,6 +61,8 @@ copia pulita in `C:\Build\PDFz-<piattaforma>`.
   (`https://pdfz.pages.dev/download/vX.Y.Z/<file>`, pagina `https://pdfz.pages.dev/`, web app `…/app/`; finché il
   repository è pubblico valgono anche quelli di GitHub), verificati senza login (richiesta del 2026-10-22:
   "ogni volta che facciamo una modifica"). Il sito si aggiorna da solo dopo la release (`cloudflare.yml`, qualche minuto).
+  **In ogni messaggio finale c'è sempre il link del sito https://pdfz.pages.dev/**, ben visibile, anche quando non esce
+  una versione nuova (richiesta del 2026-10-30: "Inviami sempre il link per il sito cloudflare").
 - **Aggiornamenti**: l'app legge `UPDATE_BASE_URL` (scritto prima della build da `packaging/imposta-url-aggiornamenti.sh`):
   variabile di repository `UPDATE_BASE_URL` oppure `https://github.com/akito996/pdfz/releases/latest/download/`
   (funziona solo con release pubbliche). Per il repository privato: sito su **Cloudflare** (`docs/cloudflare-aggiornamenti.md`,
